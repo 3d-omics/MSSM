@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Chapter 2 Loading and Tidying Data | 3D’omics | Micro-scale spatial metagenomics (MSSM)</title>
+  <meta name="description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  <meta name="generator" content="bookdown 0.43.2 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Chapter 2 Loading and Tidying Data | 3D’omics | Micro-scale spatial metagenomics (MSSM)" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  <meta name="github-repo" content="3d-omics/XXX" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 2 Loading and Tidying Data | 3D’omics | Micro-scale spatial metagenomics (MSSM)" />
+  
+  <meta name="twitter:description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  
+
+<meta name="author" content="Carlotta Pietroni" />
+<meta name="author" content="Antton Alberdi" />
+<meta name="author" content="Amalia Bogri" />
+
+
+<meta name="date" content="2025-07-10" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="index.html"/>
+
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">A Minimal Book Example</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#prepare-the-r-environment"><i class="fa fa-check"></i><b>1.1</b> Prepare the R environment</a>
+<ul>
+<li class="chapter" data-level="1.1.1" data-path="index.html"><a href="index.html#environment"><i class="fa fa-check"></i><b>1.1.1</b> Environment</a></li>
+<li class="chapter" data-level="1.1.2" data-path="index.html"><a href="index.html#libraries"><i class="fa fa-check"></i><b>1.1.2</b> Libraries</a></li>
+<li class="chapter" data-level="1.1.3" data-path="index.html"><a href="index.html#notes"><i class="fa fa-check"></i><b>1.1.3</b> Notes:</a></li>
+</ul></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#define-plotting-settings"><i class="fa fa-check"></i><b>1.2</b> Define Plotting Settings</a>
+<ul>
+<li class="chapter" data-level="1.2.1" data-path="index.html"><a href="index.html#color-schemes"><i class="fa fa-check"></i><b>1.2.1</b> Color Schemes</a></li>
+<li class="chapter" data-level="1.2.2" data-path="index.html"><a href="index.html#plotting-theme"><i class="fa fa-check"></i><b>1.2.2</b> Plotting Theme</a></li>
+</ul></li>
+<li class="chapter" data-level="1.3" data-path="index.html"><a href="index.html#load-functions"><i class="fa fa-check"></i><b>1.3</b> Load Functions</a>
+<ul>
+<li class="chapter" data-level="1.3.1" data-path="index.html"><a href="index.html#parse_fastp_function"><i class="fa fa-check"></i><b>1.3.1</b> parse_fastp_function</a></li>
+<li class="chapter" data-level="1.3.2" data-path="index.html"><a href="index.html#calculate_alpha_diversity"><i class="fa fa-check"></i><b>1.3.2</b> calculate_alpha_diversity</a></li>
+<li class="chapter" data-level="1.3.3" data-path="index.html"><a href="index.html#amalia-perform_pca"><i class="fa fa-check"></i><b>1.3.3</b> Amalia: perform_pca</a></li>
+<li class="chapter" data-level="1.3.4" data-path="index.html"><a href="index.html#fit_and_analyze_model"><i class="fa fa-check"></i><b>1.3.4</b> fit_and_analyze_model</a></li>
+<li class="chapter" data-level="1.3.5" data-path="index.html"><a href="index.html#pivot_phylo"><i class="fa fa-check"></i><b>1.3.5</b> pivot_phylo</a></li>
+<li class="chapter" data-level="1.3.6" data-path="index.html"><a href="index.html#spatial_cryosections"><i class="fa fa-check"></i><b>1.3.6</b> spatial_cryosections</a></li>
+<li class="chapter" data-level="1.3.7" data-path="index.html"><a href="index.html#lawsonibacter_mantel_analysis"><i class="fa fa-check"></i><b>1.3.7</b> lawsonibacter_mantel_analysis</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html"><i class="fa fa-check"></i><b>2</b> Loading and Tidying Data</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#import-sample-metadata"><i class="fa fa-check"></i><b>2.1</b> Import Sample metadata</a></li>
+<li class="chapter" data-level="2.2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#sequencing-data-quality"><i class="fa fa-check"></i><b>2.2</b> Sequencing Data Quality</a>
+<ul>
+<li class="chapter" data-level="2.2.1" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#read-quality-pre--vs-post-filtering-fastp"><i class="fa fa-check"></i><b>2.2.1</b> Read Quality: Pre- vs Post-Filtering (fastp)</a></li>
+<li class="chapter" data-level="2.2.2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#contamination-assessment-host-human-and-environmental-reads"><i class="fa fa-check"></i><b>2.2.2</b> Contamination Assessment: Host, Human, and Environmental Reads</a></li>
+<li class="chapter" data-level="2.2.3" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#genome-centric-mapping-statistics-macroscale-mag-catalogue"><i class="fa fa-check"></i><b>2.2.3</b> Genome-Centric Mapping Statistics: Macroscale MAG Catalogue</a></li>
+<li class="chapter" data-level="2.2.4" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#read-centric-mapping-statistics-kraken-genomes-and-singlem-single-copy-marker-genes"><i class="fa fa-check"></i><b>2.2.4</b> Read-Centric Mapping Statistics: Kraken (genomes) and SingleM (single-copy marker genes)</a></li>
+<li class="chapter" data-level="2.2.5" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#redundancy-coverage-estimation-nonpareil"><i class="fa fa-check"></i><b>2.2.5</b> Redundancy &amp; Coverage Estimation: Nonpareil</a></li>
+<li class="chapter" data-level="2.2.6" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#combined-quality-statistics"><i class="fa fa-check"></i><b>2.2.6</b> Combined Quality Statistics</a></li>
+</ul></li>
+</ul></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">3D’omics | Micro-scale spatial metagenomics (MSSM)</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="loading-and-tidying-data" class="section level1 hasAnchor" number="2">
+<h1><span class="header-section-number">Chapter 2</span> Loading and Tidying Data<a href="loading-and-tidying-data.html#loading-and-tidying-data" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p><strong>Note:</strong> This step requires access to the raw data files located at xxxx. If you prefer to skip this step, you can proceed to the next section, making sure to load the R object that contains the necessary files for the subsequent analysis in location.</p>
+<div id="import-sample-metadata" class="section level2 hasAnchor" number="2.1">
+<h2><span class="header-section-number">2.1</span> Import Sample metadata<a href="loading-and-tidying-data.html#import-sample-metadata" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb12-1"><a href="loading-and-tidying-data.html#cb12-1" tabindex="-1"></a>mssm_sample_metadata <span class="ot">&lt;-</span> <span class="fu">airtable</span>(<span class="st">&quot;4-MSE-Info&quot;</span>, <span class="st">&quot;appKakM1bnKSekwuW&quot;</span>) <span class="sc">%&gt;%</span>  get base ID from Airtable browser URL</span>
+<span id="cb12-2"><a href="loading-and-tidying-data.html#cb12-2" tabindex="-1"></a>  <span class="fu">read_airtable</span>(., <span class="at">fields =</span> <span class="fu">c</span>(</span>
+<span id="cb12-3"><a href="loading-and-tidying-data.html#cb12-3" tabindex="-1"></a>    <span class="st">&quot;ID&quot;</span>, <span class="st">&quot;LabBatch_text&quot;</span>, <span class="st">&quot;IntestinalSection&quot;</span>, <span class="st">&quot;SampleType&quot;</span>,</span>
+<span id="cb12-4"><a href="loading-and-tidying-data.html#cb12-4" tabindex="-1"></a>    <span class="st">&quot;Xcoord&quot;</span>, <span class="st">&quot;Ycoord&quot;</span>, <span class="st">&quot;SizeApprox&quot;</span>, <span class="st">&quot;cryosection_text&quot;</span>, <span class="st">&quot;buffer_text&quot;</span>, <span class="st">&quot;Collection_method_text&quot;</span>,</span>
+<span id="cb12-5"><a href="loading-and-tidying-data.html#cb12-5" tabindex="-1"></a>    <span class="st">&quot;Collection_Success&quot;</span>, <span class="st">&quot;Collection_attempts&quot;</span>, <span class="st">&quot;UsedCycles&quot;</span>, <span class="st">&quot;animal_temp&quot;</span>, <span class="st">&quot;Protocol_text&quot;</span>,</span>
+<span id="cb12-6"><a href="loading-and-tidying-data.html#cb12-6" tabindex="-1"></a>    <span class="st">&quot;adapter_type_text&quot;</span></span>
+<span id="cb12-7"><a href="loading-and-tidying-data.html#cb12-7" tabindex="-1"></a>  ), <span class="at">id_to_col =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb12-8"><a href="loading-and-tidying-data.html#cb12-8" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb12-9"><a href="loading-and-tidying-data.html#cb12-9" tabindex="-1"></a>    LabBatch_text <span class="sc">%in%</span> <span class="fu">c</span>(</span>
+<span id="cb12-10"><a href="loading-and-tidying-data.html#cb12-10" tabindex="-1"></a>       <span class="st">&quot;MSEB0001&quot;</span>, <span class="st">&quot;MSEB0002&quot;</span>, <span class="st">&quot;MSEB0003&quot;</span>, <span class="st">&quot;MSEB0004&quot;</span>, <span class="st">&quot;MSEB0005&quot;</span>,</span>
+<span id="cb12-11"><a href="loading-and-tidying-data.html#cb12-11" tabindex="-1"></a>      <span class="st">&quot;MSEB0006&quot;</span>, <span class="st">&quot;MSEB0009&quot;</span>, <span class="st">&quot;MSEB0010&quot;</span>, <span class="st">&quot;MSEB0011&quot;</span>, <span class="st">&quot;MSEB0012&quot;</span>,</span>
+<span id="cb12-12"><a href="loading-and-tidying-data.html#cb12-12" tabindex="-1"></a>      <span class="st">&quot;MSEB0014&quot;</span>, <span class="st">&quot;MSEB0015&quot;</span></span>
+<span id="cb12-13"><a href="loading-and-tidying-data.html#cb12-13" tabindex="-1"></a>    ),</span>
+<span id="cb12-14"><a href="loading-and-tidying-data.html#cb12-14" tabindex="-1"></a>    <span class="sc">!</span>SampleType <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;ControlHuman&quot;</span>)</span>
+<span id="cb12-15"><a href="loading-and-tidying-data.html#cb12-15" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-16"><a href="loading-and-tidying-data.html#cb12-16" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb12-17"><a href="loading-and-tidying-data.html#cb12-17" tabindex="-1"></a>    <span class="at">batch =</span> LabBatch_text, <span class="at">microsample =</span> ID, <span class="at">section =</span> IntestinalSection, </span>
+<span id="cb12-18"><a href="loading-and-tidying-data.html#cb12-18" tabindex="-1"></a>    <span class="at">type =</span> SampleType, <span class="at">cryosection =</span> cryosection_text, </span>
+<span id="cb12-19"><a href="loading-and-tidying-data.html#cb12-19" tabindex="-1"></a>    <span class="at">buffer =</span> buffer_text, <span class="at">collection_method =</span> Collection_method_text,</span>
+<span id="cb12-20"><a href="loading-and-tidying-data.html#cb12-20" tabindex="-1"></a>    <span class="at">collection =</span> Collection_Success, <span class="at">collection_attempts =</span> Collection_attempts,</span>
+<span id="cb12-21"><a href="loading-and-tidying-data.html#cb12-21" tabindex="-1"></a>    <span class="at">cycles =</span> UsedCycles, <span class="at">animal =</span> animal_temp, <span class="at">size =</span> SizeApprox, </span>
+<span id="cb12-22"><a href="loading-and-tidying-data.html#cb12-22" tabindex="-1"></a>    <span class="at">protocol =</span> Protocol_text, <span class="at">adapter =</span> adapter_type_text</span>
+<span id="cb12-23"><a href="loading-and-tidying-data.html#cb12-23" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-24"><a href="loading-and-tidying-data.html#cb12-24" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb12-25"><a href="loading-and-tidying-data.html#cb12-25" tabindex="-1"></a>    microsample, section, type, batch, cryosection, buffer, Xcoord, Ycoord, </span>
+<span id="cb12-26"><a href="loading-and-tidying-data.html#cb12-26" tabindex="-1"></a>    size, collection_method, collection, collection_attempts, cycles, animal, </span>
+<span id="cb12-27"><a href="loading-and-tidying-data.html#cb12-27" tabindex="-1"></a>    protocol, adapter</span>
+<span id="cb12-28"><a href="loading-and-tidying-data.html#cb12-28" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-29"><a href="loading-and-tidying-data.html#cb12-29" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb12-30"><a href="loading-and-tidying-data.html#cb12-30" tabindex="-1"></a>    <span class="at">type_binomial =</span> <span class="fu">ifelse</span>(type <span class="sc">==</span> <span class="st">&quot;Positive&quot;</span>, <span class="st">&quot;positive&quot;</span>, <span class="st">&quot;negative&quot;</span>),</span>
+<span id="cb12-31"><a href="loading-and-tidying-data.html#cb12-31" tabindex="-1"></a>    <span class="at">buffer =</span> <span class="fu">case_when</span>(</span>
+<span id="cb12-32"><a href="loading-and-tidying-data.html#cb12-32" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B01&quot;</span> <span class="sc">~</span> <span class="st">&quot;L01&quot;</span>,</span>
+<span id="cb12-33"><a href="loading-and-tidying-data.html#cb12-33" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B02&quot;</span> <span class="sc">~</span> <span class="st">&quot;L02&quot;</span>,</span>
+<span id="cb12-34"><a href="loading-and-tidying-data.html#cb12-34" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B03&quot;</span> <span class="sc">~</span> <span class="st">&quot;L03&quot;</span>,</span>
+<span id="cb12-35"><a href="loading-and-tidying-data.html#cb12-35" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B04&quot;</span> <span class="sc">~</span> <span class="st">&quot;L04&quot;</span>,</span>
+<span id="cb12-36"><a href="loading-and-tidying-data.html#cb12-36" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B09&quot;</span> <span class="sc">~</span> <span class="st">&quot;L05&quot;</span>,</span>
+<span id="cb12-37"><a href="loading-and-tidying-data.html#cb12-37" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B11&quot;</span> <span class="sc">~</span> <span class="st">&quot;L06&quot;</span>,</span>
+<span id="cb12-38"><a href="loading-and-tidying-data.html#cb12-38" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B12&quot;</span> <span class="sc">~</span> <span class="st">&quot;L07&quot;</span>,</span>
+<span id="cb12-39"><a href="loading-and-tidying-data.html#cb12-39" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B13&quot;</span> <span class="sc">~</span> <span class="st">&quot;L08&quot;</span>,</span>
+<span id="cb12-40"><a href="loading-and-tidying-data.html#cb12-40" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> buffer</span>
+<span id="cb12-41"><a href="loading-and-tidying-data.html#cb12-41" tabindex="-1"></a>    )</span>
+<span id="cb12-42"><a href="loading-and-tidying-data.html#cb12-42" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-43"><a href="loading-and-tidying-data.html#cb12-43" tabindex="-1"></a>  <span class="fu">unnest</span>(<span class="fu">c</span>(section, Xcoord, Ycoord, size, collection, cycles)) <span class="sc">%&gt;%</span></span>
+<span id="cb12-44"><a href="loading-and-tidying-data.html#cb12-44" tabindex="-1"></a>  <span class="fu">arrange</span>(microsample)</span>
+<span id="cb12-45"><a href="loading-and-tidying-data.html#cb12-45" tabindex="-1"></a><span class="co">#write.table(mssm_sample_metadata, &quot;data/mssm_sample_metadata.tsv&quot;)</span></span>
+<span id="cb12-46"><a href="loading-and-tidying-data.html#cb12-46" tabindex="-1"></a><span class="co">#mssm_sample_metadata &lt;- read.table(&quot;data/mssm_sample_metadata.tsv&quot;)</span></span></code></pre></div>
+</div>
+<div id="sequencing-data-quality" class="section level2 hasAnchor" number="2.2">
+<h2><span class="header-section-number">2.2</span> Sequencing Data Quality<a href="loading-and-tidying-data.html#sequencing-data-quality" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="read-quality-pre--vs-post-filtering-fastp" class="section level3 hasAnchor" number="2.2.1">
+<h3><span class="header-section-number">2.2.1</span> Read Quality: Pre- vs Post-Filtering (fastp)<a href="loading-and-tidying-data.html#read-quality-pre--vs-post-filtering-fastp" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p><strong>Note:</strong> The parse_fastp() function in index needs to be loaded.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb13-1"><a href="loading-and-tidying-data.html#cb13-1" tabindex="-1"></a>mssm_json_data <span class="ot">&lt;-</span> <span class="fu">fromJSON</span>(<span class="st">&quot;data/multiqc_data.json&quot;</span>) <span class="co"># Download file from ERDA</span></span>
+<span id="cb13-2"><a href="loading-and-tidying-data.html#cb13-2" tabindex="-1"></a>mssm_fastp <span class="ot">&lt;-</span> <span class="fu">parse_fastp</span>(mssm_json_data) <span class="sc">%&gt;%</span></span>
+<span id="cb13-3"><a href="loading-and-tidying-data.html#cb13-3" tabindex="-1"></a>  <span class="fu">rename_with</span>(<span class="sc">~</span> <span class="fu">gsub</span>(<span class="st">&quot;^(summary|filtering_result|adapter_cutting|polyx_trimming)</span><span class="sc">\\</span><span class="st">.&quot;</span>, <span class="st">&quot;&quot;</span>, .)) <span class="sc">%&gt;%</span></span>
+<span id="cb13-4"><a href="loading-and-tidying-data.html#cb13-4" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb13-5"><a href="loading-and-tidying-data.html#cb13-5" tabindex="-1"></a>    sample_id,</span>
+<span id="cb13-6"><a href="loading-and-tidying-data.html#cb13-6" tabindex="-1"></a>    before_filtering.total_reads,</span>
+<span id="cb13-7"><a href="loading-and-tidying-data.html#cb13-7" tabindex="-1"></a>    after_filtering.total_reads,</span>
+<span id="cb13-8"><a href="loading-and-tidying-data.html#cb13-8" tabindex="-1"></a>    before_filtering.total_bases,</span>
+<span id="cb13-9"><a href="loading-and-tidying-data.html#cb13-9" tabindex="-1"></a>    after_filtering.total_bases,</span>
+<span id="cb13-10"><a href="loading-and-tidying-data.html#cb13-10" tabindex="-1"></a>    before_filtering.gc_content,</span>
+<span id="cb13-11"><a href="loading-and-tidying-data.html#cb13-11" tabindex="-1"></a>    after_filtering.gc_content,</span>
+<span id="cb13-12"><a href="loading-and-tidying-data.html#cb13-12" tabindex="-1"></a>    low_quality_reads,</span>
+<span id="cb13-13"><a href="loading-and-tidying-data.html#cb13-13" tabindex="-1"></a>    adapter_trimmed_reads,</span>
+<span id="cb13-14"><a href="loading-and-tidying-data.html#cb13-14" tabindex="-1"></a>    adapter_trimmed_bases,</span>
+<span id="cb13-15"><a href="loading-and-tidying-data.html#cb13-15" tabindex="-1"></a>    duplication.rate</span>
+<span id="cb13-16"><a href="loading-and-tidying-data.html#cb13-16" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb13-17"><a href="loading-and-tidying-data.html#cb13-17" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_remove</span>(sample_id, <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.lib</span><span class="sc">\\</span><span class="st">d+$&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb13-18"><a href="loading-and-tidying-data.html#cb13-18" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb13-19"><a href="loading-and-tidying-data.html#cb13-19" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb13-20"><a href="loading-and-tidying-data.html#cb13-20" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb13-21"><a href="loading-and-tidying-data.html#cb13-21" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">contains</span>(<span class="st">&quot;reads&quot;</span>), sum, <span class="at">.names =</span> <span class="st">&quot;total_{.col}&quot;</span>),</span>
+<span id="cb13-22"><a href="loading-and-tidying-data.html#cb13-22" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">contains</span>(<span class="st">&quot;bases&quot;</span>), sum, <span class="at">.names =</span> <span class="st">&quot;total_{.col}&quot;</span>),</span>
+<span id="cb13-23"><a href="loading-and-tidying-data.html#cb13-23" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">ends_with</span>(<span class="st">&quot;content&quot;</span>), mean, <span class="at">.names =</span> <span class="st">&quot;percent_{.col}&quot;</span>),</span>
+<span id="cb13-24"><a href="loading-and-tidying-data.html#cb13-24" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">ends_with</span>(<span class="st">&quot;rate&quot;</span>), mean, <span class="at">.names =</span> <span class="st">&quot;percent_{.col}&quot;</span>)</span>
+<span id="cb13-25"><a href="loading-and-tidying-data.html#cb13-25" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="contamination-assessment-host-human-and-environmental-reads" class="section level3 hasAnchor" number="2.2.2">
+<h3><span class="header-section-number">2.2.2</span> Contamination Assessment: Host, Human, and Environmental Reads<a href="loading-and-tidying-data.html#contamination-assessment-host-human-and-environmental-reads" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb14-1"><a href="loading-and-tidying-data.html#cb14-1" tabindex="-1"></a>mssm_euk_mapping <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_bowtie2_multiqc_report_data/multiqc_samtools_stats.txt&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb14-2"><a href="loading-and-tidying-data.html#cb14-2" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb14-3"><a href="loading-and-tidying-data.html#cb14-3" tabindex="-1"></a>    <span class="at">reference =</span> <span class="fu">case_when</span>(</span>
+<span id="cb14-4"><a href="loading-and-tidying-data.html#cb14-4" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">&quot;GRCh38&quot;</span>, Sample, <span class="at">ignore.case =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="st">&quot;human&quot;</span>,</span>
+<span id="cb14-5"><a href="loading-and-tidying-data.html#cb14-5" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">&quot;GRCg7b&quot;</span>, Sample, <span class="at">ignore.case =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="st">&quot;chicken&quot;</span>,</span>
+<span id="cb14-6"><a href="loading-and-tidying-data.html#cb14-6" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">&quot;Sscrofa11.1&quot;</span>, Sample, <span class="at">ignore.case =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="st">&quot;pig&quot;</span>,</span>
+<span id="cb14-7"><a href="loading-and-tidying-data.html#cb14-7" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">NA_character_</span></span>
+<span id="cb14-8"><a href="loading-and-tidying-data.html#cb14-8" tabindex="-1"></a>    ),</span>
+<span id="cb14-9"><a href="loading-and-tidying-data.html#cb14-9" tabindex="-1"></a>    <span class="at">microsample =</span> <span class="fu">str_extract</span>(Sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)</span>
+<span id="cb14-10"><a href="loading-and-tidying-data.html#cb14-10" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-11"><a href="loading-and-tidying-data.html#cb14-11" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb14-12"><a href="loading-and-tidying-data.html#cb14-12" tabindex="-1"></a>    <span class="sc">!</span><span class="fu">is.na</span>(reference), <span class="co"># Remove rows where reference is NA</span></span>
+<span id="cb14-13"><a href="loading-and-tidying-data.html#cb14-13" tabindex="-1"></a>    <span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)</span>
+<span id="cb14-14"><a href="loading-and-tidying-data.html#cb14-14" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-15"><a href="loading-and-tidying-data.html#cb14-15" tabindex="-1"></a>  <span class="fu">select</span>(Sample, microsample, reference, raw_total_sequences, reads_mapped, reads_unmapped) <span class="sc">%&gt;%</span></span>
+<span id="cb14-16"><a href="loading-and-tidying-data.html#cb14-16" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample, reference) <span class="sc">%&gt;%</span></span>
+<span id="cb14-17"><a href="loading-and-tidying-data.html#cb14-17" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb14-18"><a href="loading-and-tidying-data.html#cb14-18" tabindex="-1"></a>    <span class="at">raw_total_sequences =</span> <span class="fu">sum</span>(raw_total_sequences, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb14-19"><a href="loading-and-tidying-data.html#cb14-19" tabindex="-1"></a>    <span class="at">reads_mapped =</span> <span class="fu">sum</span>(reads_mapped, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb14-20"><a href="loading-and-tidying-data.html#cb14-20" tabindex="-1"></a>    <span class="at">reads_unmapped =</span> <span class="fu">sum</span>(reads_unmapped, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb14-21"><a href="loading-and-tidying-data.html#cb14-21" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-22"><a href="loading-and-tidying-data.html#cb14-22" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> reference, <span class="at">values_from =</span> <span class="fu">c</span>(raw_total_sequences, reads_mapped, reads_unmapped))</span></code></pre></div>
+</div>
+<div id="genome-centric-mapping-statistics-macroscale-mag-catalogue" class="section level3 hasAnchor" number="2.2.3">
+<h3><span class="header-section-number">2.2.3</span> Genome-Centric Mapping Statistics: Macroscale MAG Catalogue<a href="loading-and-tidying-data.html#genome-centric-mapping-statistics-macroscale-mag-catalogue" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb15-1"><a href="loading-and-tidying-data.html#cb15-1" tabindex="-1"></a><span class="co"># download.file(&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify.zip&quot;, &quot;data/quantify.zip&quot;, mode = &quot;wb&quot;)</span></span>
+<span id="cb15-2"><a href="loading-and-tidying-data.html#cb15-2" tabindex="-1"></a>mssm_mag_mapping <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="fu">unz</span>(<span class="st">&quot;data/quantify.zip&quot;</span>, <span class="st">&quot;multiqc_samtools_stats.txt&quot;</span>), <span class="at">header =</span> T, <span class="at">sep =</span> <span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>, <span class="at">quote =</span> <span class="st">&quot;</span><span class="sc">\&quot;</span><span class="st">&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb15-3"><a href="loading-and-tidying-data.html#cb15-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_extract</span>(Sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-4"><a href="loading-and-tidying-data.html#cb15-4" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-5"><a href="loading-and-tidying-data.html#cb15-5" tabindex="-1"></a>  <span class="fu">select</span>(Sample, microsample, raw_total_sequences, reads_mapped, reads_unmapped) <span class="sc">%&gt;%</span></span>
+<span id="cb15-6"><a href="loading-and-tidying-data.html#cb15-6" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb15-7"><a href="loading-and-tidying-data.html#cb15-7" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb15-8"><a href="loading-and-tidying-data.html#cb15-8" tabindex="-1"></a>    <span class="at">raw_total_sequences_mag =</span> <span class="fu">sum</span>(raw_total_sequences, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb15-9"><a href="loading-and-tidying-data.html#cb15-9" tabindex="-1"></a>    <span class="at">reads_mapped_mag =</span> <span class="fu">sum</span>(reads_mapped, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb15-10"><a href="loading-and-tidying-data.html#cb15-10" tabindex="-1"></a>    <span class="at">reads_unmapped_mag =</span> <span class="fu">sum</span>(reads_unmapped, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb15-11"><a href="loading-and-tidying-data.html#cb15-11" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="read-centric-mapping-statistics-kraken-genomes-and-singlem-single-copy-marker-genes" class="section level3 hasAnchor" number="2.2.4">
+<h3><span class="header-section-number">2.2.4</span> Read-Centric Mapping Statistics: Kraken (genomes) and SingleM (single-copy marker genes)<a href="loading-and-tidying-data.html#read-centric-mapping-statistics-kraken-genomes-and-singlem-single-copy-marker-genes" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb16-1"><a href="loading-and-tidying-data.html#cb16-1" tabindex="-1"></a>mssm_singlem <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess/singlem/microbial_fraction.tsv&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb16-2"><a href="loading-and-tidying-data.html#cb16-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_extract</span>(sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb16-3"><a href="loading-and-tidying-data.html#cb16-3" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb16-4"><a href="loading-and-tidying-data.html#cb16-4" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(warning, sample)) <span class="sc">%&gt;%</span></span>
+<span id="cb16-5"><a href="loading-and-tidying-data.html#cb16-5" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb16-6"><a href="loading-and-tidying-data.html#cb16-6" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb16-7"><a href="loading-and-tidying-data.html#cb16-7" tabindex="-1"></a>    <span class="at">read_fraction_singlem =</span> (<span class="fu">mean</span>(read_fraction, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">/</span> <span class="dv">100</span> <span class="co">#,</span></span>
+<span id="cb16-8"><a href="loading-and-tidying-data.html#cb16-8" tabindex="-1"></a>    <span class="co"># bacterial_archaeal_bases_singlem = sum(bacterial_archaeal_bases, na.rm = TRUE),</span></span>
+<span id="cb16-9"><a href="loading-and-tidying-data.html#cb16-9" tabindex="-1"></a>    <span class="co"># average_bacterial_archaeal_genome_size_singlem = mean(average_bacterial_archaeal_genome_size, na.rm = TRUE)</span></span>
+<span id="cb16-10"><a href="loading-and-tidying-data.html#cb16-10" tabindex="-1"></a>  )</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb17-1"><a href="loading-and-tidying-data.html#cb17-1" tabindex="-1"></a>mssm_kraken <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_kraken2_multiqc_report_data/multiqc_kraken.txt&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb17-2"><a href="loading-and-tidying-data.html#cb17-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_extract</span>(Sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb17-3"><a href="loading-and-tidying-data.html#cb17-3" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb17-4"><a href="loading-and-tidying-data.html#cb17-4" tabindex="-1"></a>  <span class="fu">select</span>(Sample, microsample, D) <span class="sc">%&gt;%</span></span>
+<span id="cb17-5"><a href="loading-and-tidying-data.html#cb17-5" tabindex="-1"></a>  <span class="fu">separate</span>(D, <span class="at">into =</span> <span class="fu">c</span>(<span class="st">&quot;Eukaryota&quot;</span>, <span class="st">&quot;Bacteria&quot;</span>, <span class="st">&quot;Archaea&quot;</span>, <span class="st">&quot;Viruses&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;, &quot;</span>, <span class="at">remove =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb17-6"><a href="loading-and-tidying-data.html#cb17-6" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="sc">!</span><span class="fu">all_of</span>(<span class="st">&quot;microsample&quot;</span>), <span class="sc">~</span> <span class="fu">parse_number</span>(.))) <span class="sc">%&gt;%</span></span>
+<span id="cb17-7"><a href="loading-and-tidying-data.html#cb17-7" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb17-8"><a href="loading-and-tidying-data.html#cb17-8" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb17-9"><a href="loading-and-tidying-data.html#cb17-9" tabindex="-1"></a>    <span class="at">kr_Eukaryota =</span> <span class="fu">sum</span>(Eukaryota, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb17-10"><a href="loading-and-tidying-data.html#cb17-10" tabindex="-1"></a>    <span class="at">kr_Bacteria =</span> <span class="fu">sum</span>(Bacteria, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb17-11"><a href="loading-and-tidying-data.html#cb17-11" tabindex="-1"></a>    <span class="at">kr_Archaea =</span> <span class="fu">sum</span>(Archaea, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb17-12"><a href="loading-and-tidying-data.html#cb17-12" tabindex="-1"></a>    <span class="at">kr_Viruses =</span> <span class="fu">sum</span>(Viruses, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb17-13"><a href="loading-and-tidying-data.html#cb17-13" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb17-14"><a href="loading-and-tidying-data.html#cb17-14" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb17-15"><a href="loading-and-tidying-data.html#cb17-15" tabindex="-1"></a>    <span class="at">total_kraken =</span> kr_Eukaryota <span class="sc">+</span> kr_Bacteria <span class="sc">+</span> kr_Archaea <span class="sc">+</span> kr_Viruses,</span>
+<span id="cb17-16"><a href="loading-and-tidying-data.html#cb17-16" tabindex="-1"></a>    <span class="at">bacteria_pct_kraken =</span> kr_Bacteria <span class="sc">/</span> total_kraken,</span>
+<span id="cb17-17"><a href="loading-and-tidying-data.html#cb17-17" tabindex="-1"></a>    <span class="at">eukaryota_pct_kraken =</span> kr_Eukaryota <span class="sc">/</span> total_kraken</span>
+<span id="cb17-18"><a href="loading-and-tidying-data.html#cb17-18" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="redundancy-coverage-estimation-nonpareil" class="section level3 hasAnchor" number="2.2.5">
+<h3><span class="header-section-number">2.2.5</span> Redundancy &amp; Coverage Estimation: Nonpareil<a href="loading-and-tidying-data.html#redundancy-coverage-estimation-nonpareil" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb18-1"><a href="loading-and-tidying-data.html#cb18-1" tabindex="-1"></a>mssm_nonpareil <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_nonpareil_multiqc_report_data/nonpareil-table.txt&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb18-2"><a href="loading-and-tidying-data.html#cb18-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_extract</span>(Sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb18-3"><a href="loading-and-tidying-data.html#cb18-3" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb18-4"><a href="loading-and-tidying-data.html#cb18-4" tabindex="-1"></a>  <span class="fu">select</span>(microsample, Redundancy, Coverage, Diversity) <span class="sc">%&gt;%</span></span>
+<span id="cb18-5"><a href="loading-and-tidying-data.html#cb18-5" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb18-6"><a href="loading-and-tidying-data.html#cb18-6" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb18-7"><a href="loading-and-tidying-data.html#cb18-7" tabindex="-1"></a>    <span class="at">redundancy_nonpareil =</span> (<span class="fu">mean</span>(Redundancy, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">/</span> <span class="dv">100</span>,</span>
+<span id="cb18-8"><a href="loading-and-tidying-data.html#cb18-8" tabindex="-1"></a>    <span class="at">coverage_nonpareil =</span> (<span class="fu">mean</span>(Coverage, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">/</span> <span class="dv">100</span>,</span>
+<span id="cb18-9"><a href="loading-and-tidying-data.html#cb18-9" tabindex="-1"></a>    <span class="at">diversity_nonpareil =</span> <span class="fu">mean</span>(Diversity, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb18-10"><a href="loading-and-tidying-data.html#cb18-10" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="combined-quality-statistics" class="section level3 hasAnchor" number="2.2.6">
+<h3><span class="header-section-number">2.2.6</span> Combined Quality Statistics<a href="loading-and-tidying-data.html#combined-quality-statistics" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb19-1"><a href="loading-and-tidying-data.html#cb19-1" tabindex="-1"></a>mssm_quality <span class="ot">&lt;-</span> <span class="fu">reduce</span>(</span>
+<span id="cb19-2"><a href="loading-and-tidying-data.html#cb19-2" tabindex="-1"></a>  <span class="fu">list</span>(</span>
+<span id="cb19-3"><a href="loading-and-tidying-data.html#cb19-3" tabindex="-1"></a>    mssm_sample_metadata,</span>
+<span id="cb19-4"><a href="loading-and-tidying-data.html#cb19-4" tabindex="-1"></a>    mssm_fastp,</span>
+<span id="cb19-5"><a href="loading-and-tidying-data.html#cb19-5" tabindex="-1"></a>    mssm_euk_mapping,</span>
+<span id="cb19-6"><a href="loading-and-tidying-data.html#cb19-6" tabindex="-1"></a>    mssm_mag_mapping,</span>
+<span id="cb19-7"><a href="loading-and-tidying-data.html#cb19-7" tabindex="-1"></a>    mssm_singlem,</span>
+<span id="cb19-8"><a href="loading-and-tidying-data.html#cb19-8" tabindex="-1"></a>    mssm_kraken,</span>
+<span id="cb19-9"><a href="loading-and-tidying-data.html#cb19-9" tabindex="-1"></a>    mssm_nonpareil</span>
+<span id="cb19-10"><a href="loading-and-tidying-data.html#cb19-10" tabindex="-1"></a>  ),</span>
+<span id="cb19-11"><a href="loading-and-tidying-data.html#cb19-11" tabindex="-1"></a>  full_join,</span>
+<span id="cb19-12"><a href="loading-and-tidying-data.html#cb19-12" tabindex="-1"></a>  <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span></span>
+<span id="cb19-13"><a href="loading-and-tidying-data.html#cb19-13" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-14"><a href="loading-and-tidying-data.html#cb19-14" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb19-15"><a href="loading-and-tidying-data.html#cb19-15" tabindex="-1"></a>    <span class="at">lowquality_reads_pct =</span> ((total_before_filtering.total_reads <span class="sc">-</span> total_after_filtering.total_reads) <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-16"><a href="loading-and-tidying-data.html#cb19-16" tabindex="-1"></a>    <span class="at">adapter_contamination_pct =</span> (total_adapter_trimmed_bases <span class="sc">/</span> total_before_filtering.total_bases),</span>
+<span id="cb19-17"><a href="loading-and-tidying-data.html#cb19-17" tabindex="-1"></a>    <span class="at">host_pct =</span> (reads_mapped_chicken <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-18"><a href="loading-and-tidying-data.html#cb19-18" tabindex="-1"></a>    <span class="at">human_pct =</span> (reads_mapped_human <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-19"><a href="loading-and-tidying-data.html#cb19-19" tabindex="-1"></a>    <span class="at">pig_pct =</span> (reads_mapped_pig <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-20"><a href="loading-and-tidying-data.html#cb19-20" tabindex="-1"></a>    <span class="at">prokreads_pct =</span> (raw_total_sequences_mag <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-21"><a href="loading-and-tidying-data.html#cb19-21" tabindex="-1"></a>    <span class="at">mapmag_rawreads_pct =</span> (reads_mapped_mag <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-22"><a href="loading-and-tidying-data.html#cb19-22" tabindex="-1"></a>    <span class="at">mapmag_filteredreads_pct =</span> (reads_mapped_mag <span class="sc">/</span> total_after_filtering.total_reads),</span>
+<span id="cb19-23"><a href="loading-and-tidying-data.html#cb19-23" tabindex="-1"></a>    <span class="at">mapmag_prokreads_pct =</span> (reads_mapped_mag <span class="sc">/</span> raw_total_sequences_mag)</span>
+<span id="cb19-24"><a href="loading-and-tidying-data.html#cb19-24" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb19-25"><a href="loading-and-tidying-data.html#cb19-25" tabindex="-1"></a>  <span class="fu">filter</span>(microsample <span class="sc">%in%</span> <span class="fu">c</span>(mssm_sample_metadata<span class="sc">$</span>microsample))</span></code></pre></div>
+
+</div>
+</div>
+</div>
+
+
+
+
+
+
+
+
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="index.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+  "sharing": {
+    "github": false,
+    "facebook": true,
+    "twitter": true,
+    "linkedin": false,
+    "weibo": false,
+    "instapaper": false,
+    "vk": false,
+    "whatsapp": false,
+    "all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+  },
+  "fontsettings": {
+    "theme": "white",
+    "family": "sans",
+    "size": 2
+  },
+  "edit": {
+    "link": "https://github.com/USERNAME/REPO/edit/BRANCH/01-data_preparation.Rmd",
+    "text": "Edit"
+  },
+  "history": {
+    "link": null,
+    "text": null
+  },
+  "view": {
+    "link": null,
+    "text": null
+  },
+  "download": ["_main.pdf", "_main.epub"],
+  "search": {
+    "engine": "fuse",
+    "options": null
+  },
+  "toc": {
+    "collapse": "subsection"
+  }
+});
+});
+</script>
+
+</body>
+
+</html>

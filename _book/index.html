@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>3D’omics | Micro-scale spatial metagenomics (MSSM)</title>
+  <meta name="description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  <meta name="generator" content="bookdown 0.43.2 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="3D’omics | Micro-scale spatial metagenomics (MSSM)" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  <meta name="github-repo" content="3d-omics/XXX" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="3D’omics | Micro-scale spatial metagenomics (MSSM)" />
+  
+  <meta name="twitter:description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  
+
+<meta name="author" content="Carlotta Pietroni" />
+<meta name="author" content="Antton Alberdi" />
+<meta name="author" content="Amalia Bogri" />
+
+
+<meta name="date" content="2025-07-10" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+
+<link rel="next" href="loading-and-tidying-data.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">A Minimal Book Example</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#prepare-the-r-environment"><i class="fa fa-check"></i><b>1.1</b> Prepare the R environment</a>
+<ul>
+<li class="chapter" data-level="1.1.1" data-path="index.html"><a href="index.html#environment"><i class="fa fa-check"></i><b>1.1.1</b> Environment</a></li>
+<li class="chapter" data-level="1.1.2" data-path="index.html"><a href="index.html#libraries"><i class="fa fa-check"></i><b>1.1.2</b> Libraries</a></li>
+<li class="chapter" data-level="1.1.3" data-path="index.html"><a href="index.html#notes"><i class="fa fa-check"></i><b>1.1.3</b> Notes:</a></li>
+</ul></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#define-plotting-settings"><i class="fa fa-check"></i><b>1.2</b> Define Plotting Settings</a>
+<ul>
+<li class="chapter" data-level="1.2.1" data-path="index.html"><a href="index.html#color-schemes"><i class="fa fa-check"></i><b>1.2.1</b> Color Schemes</a></li>
+<li class="chapter" data-level="1.2.2" data-path="index.html"><a href="index.html#plotting-theme"><i class="fa fa-check"></i><b>1.2.2</b> Plotting Theme</a></li>
+</ul></li>
+<li class="chapter" data-level="1.3" data-path="index.html"><a href="index.html#load-functions"><i class="fa fa-check"></i><b>1.3</b> Load Functions</a>
+<ul>
+<li class="chapter" data-level="1.3.1" data-path="index.html"><a href="index.html#parse_fastp_function"><i class="fa fa-check"></i><b>1.3.1</b> parse_fastp_function</a></li>
+<li class="chapter" data-level="1.3.2" data-path="index.html"><a href="index.html#calculate_alpha_diversity"><i class="fa fa-check"></i><b>1.3.2</b> calculate_alpha_diversity</a></li>
+<li class="chapter" data-level="1.3.3" data-path="index.html"><a href="index.html#amalia-perform_pca"><i class="fa fa-check"></i><b>1.3.3</b> Amalia: perform_pca</a></li>
+<li class="chapter" data-level="1.3.4" data-path="index.html"><a href="index.html#fit_and_analyze_model"><i class="fa fa-check"></i><b>1.3.4</b> fit_and_analyze_model</a></li>
+<li class="chapter" data-level="1.3.5" data-path="index.html"><a href="index.html#pivot_phylo"><i class="fa fa-check"></i><b>1.3.5</b> pivot_phylo</a></li>
+<li class="chapter" data-level="1.3.6" data-path="index.html"><a href="index.html#spatial_cryosections"><i class="fa fa-check"></i><b>1.3.6</b> spatial_cryosections</a></li>
+<li class="chapter" data-level="1.3.7" data-path="index.html"><a href="index.html#lawsonibacter_mantel_analysis"><i class="fa fa-check"></i><b>1.3.7</b> lawsonibacter_mantel_analysis</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html"><i class="fa fa-check"></i><b>2</b> Loading and Tidying Data</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#import-sample-metadata"><i class="fa fa-check"></i><b>2.1</b> Import Sample metadata</a></li>
+<li class="chapter" data-level="2.2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#sequencing-data-quality"><i class="fa fa-check"></i><b>2.2</b> Sequencing Data Quality</a>
+<ul>
+<li class="chapter" data-level="2.2.1" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#read-quality-pre--vs-post-filtering-fastp"><i class="fa fa-check"></i><b>2.2.1</b> Read Quality: Pre- vs Post-Filtering (fastp)</a></li>
+<li class="chapter" data-level="2.2.2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#contamination-assessment-host-human-and-environmental-reads"><i class="fa fa-check"></i><b>2.2.2</b> Contamination Assessment: Host, Human, and Environmental Reads</a></li>
+<li class="chapter" data-level="2.2.3" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#genome-centric-mapping-statistics-macroscale-mag-catalogue"><i class="fa fa-check"></i><b>2.2.3</b> Genome-Centric Mapping Statistics: Macroscale MAG Catalogue</a></li>
+<li class="chapter" data-level="2.2.4" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#read-centric-mapping-statistics-kraken-genomes-and-singlem-single-copy-marker-genes"><i class="fa fa-check"></i><b>2.2.4</b> Read-Centric Mapping Statistics: Kraken (genomes) and SingleM (single-copy marker genes)</a></li>
+<li class="chapter" data-level="2.2.5" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#redundancy-coverage-estimation-nonpareil"><i class="fa fa-check"></i><b>2.2.5</b> Redundancy &amp; Coverage Estimation: Nonpareil</a></li>
+<li class="chapter" data-level="2.2.6" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#combined-quality-statistics"><i class="fa fa-check"></i><b>2.2.6</b> Combined Quality Statistics</a></li>
+</ul></li>
+</ul></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">3D’omics | Micro-scale spatial metagenomics (MSSM)</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="header">
+<h1 class="title">3D’omics | Micro-scale spatial metagenomics (MSSM)</h1>
+<h2 class="subtitle"><em>Work in progress</em></h2>
+<p class="author"><em>Carlotta Pietroni<a href="#fn1" class="footnote-ref" id="fnref1"><sup>1</sup></a></em></p>
+<p class="author"><em>Antton Alberdi<a href="#fn2" class="footnote-ref" id="fnref2"><sup>2</sup></a></em></p>
+<p class="author"><em>Amalia Bogri<a href="#fn3" class="footnote-ref" id="fnref3"><sup>3</sup></a></em></p>
+<p class="date"><em>2025-07-10</em></p>
+</div>
+<div id="introduction" class="section level1 hasAnchor" number="1">
+<h1><span class="header-section-number">Chapter 1</span> Introduction<a href="index.html#introduction" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p>This webbook contains all the code used for the analyses of in “Micro-scale spatial metagenomics: revealing high-resolution spatial biogeography of gut microbiomes”.</p>
+<div id="prepare-the-r-environment" class="section level2 hasAnchor" number="1.1">
+<h2><span class="header-section-number">1.1</span> Prepare the R environment<a href="index.html#prepare-the-r-environment" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="environment" class="section level3 hasAnchor" number="1.1.1">
+<h3><span class="header-section-number">1.1.1</span> Environment<a href="index.html#environment" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>To reproduce all the analyses locally, clone this repository in your computer using:</p>
+<pre><code>RStudio &gt; New Project &gt; Version Control &gt; Git</code></pre>
+<p>And indicating the following git repository:</p>
+<blockquote>
+<p><a href="https://github.com/3d-omics/XXX" class="uri">https://github.com/3d-omics/XXX</a></p>
+</blockquote>
+<p>Once the R project has been created, follow the instructions and code chunks shown in this webbook.</p>
+</div>
+<div id="libraries" class="section level3 hasAnchor" number="1.1.2">
+<h3><span class="header-section-number">1.1.2</span> Libraries<a href="index.html#libraries" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p>The following R packages are required for the data analysis.</p>
+<div class="sourceCode" id="cb2"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb2-1"><a href="index.html#cb2-1" tabindex="-1"></a><span class="co"># install.packages(&#39;BiocManager&#39;, dependencies = TRUE)</span></span>
+<span id="cb2-2"><a href="index.html#cb2-2" tabindex="-1"></a><span class="co"># BiocManager::install(c(&quot;phyloseq&quot;, &quot;ggtreeExtra&quot;,&quot;ggtree&quot;,&quot;ANCOMBC&quot;, &quot;ALDEx2&quot;))&#39;</span></span>
+<span id="cb2-3"><a href="index.html#cb2-3" tabindex="-1"></a><span class="co"># install.packages(&#39;remotes&#39;, dependencies = TRUE)</span></span>
+<span id="cb2-4"><a href="index.html#cb2-4" tabindex="-1"></a><span class="co"># remotes::install_github(&#39;anttonalberdi/hilldiv2&#39;)</span></span>
+<span id="cb2-5"><a href="index.html#cb2-5" tabindex="-1"></a><span class="co"># remotes::install_github(&#39;anttonalberdi/distillR&#39;)&#39;</span></span>
+<span id="cb2-6"><a href="index.html#cb2-6" tabindex="-1"></a><span class="co"># remotes::install_github(&#39;wilkelab/cowplot&#39;)</span></span>
+<span id="cb2-7"><a href="index.html#cb2-7" tabindex="-1"></a></span>
+<span id="cb2-8"><a href="index.html#cb2-8" tabindex="-1"></a><span class="cf">if</span>(<span class="sc">!</span><span class="fu">require</span>(<span class="st">&quot;pacman&quot;</span>)) <span class="fu">install.packages</span>(<span class="st">&quot;pacman&quot;</span>)</span>
+<span id="cb2-9"><a href="index.html#cb2-9" tabindex="-1"></a>pacman<span class="sc">::</span><span class="fu">p_load</span>(tidyverse, rairtable, jsonlite, distillR, ape,</span>
+<span id="cb2-10"><a href="index.html#cb2-10" tabindex="-1"></a>               hilldiv2, ggpubr, broom, reshape2, zCompositions, ANCOMBC,</span>
+<span id="cb2-11"><a href="index.html#cb2-11" tabindex="-1"></a>               cowplot, ALDEx2, car, DHARMa, sjPlot, ggeffects, microViz,</span>
+<span id="cb2-12"><a href="index.html#cb2-12" tabindex="-1"></a>               ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork,</span>
+<span id="cb2-13"><a href="index.html#cb2-13" tabindex="-1"></a>               grid, pheatmap, janitor, spdep, adespatial, adegraphics, <span class="co"># lmPerm</span></span>
+<span id="cb2-14"><a href="index.html#cb2-14" tabindex="-1"></a>               ade4, magick, permuco, airtabler2, rmarkdown, purrr)</span>
+<span id="cb2-15"><a href="index.html#cb2-15" tabindex="-1"></a>select <span class="ot">&lt;-</span> dplyr<span class="sc">::</span>select</span>
+<span id="cb2-16"><a href="index.html#cb2-16" tabindex="-1"></a>recode <span class="ot">&lt;-</span> dplyr<span class="sc">::</span>recode</span></code></pre></div>
+</div>
+<div id="notes" class="section level3 hasAnchor" number="1.1.3">
+<h3><span class="header-section-number">1.1.3</span> Notes:<a href="index.html#notes" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="installation-of-modules" class="section level4 hasAnchor" number="1.1.3.1">
+<h4><span class="header-section-number">1.1.3.1</span> Installation of modules<a href="index.html#installation-of-modules" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<p>Most of the modules can be downloaded from CRAN with ‘install.packages(’XXX’, dependencies = TRUE)‘.
+Four modules are from Bioconductor.
+Install with: ’install.packages(’BiocManager’, dependencies = TRUE)
+BiocManager::install(c(“phyloseq”, “ggtreeExtra”,“ggtree”,“ANCOMBC”, “ALDEx2”))’
+Three modules are github.
+Install with: ‘install.packages(’remotes’, dependencies = TRUE)
+remotes::install_github(‘anttonalberdi/hilldiv2’)
+remotes::install_github(‘anttonalberdi/distillR’)’
+remotes::install_github(‘wilkelab/cowplot’)’</p>
+</div>
+<div id="airtable-access" class="section level4 hasAnchor" number="1.1.3.2">
+<h4><span class="header-section-number">1.1.3.2</span> Airtable access:<a href="index.html#airtable-access" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<p>Currently the metadata is loaded from the 3D’omics airtable. In order to access it you need your own API key (from Antton). set_airtable_api_key(‘XXXXX’, install = TRUE)</p>
+</div>
+</div>
+</div>
+<div id="define-plotting-settings" class="section level2 hasAnchor" number="1.2">
+<h2><span class="header-section-number">1.2</span> Define Plotting Settings<a href="index.html#define-plotting-settings" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="color-schemes" class="section level3 hasAnchor" number="1.2.1">
+<h3><span class="header-section-number">1.2.1</span> Color Schemes<a href="index.html#color-schemes" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb3"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb3-1"><a href="index.html#cb3-1" tabindex="-1"></a>phylum_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Actinomycetota =</span> <span class="st">&quot;#346254&quot;</span>,</span>
+<span id="cb3-2"><a href="index.html#cb3-2" tabindex="-1"></a>                   <span class="at">Bacillota =</span> <span class="st">&quot;#4a6ab7&quot;</span>,</span>
+<span id="cb3-3"><a href="index.html#cb3-3" tabindex="-1"></a>                   <span class="at">Bacillota_A =</span> <span class="st">&quot;#8c1c47&quot;</span>,</span>
+<span id="cb3-4"><a href="index.html#cb3-4" tabindex="-1"></a>                   <span class="at">Bacteroidota =</span> <span class="st">&quot;#9c8464&quot;</span>,</span>
+<span id="cb3-5"><a href="index.html#cb3-5" tabindex="-1"></a>                   <span class="at">Pseudomonadota =</span> <span class="st">&quot;#c49d4b&quot;</span>,</span>
+<span id="cb3-6"><a href="index.html#cb3-6" tabindex="-1"></a>                   <span class="at">Verrucomicrobiota =</span> <span class="st">&quot;#462410&quot;</span>)</span>
+<span id="cb3-7"><a href="index.html#cb3-7" tabindex="-1"></a></span>
+<span id="cb3-8"><a href="index.html#cb3-8" tabindex="-1"></a>order_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="at">Actinomycetales   =</span> <span class="st">&quot;#79b1a3&quot;</span>,</span>
+<span id="cb3-9"><a href="index.html#cb3-9" tabindex="-1"></a>                  <span class="at">Coriobacteriales =</span>    <span class="st">&quot;#498a77&quot;</span>,</span>
+<span id="cb3-10"><a href="index.html#cb3-10" tabindex="-1"></a>                  <span class="at">CAJFEE01 =</span>    <span class="st">&quot;#a0c5e8&quot;</span>,</span>
+<span id="cb3-11"><a href="index.html#cb3-11" tabindex="-1"></a>                  <span class="at">Erysipelotrichales =</span>  <span class="st">&quot;#7acef4&quot;</span>,</span>
+<span id="cb3-12"><a href="index.html#cb3-12" tabindex="-1"></a>                  <span class="at">Lactobacillales =</span> <span class="st">&quot;#6390fb&quot;</span>,</span>
+<span id="cb3-13"><a href="index.html#cb3-13" tabindex="-1"></a>                  <span class="at">ML615J_28 =</span>   <span class="st">&quot;#70c9de&quot;</span>,</span>
+<span id="cb3-14"><a href="index.html#cb3-14" tabindex="-1"></a>                  <span class="at">Paenibacillales =</span> <span class="st">&quot;#70a8dc&quot;</span>,</span>
+<span id="cb3-15"><a href="index.html#cb3-15" tabindex="-1"></a>                  <span class="at">RF39 =</span>    <span class="st">&quot;#5c7fba&quot;</span>,</span>
+<span id="cb3-16"><a href="index.html#cb3-16" tabindex="-1"></a>                  <span class="at">Christensenellales =</span>  <span class="st">&quot;#f58262&quot;</span>,</span>
+<span id="cb3-17"><a href="index.html#cb3-17" tabindex="-1"></a>                  <span class="at">Clostridiales =</span>   <span class="st">&quot;#cf4a82&quot;</span>,</span>
+<span id="cb3-18"><a href="index.html#cb3-18" tabindex="-1"></a>                  <span class="at">Lachnospirales =</span>  <span class="st">&quot;#e15f7d&quot;</span>,</span>
+<span id="cb3-19"><a href="index.html#cb3-19" tabindex="-1"></a>                  <span class="at">Monoglobales =</span> <span class="st">&quot;#e18299&quot;</span>,</span>
+<span id="cb3-20"><a href="index.html#cb3-20" tabindex="-1"></a>                  <span class="at">Oscillospirales =</span> <span class="st">&quot;#ba2760&quot;</span>,</span>
+<span id="cb3-21"><a href="index.html#cb3-21" tabindex="-1"></a>                  <span class="at">Peptostreptococcales =</span>    <span class="st">&quot;#e35d51&quot;</span>,</span>
+<span id="cb3-22"><a href="index.html#cb3-22" tabindex="-1"></a>                  <span class="at">TANB77 =</span>  <span class="st">&quot;#ef3d26&quot;</span>,</span>
+<span id="cb3-23"><a href="index.html#cb3-23" tabindex="-1"></a>                  <span class="at">UBA1381 =</span> <span class="st">&quot;#be5643&quot;</span>,</span>
+<span id="cb3-24"><a href="index.html#cb3-24" tabindex="-1"></a>                  <span class="at">Bacteroidales =</span>   <span class="st">&quot;#e3c7a0&quot;</span>,</span>
+<span id="cb3-25"><a href="index.html#cb3-25" tabindex="-1"></a>                  <span class="at">Enterobacterales =</span>    <span class="st">&quot;#ffcc62&quot;</span>,</span>
+<span id="cb3-26"><a href="index.html#cb3-26" tabindex="-1"></a>                  <span class="at">Verrucomicrobiales =</span> <span class="st">&quot;#823f1d&quot;</span>)</span>
+<span id="cb3-27"><a href="index.html#cb3-27" tabindex="-1"></a></span>
+<span id="cb3-28"><a href="index.html#cb3-28" tabindex="-1"></a>lawsonibacter_colors <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">`</span><span class="at">GPB:bin_000217</span><span class="st">`</span>  <span class="ot">=</span> <span class="st">&quot;#79b1a3&quot;</span>,</span>
+<span id="cb3-29"><a href="index.html#cb3-29" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000137</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;darkgrey&quot;</span>,</span>
+<span id="cb3-30"><a href="index.html#cb3-30" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000118</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;#7acef4&quot;</span>, </span>
+<span id="cb3-31"><a href="index.html#cb3-31" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000080</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;#6390fb&quot;</span>, </span>
+<span id="cb3-32"><a href="index.html#cb3-32" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000077</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;#5c7fba&quot;</span>,</span>
+<span id="cb3-33"><a href="index.html#cb3-33" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000072</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;lightgreen&quot;</span>, </span>
+<span id="cb3-34"><a href="index.html#cb3-34" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000015</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;#cf4a82&quot;</span>, </span>
+<span id="cb3-35"><a href="index.html#cb3-35" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000047</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;#e35d51&quot;</span>, </span>
+<span id="cb3-36"><a href="index.html#cb3-36" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000044</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;black&quot;</span>,</span>
+<span id="cb3-37"><a href="index.html#cb3-37" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000034</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;#e3c7a0&quot;</span>, </span>
+<span id="cb3-38"><a href="index.html#cb3-38" tabindex="-1"></a>                  <span class="st">`</span><span class="at">GPB:bin_000063</span><span class="st">`</span> <span class="ot">=</span>    <span class="st">&quot;#ffcc62&quot;</span>, </span>
+<span id="cb3-39"><a href="index.html#cb3-39" tabindex="-1"></a>                  <span class="st">`</span><span class="at">D300470:bin_000020</span><span class="st">`</span> <span class="ot">=</span> <span class="st">&quot;darkseagreen3&quot;</span>) </span></code></pre></div>
+</div>
+<div id="plotting-theme" class="section level3 hasAnchor" number="1.2.2">
+<h3><span class="header-section-number">1.2.2</span> Plotting Theme<a href="index.html#plotting-theme" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb4"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb4-1"><a href="index.html#cb4-1" tabindex="-1"></a>custom_ggplot_theme <span class="ot">&lt;-</span> <span class="fu">theme</span>(</span>
+<span id="cb4-2"><a href="index.html#cb4-2" tabindex="-1"></a>  <span class="at">strip.text.y.left =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">0</span>),</span>
+<span id="cb4-3"><a href="index.html#cb4-3" tabindex="-1"></a>  <span class="at">strip.text.y.right =</span> <span class="fu">element_text</span>(<span class="at">angle =</span> <span class="dv">0</span>),</span>
+<span id="cb4-4"><a href="index.html#cb4-4" tabindex="-1"></a>  <span class="at">axis.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">10</span>),</span>
+<span id="cb4-5"><a href="index.html#cb4-5" tabindex="-1"></a>  <span class="at">axis.title =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">12</span>, <span class="at">face =</span> <span class="st">&quot;bold&quot;</span>),</span>
+<span id="cb4-6"><a href="index.html#cb4-6" tabindex="-1"></a>  <span class="at">strip.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">&quot;#dde3e9&quot;</span>, <span class="at">color =</span> <span class="st">&quot;white&quot;</span>, <span class="at">size =</span> <span class="fl">0.8</span>), <span class="co"># Custom facet strip background</span></span>
+<span id="cb4-7"><a href="index.html#cb4-7" tabindex="-1"></a>  <span class="at">strip.text =</span> <span class="fu">element_text</span>(<span class="at">size =</span> <span class="dv">11</span>, <span class="at">face =</span> <span class="st">&quot;bold&quot;</span>, <span class="at">color =</span> <span class="st">&quot;black&quot;</span>), <span class="co"># Custom facet text 8</span></span>
+<span id="cb4-8"><a href="index.html#cb4-8" tabindex="-1"></a>  <span class="at">strip.placement =</span> <span class="st">&quot;outside&quot;</span>, <span class="co"># Place strip outside the panel grid</span></span>
+<span id="cb4-9"><a href="index.html#cb4-9" tabindex="-1"></a>  <span class="at">panel.spacing =</span> <span class="fu">unit</span>(<span class="fl">0.1</span>, <span class="st">&quot;lines&quot;</span>), <span class="co"># Adjust space between panels</span></span>
+<span id="cb4-10"><a href="index.html#cb4-10" tabindex="-1"></a>  <span class="at">panel.grid.major =</span> <span class="fu">element_line</span>(<span class="at">color =</span> <span class="st">&quot;#dde3e9&quot;</span>), <span class="co"># Customize major grid lines</span></span>
+<span id="cb4-11"><a href="index.html#cb4-11" tabindex="-1"></a>  <span class="at">panel.grid.minor =</span> <span class="fu">element_blank</span>(), <span class="co"># Remove minor grid lines</span></span>
+<span id="cb4-12"><a href="index.html#cb4-12" tabindex="-1"></a>  <span class="at">panel.background =</span> <span class="fu">element_rect</span>(<span class="at">fill =</span> <span class="st">&quot;white&quot;</span>), <span class="co"># Change panel background color</span></span>
+<span id="cb4-13"><a href="index.html#cb4-13" tabindex="-1"></a>  <span class="at">plot.margin =</span> <span class="fu">unit</span>(<span class="fu">c</span>(<span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>, <span class="dv">1</span>), <span class="st">&quot;cm&quot;</span>) <span class="co"># Adjust plot margins to ensure content fits</span></span>
+<span id="cb4-14"><a href="index.html#cb4-14" tabindex="-1"></a>)</span></code></pre></div>
+</div>
+</div>
+<div id="load-functions" class="section level2 hasAnchor" number="1.3">
+<h2><span class="header-section-number">1.3</span> Load Functions<a href="index.html#load-functions" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="parse_fastp_function" class="section level3 hasAnchor" number="1.3.1">
+<h3><span class="header-section-number">1.3.1</span> parse_fastp_function<a href="index.html#parse_fastp_function" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb5"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb5-1"><a href="index.html#cb5-1" tabindex="-1"></a>parse_fastp <span class="ot">&lt;-</span> <span class="cf">function</span>(multiqc_json) {</span>
+<span id="cb5-2"><a href="index.html#cb5-2" tabindex="-1"></a>  fastp_raw <span class="ot">&lt;-</span> multiqc_json<span class="sc">$</span>report_saved_raw_data<span class="sc">$</span>multiqc_fastp</span>
+<span id="cb5-3"><a href="index.html#cb5-3" tabindex="-1"></a></span>
+<span id="cb5-4"><a href="index.html#cb5-4" tabindex="-1"></a>  fastp_tibble <span class="ot">&lt;-</span></span>
+<span id="cb5-5"><a href="index.html#cb5-5" tabindex="-1"></a>    tibble<span class="sc">::</span><span class="fu">tibble</span>(</span>
+<span id="cb5-6"><a href="index.html#cb5-6" tabindex="-1"></a>      <span class="at">sample_id =</span> <span class="fu">names</span>(fastp_raw),</span>
+<span id="cb5-7"><a href="index.html#cb5-7" tabindex="-1"></a>      <span class="at">values =</span> fastp_raw</span>
+<span id="cb5-8"><a href="index.html#cb5-8" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb5-9"><a href="index.html#cb5-9" tabindex="-1"></a>    dplyr<span class="sc">::</span><span class="fu">mutate</span>(</span>
+<span id="cb5-10"><a href="index.html#cb5-10" tabindex="-1"></a>      <span class="at">sample_id =</span> sample_id <span class="sc">|&gt;</span></span>
+<span id="cb5-11"><a href="index.html#cb5-11" tabindex="-1"></a>        stringr<span class="sc">::</span><span class="fu">str_remove_all</span>(<span class="st">&quot;fastp </span><span class="sc">\\</span><span class="st">| &quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-12"><a href="index.html#cb5-12" tabindex="-1"></a>        stringr<span class="sc">::</span><span class="fu">str_remove</span>(<span class="st">&quot;_[12].fq.gz&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-13"><a href="index.html#cb5-13" tabindex="-1"></a>        stringr<span class="sc">::</span><span class="fu">str_split</span>(<span class="st">&quot;_&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-14"><a href="index.html#cb5-14" tabindex="-1"></a>        purrr<span class="sc">::</span><span class="fu">map</span>(<span class="dv">1</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-15"><a href="index.html#cb5-15" tabindex="-1"></a>        <span class="fu">unlist</span>()</span>
+<span id="cb5-16"><a href="index.html#cb5-16" tabindex="-1"></a>    ) <span class="sc">|&gt;</span></span>
+<span id="cb5-17"><a href="index.html#cb5-17" tabindex="-1"></a>    tidyr<span class="sc">::</span><span class="fu">unnest_wider</span>(values) <span class="sc">|&gt;</span></span>
+<span id="cb5-18"><a href="index.html#cb5-18" tabindex="-1"></a>    tidyr<span class="sc">::</span><span class="fu">unnest_wider</span>(<span class="sc">-</span>sample_id, <span class="at">names_sep =</span> <span class="st">&quot;.&quot;</span>) <span class="sc">|&gt;</span></span>
+<span id="cb5-19"><a href="index.html#cb5-19" tabindex="-1"></a>    tidyr<span class="sc">::</span><span class="fu">unnest_wider</span>(</span>
+<span id="cb5-20"><a href="index.html#cb5-20" tabindex="-1"></a>      <span class="fu">c</span>(</span>
+<span id="cb5-21"><a href="index.html#cb5-21" tabindex="-1"></a>        summary.before_filtering,</span>
+<span id="cb5-22"><a href="index.html#cb5-22" tabindex="-1"></a>        summary.after_filtering,</span>
+<span id="cb5-23"><a href="index.html#cb5-23" tabindex="-1"></a>        polyx_trimming.polyx_trimmed_reads,</span>
+<span id="cb5-24"><a href="index.html#cb5-24" tabindex="-1"></a>        polyx_trimming.polyx_trimmed_bases</span>
+<span id="cb5-25"><a href="index.html#cb5-25" tabindex="-1"></a>      ),</span>
+<span id="cb5-26"><a href="index.html#cb5-26" tabindex="-1"></a>      <span class="at">names_sep =</span> <span class="st">&quot;.&quot;</span></span>
+<span id="cb5-27"><a href="index.html#cb5-27" tabindex="-1"></a>    )</span>
+<span id="cb5-28"><a href="index.html#cb5-28" tabindex="-1"></a>  fastp_tibble</span>
+<span id="cb5-29"><a href="index.html#cb5-29" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="calculate_alpha_diversity" class="section level3 hasAnchor" number="1.3.2">
+<h3><span class="header-section-number">1.3.2</span> calculate_alpha_diversity<a href="index.html#calculate_alpha_diversity" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb6"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb6-1"><a href="index.html#cb6-1" tabindex="-1"></a>calculate_alpha_diversity <span class="ot">&lt;-</span> <span class="cf">function</span>(input_data, metadata_name, dataset_name, tree_name) {</span>
+<span id="cb6-2"><a href="index.html#cb6-2" tabindex="-1"></a>  input_data_matrix <span class="ot">&lt;-</span> input_data <span class="sc">%&gt;%</span> <span class="fu">column_to_rownames</span>(<span class="at">var =</span> <span class="st">&quot;genome&quot;</span>) </span>
+<span id="cb6-3"><a href="index.html#cb6-3" tabindex="-1"></a>  colsum <span class="ot">&lt;-</span> input_data_matrix  <span class="sc">%&gt;%</span></span>
+<span id="cb6-4"><a href="index.html#cb6-4" tabindex="-1"></a>    <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), sum)) <span class="sc">%&gt;%</span></span>
+<span id="cb6-5"><a href="index.html#cb6-5" tabindex="-1"></a>    <span class="fu">pivot_longer</span>(<span class="at">cols =</span> <span class="fu">everything</span>(), <span class="at">names_to =</span> <span class="st">&quot;microsample&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;cov_filtering&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb6-6"><a href="index.html#cb6-6" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">cov_filtering=</span><span class="fu">ifelse</span>(cov_filtering <span class="sc">&gt;</span> <span class="dv">0</span> , <span class="st">&quot;Retained By Filtering&quot;</span>, <span class="st">&quot;Excluded By Filtering&quot;</span>))</span>
+<span id="cb6-7"><a href="index.html#cb6-7" tabindex="-1"></a>  <span class="co"># Define diversity metrics and calculate</span></span>
+<span id="cb6-8"><a href="index.html#cb6-8" tabindex="-1"></a>  diversity_metrics <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb6-9"><a href="index.html#cb6-9" tabindex="-1"></a>    <span class="at">richness =</span> <span class="fu">hilldiv</span>(input_data_matrix, <span class="at">q =</span> <span class="dv">0</span>),</span>
+<span id="cb6-10"><a href="index.html#cb6-10" tabindex="-1"></a>    <span class="at">neutral =</span> <span class="fu">hilldiv</span>(input_data_matrix, <span class="at">q =</span> <span class="dv">1</span>),</span>
+<span id="cb6-11"><a href="index.html#cb6-11" tabindex="-1"></a>    <span class="at">phylogenetic =</span> <span class="fu">hilldiv</span>(input_data_matrix, <span class="at">q =</span> <span class="dv">1</span>, <span class="at">tree =</span> tree_name)</span>
+<span id="cb6-12"><a href="index.html#cb6-12" tabindex="-1"></a>  )</span>
+<span id="cb6-13"><a href="index.html#cb6-13" tabindex="-1"></a>  <span class="co"># Process metrics into a single data frame</span></span>
+<span id="cb6-14"><a href="index.html#cb6-14" tabindex="-1"></a>  alpha_diversity <span class="ot">&lt;-</span> <span class="fu">lapply</span>(<span class="fu">names</span>(diversity_metrics), <span class="cf">function</span>(metric) {</span>
+<span id="cb6-15"><a href="index.html#cb6-15" tabindex="-1"></a>    diversity_metrics[[metric]] <span class="sc">%&gt;%</span></span>
+<span id="cb6-16"><a href="index.html#cb6-16" tabindex="-1"></a>      <span class="fu">t</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb6-17"><a href="index.html#cb6-17" tabindex="-1"></a>      <span class="fu">as.data.frame</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb6-18"><a href="index.html#cb6-18" tabindex="-1"></a>      <span class="fu">rownames_to_column</span>(<span class="at">var =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb6-19"><a href="index.html#cb6-19" tabindex="-1"></a>      <span class="fu">rename</span>(<span class="sc">!!</span><span class="fu">sym</span>(metric) <span class="sc">:=</span> <span class="dv">2</span>) <span class="co"># rename metric column</span></span>
+<span id="cb6-20"><a href="index.html#cb6-20" tabindex="-1"></a>  }) <span class="sc">%&gt;%</span></span>
+<span id="cb6-21"><a href="index.html#cb6-21" tabindex="-1"></a>    <span class="fu">reduce</span>(full_join, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb6-22"><a href="index.html#cb6-22" tabindex="-1"></a>    <span class="fu">right_join</span>(metadata_name, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span> <span class="co"># Merge with final stats</span></span>
+<span id="cb6-23"><a href="index.html#cb6-23" tabindex="-1"></a>    <span class="fu">left_join</span>(colsum, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>)</span>
+<span id="cb6-24"><a href="index.html#cb6-24" tabindex="-1"></a>  <span class="co">#output_filename &lt;- paste0(&quot;results/alpha_div_&quot;, dataset_name, &quot;.tsv&quot;)</span></span>
+<span id="cb6-25"><a href="index.html#cb6-25" tabindex="-1"></a>  <span class="co">#write_tsv(alpha_diversity, output_filename)</span></span>
+<span id="cb6-26"><a href="index.html#cb6-26" tabindex="-1"></a>  <span class="fu">return</span>(alpha_diversity)</span>
+<span id="cb6-27"><a href="index.html#cb6-27" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="amalia-perform_pca" class="section level3 hasAnchor" number="1.3.3">
+<h3><span class="header-section-number">1.3.3</span> Amalia: perform_pca<a href="index.html#amalia-perform_pca" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb7"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb7-1"><a href="index.html#cb7-1" tabindex="-1"></a>perform_pca <span class="ot">&lt;-</span> <span class="cf">function</span>(df, <span class="at">zero_method =</span> <span class="st">&quot;GBM&quot;</span>, <span class="at">z_delete =</span> <span class="cn">TRUE</span>) {</span>
+<span id="cb7-2"><a href="index.html#cb7-2" tabindex="-1"></a>  </span>
+<span id="cb7-3"><a href="index.html#cb7-3" tabindex="-1"></a>  <span class="co"># Store original dimensions</span></span>
+<span id="cb7-4"><a href="index.html#cb7-4" tabindex="-1"></a>  original_rows <span class="ot">&lt;-</span> <span class="fu">nrow</span>(df)</span>
+<span id="cb7-5"><a href="index.html#cb7-5" tabindex="-1"></a>  original_cols <span class="ot">&lt;-</span> <span class="fu">ncol</span>(df)</span>
+<span id="cb7-6"><a href="index.html#cb7-6" tabindex="-1"></a>  </span>
+<span id="cb7-7"><a href="index.html#cb7-7" tabindex="-1"></a>  <span class="co"># 1. Zero replacement</span></span>
+<span id="cb7-8"><a href="index.html#cb7-8" tabindex="-1"></a>  <span class="cf">if</span> (<span class="fu">any</span>(df <span class="sc">==</span> <span class="dv">0</span>)) { <span class="co"># I think cmultRepl already does that</span></span>
+<span id="cb7-9"><a href="index.html#cb7-9" tabindex="-1"></a>    <span class="fu">print</span>(<span class="st">&quot;Zeros found&quot;</span>)</span>
+<span id="cb7-10"><a href="index.html#cb7-10" tabindex="-1"></a>    df <span class="ot">&lt;-</span> <span class="fu">cmultRepl</span>(df, <span class="at">method =</span> zero_method, <span class="at">output =</span> <span class="st">&quot;prop&quot;</span>,</span>
+<span id="cb7-11"><a href="index.html#cb7-11" tabindex="-1"></a>                        <span class="at">z.warning =</span> <span class="fl">0.8</span>, <span class="at">z.delete =</span> z_delete)</span>
+<span id="cb7-12"><a href="index.html#cb7-12" tabindex="-1"></a>    df <span class="ot">&lt;-</span> df <span class="sc">*</span> <span class="dv">100</span></span>
+<span id="cb7-13"><a href="index.html#cb7-13" tabindex="-1"></a>  }</span>
+<span id="cb7-14"><a href="index.html#cb7-14" tabindex="-1"></a></span>
+<span id="cb7-15"><a href="index.html#cb7-15" tabindex="-1"></a>  <span class="co"># Print removed rows and columns</span></span>
+<span id="cb7-16"><a href="index.html#cb7-16" tabindex="-1"></a>  removed_rows <span class="ot">&lt;-</span> original_rows <span class="sc">-</span> <span class="fu">nrow</span>(df)</span>
+<span id="cb7-17"><a href="index.html#cb7-17" tabindex="-1"></a>  removed_cols <span class="ot">&lt;-</span> original_cols <span class="sc">-</span> <span class="fu">ncol</span>(df)</span>
+<span id="cb7-18"><a href="index.html#cb7-18" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">&quot;Rows (samples) removed:&quot;</span>, removed_rows, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb7-19"><a href="index.html#cb7-19" tabindex="-1"></a>  <span class="fu">cat</span>(<span class="st">&quot;Columns (taxa) removed:&quot;</span>, removed_cols, <span class="st">&quot;</span><span class="sc">\n</span><span class="st">&quot;</span>)</span>
+<span id="cb7-20"><a href="index.html#cb7-20" tabindex="-1"></a>  </span>
+<span id="cb7-21"><a href="index.html#cb7-21" tabindex="-1"></a>  <span class="co">#plot_abundance_heatmap(df)</span></span>
+<span id="cb7-22"><a href="index.html#cb7-22" tabindex="-1"></a></span>
+<span id="cb7-23"><a href="index.html#cb7-23" tabindex="-1"></a>  <span class="co"># Geometric mean function</span></span>
+<span id="cb7-24"><a href="index.html#cb7-24" tabindex="-1"></a>  geometric_mean <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb7-25"><a href="index.html#cb7-25" tabindex="-1"></a>    <span class="co"># Use log to avoid underflow</span></span>
+<span id="cb7-26"><a href="index.html#cb7-26" tabindex="-1"></a>    <span class="fu">exp</span>(<span class="fu">mean</span>(<span class="fu">log</span>(x), <span class="at">na.rm =</span> <span class="cn">TRUE</span>))  </span>
+<span id="cb7-27"><a href="index.html#cb7-27" tabindex="-1"></a>    }</span>
+<span id="cb7-28"><a href="index.html#cb7-28" tabindex="-1"></a>    </span>
+<span id="cb7-29"><a href="index.html#cb7-29" tabindex="-1"></a>  <span class="co"># 2. Calculate geometric mean of the parts (taxa) of the data set.</span></span>
+<span id="cb7-30"><a href="index.html#cb7-30" tabindex="-1"></a>  taxa_geometric_means <span class="ot">&lt;-</span> <span class="fu">apply</span>(df, <span class="dv">2</span>, geometric_mean)</span>
+<span id="cb7-31"><a href="index.html#cb7-31" tabindex="-1"></a>  </span>
+<span id="cb7-32"><a href="index.html#cb7-32" tabindex="-1"></a>  <span class="co"># 3. Center data</span></span>
+<span id="cb7-33"><a href="index.html#cb7-33" tabindex="-1"></a>  df_centered <span class="ot">&lt;-</span> <span class="fu">sweep</span>(df, <span class="dv">2</span>, taxa_geometric_means, <span class="at">FUN =</span> <span class="st">&quot;/&quot;</span>)</span>
+<span id="cb7-34"><a href="index.html#cb7-34" tabindex="-1"></a>  </span>
+<span id="cb7-35"><a href="index.html#cb7-35" tabindex="-1"></a>  df_centered <span class="ot">&lt;-</span> <span class="fu">as.matrix</span>(df_centered)  </span>
+<span id="cb7-36"><a href="index.html#cb7-36" tabindex="-1"></a>  </span>
+<span id="cb7-37"><a href="index.html#cb7-37" tabindex="-1"></a>  <span class="co"># Compute the Variation Matrix</span></span>
+<span id="cb7-38"><a href="index.html#cb7-38" tabindex="-1"></a>  variation_matrix <span class="ot">&lt;-</span> <span class="fu">outer</span>(</span>
+<span id="cb7-39"><a href="index.html#cb7-39" tabindex="-1"></a>    <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(df_centered), <span class="dv">1</span><span class="sc">:</span><span class="fu">ncol</span>(df_centered), </span>
+<span id="cb7-40"><a href="index.html#cb7-40" tabindex="-1"></a>    <span class="fu">Vectorize</span>(<span class="cf">function</span>(i, j) <span class="fu">var</span>(<span class="fu">log</span>(df_centered[, i] <span class="sc">/</span> df_centered[, j]), <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb7-41"><a href="index.html#cb7-41" tabindex="-1"></a>  )</span>
+<span id="cb7-42"><a href="index.html#cb7-42" tabindex="-1"></a> </span>
+<span id="cb7-43"><a href="index.html#cb7-43" tabindex="-1"></a>   <span class="co"># Calculate Total Variance</span></span>
+<span id="cb7-44"><a href="index.html#cb7-44" tabindex="-1"></a>  D <span class="ot">&lt;-</span> <span class="fu">ncol</span>(df_centered)  <span class="co"># Number of taxa (columns)</span></span>
+<span id="cb7-45"><a href="index.html#cb7-45" tabindex="-1"></a>  totvar <span class="ot">&lt;-</span> (<span class="dv">1</span> <span class="sc">/</span> (<span class="dv">2</span> <span class="sc">*</span> D)) <span class="sc">*</span> <span class="fu">sum</span>(variation_matrix, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-46"><a href="index.html#cb7-46" tabindex="-1"></a>  </span>
+<span id="cb7-47"><a href="index.html#cb7-47" tabindex="-1"></a>  <span class="co"># 4. Scale data</span></span>
+<span id="cb7-48"><a href="index.html#cb7-48" tabindex="-1"></a>  power_exponent <span class="ot">&lt;-</span> <span class="dv">1</span> <span class="sc">/</span> <span class="fu">sqrt</span>(totvar)</span>
+<span id="cb7-49"><a href="index.html#cb7-49" tabindex="-1"></a>  df_scaled <span class="ot">&lt;-</span> df_centered<span class="sc">^</span>power_exponent</span>
+<span id="cb7-50"><a href="index.html#cb7-50" tabindex="-1"></a>  <span class="co"># print(df_scaled)</span></span>
+<span id="cb7-51"><a href="index.html#cb7-51" tabindex="-1"></a></span>
+<span id="cb7-52"><a href="index.html#cb7-52" tabindex="-1"></a>  <span class="co"># CLR transform data</span></span>
+<span id="cb7-53"><a href="index.html#cb7-53" tabindex="-1"></a>  clr_transform <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb7-54"><a href="index.html#cb7-54" tabindex="-1"></a>    <span class="fu">log</span>(x) <span class="sc">-</span> <span class="fu">mean</span>(<span class="fu">log</span>(x), <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-55"><a href="index.html#cb7-55" tabindex="-1"></a>  }</span>
+<span id="cb7-56"><a href="index.html#cb7-56" tabindex="-1"></a>  df_clr <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">apply</span>(df_scaled, <span class="dv">1</span>, clr_transform)) </span>
+<span id="cb7-57"><a href="index.html#cb7-57" tabindex="-1"></a>  df_clr <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(df_clr)</span>
+<span id="cb7-58"><a href="index.html#cb7-58" tabindex="-1"></a>  </span>
+<span id="cb7-59"><a href="index.html#cb7-59" tabindex="-1"></a>  df_clr_dist <span class="ot">&lt;-</span> <span class="fu">t</span>(<span class="fu">apply</span>(df, <span class="dv">1</span>, clr_transform)) </span>
+<span id="cb7-60"><a href="index.html#cb7-60" tabindex="-1"></a>  df_clr_dist <span class="ot">&lt;-</span> <span class="fu">as.data.frame</span>(df_clr_dist)</span>
+<span id="cb7-61"><a href="index.html#cb7-61" tabindex="-1"></a>  </span>
+<span id="cb7-62"><a href="index.html#cb7-62" tabindex="-1"></a>  <span class="co"># Perform PCA on zero replaced, centered, scaled, and CLR transformed df</span></span>
+<span id="cb7-63"><a href="index.html#cb7-63" tabindex="-1"></a>  pca_result <span class="ot">&lt;-</span> <span class="fu">prcomp</span>(df_clr, <span class="at">center =</span> <span class="cn">FALSE</span>, <span class="at">scale. =</span> <span class="cn">FALSE</span>)</span>
+<span id="cb7-64"><a href="index.html#cb7-64" tabindex="-1"></a>  pca_result_dist <span class="ot">&lt;-</span> <span class="fu">prcomp</span>(df_clr_dist, <span class="at">center =</span> <span class="cn">TRUE</span>, <span class="at">scale. =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb7-65"><a href="index.html#cb7-65" tabindex="-1"></a>  </span>
+<span id="cb7-66"><a href="index.html#cb7-66" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(</span>
+<span id="cb7-67"><a href="index.html#cb7-67" tabindex="-1"></a>    <span class="at">df_clr =</span> df_clr,</span>
+<span id="cb7-68"><a href="index.html#cb7-68" tabindex="-1"></a>    <span class="at">df_clr_dist =</span> df_clr_dist,</span>
+<span id="cb7-69"><a href="index.html#cb7-69" tabindex="-1"></a>    <span class="at">pca_result=</span>pca_result,</span>
+<span id="cb7-70"><a href="index.html#cb7-70" tabindex="-1"></a>    <span class="at">pca_result_dist=</span>pca_result_dist))</span>
+<span id="cb7-71"><a href="index.html#cb7-71" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="fit_and_analyze_model" class="section level3 hasAnchor" number="1.3.4">
+<h3><span class="header-section-number">1.3.4</span> fit_and_analyze_model<a href="index.html#fit_and_analyze_model" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb8"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb8-1"><a href="index.html#cb8-1" tabindex="-1"></a>fit_and_analyze_model <span class="ot">&lt;-</span> <span class="cf">function</span>(<span class="at">model =</span> <span class="fu">c</span>(<span class="st">&quot;lm&quot;</span>, <span class="st">&quot;glm&quot;</span>),</span>
+<span id="cb8-2"><a href="index.html#cb8-2" tabindex="-1"></a>                                  <span class="at">distribution =</span> <span class="cn">NULL</span>,</span>
+<span id="cb8-3"><a href="index.html#cb8-3" tabindex="-1"></a>                                  response_var,</span>
+<span id="cb8-4"><a href="index.html#cb8-4" tabindex="-1"></a>                                  explanatory_var,</span>
+<span id="cb8-5"><a href="index.html#cb8-5" tabindex="-1"></a>                                  data) {</span>
+<span id="cb8-6"><a href="index.html#cb8-6" tabindex="-1"></a>  model <span class="ot">&lt;-</span> <span class="fu">match.arg</span>(model) <span class="co"># Restrict to &quot;lm&quot; or &quot;glm&quot;</span></span>
+<span id="cb8-7"><a href="index.html#cb8-7" tabindex="-1"></a>  <span class="co"># Construct the model formula</span></span>
+<span id="cb8-8"><a href="index.html#cb8-8" tabindex="-1"></a>  model_formula <span class="ot">&lt;-</span> <span class="fu">as.formula</span>(<span class="fu">paste</span>(response_var, <span class="st">&quot;~&quot;</span>, explanatory_var))</span>
+<span id="cb8-9"><a href="index.html#cb8-9" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="index.html#cb8-10" tabindex="-1"></a>  <span class="co"># Initialize all possible return objects</span></span>
+<span id="cb8-11"><a href="index.html#cb8-11" tabindex="-1"></a>  anova_result <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb8-12"><a href="index.html#cb8-12" tabindex="-1"></a>  md <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb8-13"><a href="index.html#cb8-13" tabindex="-1"></a>  simResids <span class="ot">&lt;-</span> <span class="cn">NULL</span></span>
+<span id="cb8-14"><a href="index.html#cb8-14" tabindex="-1"></a></span>
+<span id="cb8-15"><a href="index.html#cb8-15" tabindex="-1"></a>  <span class="cf">if</span> (model <span class="sc">==</span> <span class="st">&quot;lm&quot;</span>) {</span>
+<span id="cb8-16"><a href="index.html#cb8-16" tabindex="-1"></a>    <span class="co"># Continuous floats (any real number)</span></span>
+<span id="cb8-17"><a href="index.html#cb8-17" tabindex="-1"></a>    md <span class="ot">&lt;-</span> <span class="fu">lm</span>(model_formula, <span class="at">data =</span> data)</span>
+<span id="cb8-18"><a href="index.html#cb8-18" tabindex="-1"></a>    anova_result <span class="ot">&lt;-</span> broom<span class="sc">::</span><span class="fu">tidy</span>(<span class="fu">Anova</span>(md, <span class="at">test.statistic =</span> <span class="st">&quot;F&quot;</span>))</span>
+<span id="cb8-19"><a href="index.html#cb8-19" tabindex="-1"></a>  } <span class="cf">else</span> <span class="cf">if</span> (model <span class="sc">==</span> <span class="st">&quot;glm&quot;</span>) {</span>
+<span id="cb8-20"><a href="index.html#cb8-20" tabindex="-1"></a>    <span class="co"># Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)</span></span>
+<span id="cb8-21"><a href="index.html#cb8-21" tabindex="-1"></a>    <span class="co"># Proportions (0–1 continuous): quasibinomial GLM (accounts overdispersion) but beta regression (not GLM)   Preferred over quasibinomial GLM</span></span>
+<span id="cb8-22"><a href="index.html#cb8-22" tabindex="-1"></a>    <span class="co"># Continuous floats (any real number): gaussian, Gamma (continuous positive data, skewed to the right)</span></span>
+<span id="cb8-23"><a href="index.html#cb8-23" tabindex="-1"></a>    <span class="cf">if</span> (<span class="fu">is.null</span>(distribution)) {</span>
+<span id="cb8-24"><a href="index.html#cb8-24" tabindex="-1"></a>      <span class="fu">stop</span>(<span class="st">&quot;You must specify a distribution family for glm.&quot;</span>)</span>
+<span id="cb8-25"><a href="index.html#cb8-25" tabindex="-1"></a>    }</span>
+<span id="cb8-26"><a href="index.html#cb8-26" tabindex="-1"></a></span>
+<span id="cb8-27"><a href="index.html#cb8-27" tabindex="-1"></a>    md <span class="ot">&lt;-</span> <span class="fu">glm</span>(model_formula, <span class="at">family =</span> distribution, <span class="at">data =</span> data)</span>
+<span id="cb8-28"><a href="index.html#cb8-28" tabindex="-1"></a></span>
+<span id="cb8-29"><a href="index.html#cb8-29" tabindex="-1"></a>    <span class="cf">if</span> (<span class="sc">!</span><span class="fu">grepl</span>(<span class="st">&quot;^quasi&quot;</span>, distribution)) { <span class="co"># Use DHARMa only on supported distributions</span></span>
+<span id="cb8-30"><a href="index.html#cb8-30" tabindex="-1"></a>      simResids <span class="ot">&lt;-</span> <span class="fu">simulateResiduals</span>(md)</span>
+<span id="cb8-31"><a href="index.html#cb8-31" tabindex="-1"></a>      anova_result <span class="ot">&lt;-</span> broom<span class="sc">::</span><span class="fu">tidy</span>(<span class="fu">Anova</span>(md, <span class="at">test.statistic =</span> <span class="st">&quot;F&quot;</span>)) <span class="co"># ANOVA with F test</span></span>
+<span id="cb8-32"><a href="index.html#cb8-32" tabindex="-1"></a>    } <span class="cf">else</span> {</span>
+<span id="cb8-33"><a href="index.html#cb8-33" tabindex="-1"></a>      anova_result <span class="ot">&lt;-</span> broom<span class="sc">::</span><span class="fu">tidy</span>(<span class="fu">Anova</span>(md, <span class="at">test.statistic =</span> <span class="st">&quot;Wald&quot;</span>)) <span class="co"># ANOVA with Chi-squared test</span></span>
+<span id="cb8-34"><a href="index.html#cb8-34" tabindex="-1"></a>    }</span>
+<span id="cb8-35"><a href="index.html#cb8-35" tabindex="-1"></a>  }</span>
+<span id="cb8-36"><a href="index.html#cb8-36" tabindex="-1"></a>  result <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb8-37"><a href="index.html#cb8-37" tabindex="-1"></a>    <span class="at">model_fit =</span> md,</span>
+<span id="cb8-38"><a href="index.html#cb8-38" tabindex="-1"></a>    <span class="at">anova =</span> anova_result</span>
+<span id="cb8-39"><a href="index.html#cb8-39" tabindex="-1"></a>  )</span>
+<span id="cb8-40"><a href="index.html#cb8-40" tabindex="-1"></a></span>
+<span id="cb8-41"><a href="index.html#cb8-41" tabindex="-1"></a>  <span class="cf">if</span> (<span class="sc">!</span><span class="fu">is.null</span>(simResids)) {</span>
+<span id="cb8-42"><a href="index.html#cb8-42" tabindex="-1"></a>    result<span class="sc">$</span>simResidual <span class="ot">&lt;-</span> simResids</span>
+<span id="cb8-43"><a href="index.html#cb8-43" tabindex="-1"></a>  }</span>
+<span id="cb8-44"><a href="index.html#cb8-44" tabindex="-1"></a></span>
+<span id="cb8-45"><a href="index.html#cb8-45" tabindex="-1"></a>  <span class="fu">return</span>(result)</span>
+<span id="cb8-46"><a href="index.html#cb8-46" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="pivot_phylo" class="section level3 hasAnchor" number="1.3.5">
+<h3><span class="header-section-number">1.3.5</span> pivot_phylo<a href="index.html#pivot_phylo" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb9"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb9-1"><a href="index.html#cb9-1" tabindex="-1"></a>pivot_phylo <span class="ot">&lt;-</span> <span class="cf">function</span>(phyloseq_obj, <span class="at">glom =</span> <span class="cn">TRUE</span>, <span class="at">tax_transform =</span> <span class="cn">TRUE</span>, taxon_level, tr_method) {</span>
+<span id="cb9-2"><a href="index.html#cb9-2" tabindex="-1"></a>  <span class="cf">if</span> (glom <span class="sc">==</span> <span class="cn">TRUE</span> <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(taxon_level)) {</span>
+<span id="cb9-3"><a href="index.html#cb9-3" tabindex="-1"></a>    phyloseq_obj <span class="ot">&lt;-</span> <span class="fu">prune_taxa</span>(<span class="fu">taxa_sums</span>(phyloseq_obj) <span class="sc">&gt;</span> <span class="dv">0</span>, phyloseq_obj)</span>
+<span id="cb9-4"><a href="index.html#cb9-4" tabindex="-1"></a>    phyloseq_obj <span class="ot">&lt;-</span> <span class="fu">tax_glom</span>(phyloseq_obj, taxon_level)</span>
+<span id="cb9-5"><a href="index.html#cb9-5" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb9-6"><a href="index.html#cb9-6" tabindex="-1"></a>    .</span>
+<span id="cb9-7"><a href="index.html#cb9-7" tabindex="-1"></a>  }</span>
+<span id="cb9-8"><a href="index.html#cb9-8" tabindex="-1"></a>  <span class="cf">if</span> (tax_transform <span class="sc">==</span> <span class="cn">TRUE</span> <span class="sc">&amp;&amp;</span> <span class="sc">!</span><span class="fu">is.null</span>(tr_method)) {</span>
+<span id="cb9-9"><a href="index.html#cb9-9" tabindex="-1"></a>    phyloseq_obj <span class="ot">&lt;-</span> <span class="fu">tax_transform</span>(phyloseq_obj, tr_method)</span>
+<span id="cb9-10"><a href="index.html#cb9-10" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb9-11"><a href="index.html#cb9-11" tabindex="-1"></a>    .</span>
+<span id="cb9-12"><a href="index.html#cb9-12" tabindex="-1"></a>  }</span>
+<span id="cb9-13"><a href="index.html#cb9-13" tabindex="-1"></a></span>
+<span id="cb9-14"><a href="index.html#cb9-14" tabindex="-1"></a>  pivot_dataframe <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">otu_table</span>(phyloseq_obj)) <span class="sc">%&gt;%</span></span>
+<span id="cb9-15"><a href="index.html#cb9-15" tabindex="-1"></a>    <span class="fu">rownames_to_column</span>(<span class="at">var =</span> <span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-16"><a href="index.html#cb9-16" tabindex="-1"></a>    <span class="fu">pivot_longer</span>(<span class="sc">-</span>genome, <span class="at">names_to =</span> <span class="st">&quot;microsample&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;abundance&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-17"><a href="index.html#cb9-17" tabindex="-1"></a>    <span class="fu">filter</span>(abundance <span class="sc">&gt;</span> <span class="dv">0</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-18"><a href="index.html#cb9-18" tabindex="-1"></a>    <span class="fu">left_join</span>(<span class="fu">data.frame</span>(<span class="fu">tax_table</span>(phyloseq_obj)) <span class="sc">%&gt;%</span></span>
+<span id="cb9-19"><a href="index.html#cb9-19" tabindex="-1"></a>      <span class="fu">rownames_to_column</span>(<span class="at">var =</span> <span class="st">&quot;genome&quot;</span>), <span class="at">by =</span> <span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-20"><a href="index.html#cb9-20" tabindex="-1"></a>    <span class="fu">left_join</span>(<span class="fu">data.frame</span>(<span class="fu">sample_data</span>(phyloseq_obj)) <span class="sc">%&gt;%</span></span>
+<span id="cb9-21"><a href="index.html#cb9-21" tabindex="-1"></a>      <span class="fu">rownames_to_column</span>(<span class="at">var =</span> <span class="st">&quot;microsample&quot;</span>), <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>)</span>
+<span id="cb9-22"><a href="index.html#cb9-22" tabindex="-1"></a></span>
+<span id="cb9-23"><a href="index.html#cb9-23" tabindex="-1"></a>  <span class="co"># Re-order levels</span></span>
+<span id="cb9-24"><a href="index.html#cb9-24" tabindex="-1"></a>  taxa_levels <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="st">&quot;domain&quot;</span>, <span class="st">&quot;phylum&quot;</span>, <span class="st">&quot;class&quot;</span>, <span class="st">&quot;order&quot;</span>, <span class="st">&quot;family&quot;</span>, <span class="st">&quot;genus&quot;</span>, <span class="st">&quot;species&quot;</span>)</span>
+<span id="cb9-25"><a href="index.html#cb9-25" tabindex="-1"></a>  <span class="co"># Iterate over taxonomic levels</span></span>
+<span id="cb9-26"><a href="index.html#cb9-26" tabindex="-1"></a>  <span class="cf">for</span> (taxa <span class="cf">in</span> taxa_levels) {</span>
+<span id="cb9-27"><a href="index.html#cb9-27" tabindex="-1"></a>    <span class="co"># Check if the column has more than one unique value</span></span>
+<span id="cb9-28"><a href="index.html#cb9-28" tabindex="-1"></a>    <span class="cf">if</span> (taxa <span class="sc">%in%</span> <span class="fu">colnames</span>(pivot_dataframe) <span class="sc">&amp;&amp;</span> <span class="fu">length</span>(<span class="fu">unique</span>(pivot_dataframe[[taxa]])) <span class="sc">&gt;</span> <span class="dv">1</span>) {</span>
+<span id="cb9-29"><a href="index.html#cb9-29" tabindex="-1"></a>      <span class="co"># Convert each taxonomic level to a factor with levels ordered by abundance</span></span>
+<span id="cb9-30"><a href="index.html#cb9-30" tabindex="-1"></a>      pivot_dataframe <span class="ot">&lt;-</span> pivot_dataframe <span class="sc">%&gt;%</span></span>
+<span id="cb9-31"><a href="index.html#cb9-31" tabindex="-1"></a>        <span class="fu">mutate</span>(</span>
+<span id="cb9-32"><a href="index.html#cb9-32" tabindex="-1"></a>          <span class="sc">!!</span><span class="at">taxa :=</span> <span class="fu">factor</span>(</span>
+<span id="cb9-33"><a href="index.html#cb9-33" tabindex="-1"></a>            <span class="sc">!!</span><span class="fu">sym</span>(taxa),</span>
+<span id="cb9-34"><a href="index.html#cb9-34" tabindex="-1"></a>            <span class="at">levels =</span> pivot_dataframe <span class="sc">%&gt;%</span></span>
+<span id="cb9-35"><a href="index.html#cb9-35" tabindex="-1"></a>              <span class="fu">group_by</span>(<span class="sc">!!</span><span class="fu">sym</span>(taxa)) <span class="sc">%&gt;%</span></span>
+<span id="cb9-36"><a href="index.html#cb9-36" tabindex="-1"></a>              <span class="fu">summarise</span>(<span class="at">total_abundance =</span> <span class="fu">sum</span>(abundance, <span class="at">na.rm =</span> <span class="cn">TRUE</span>), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb9-37"><a href="index.html#cb9-37" tabindex="-1"></a>              <span class="fu">arrange</span>(<span class="fu">desc</span>(total_abundance)) <span class="sc">%&gt;%</span></span>
+<span id="cb9-38"><a href="index.html#cb9-38" tabindex="-1"></a>              <span class="fu">pull</span>(<span class="sc">!!</span><span class="fu">sym</span>(taxa))</span>
+<span id="cb9-39"><a href="index.html#cb9-39" tabindex="-1"></a>          ) <span class="co"># Extract ordered levels</span></span>
+<span id="cb9-40"><a href="index.html#cb9-40" tabindex="-1"></a>        )</span>
+<span id="cb9-41"><a href="index.html#cb9-41" tabindex="-1"></a>    }</span>
+<span id="cb9-42"><a href="index.html#cb9-42" tabindex="-1"></a>  }</span>
+<span id="cb9-43"><a href="index.html#cb9-43" tabindex="-1"></a>  <span class="fu">return</span>(pivot_dataframe)</span>
+<span id="cb9-44"><a href="index.html#cb9-44" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="spatial_cryosections" class="section level3 hasAnchor" number="1.3.6">
+<h3><span class="header-section-number">1.3.6</span> spatial_cryosections<a href="index.html#spatial_cryosections" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb10"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb10-1"><a href="index.html#cb10-1" tabindex="-1"></a>spatial_cryosections <span class="ot">&lt;-</span> <span class="cf">function</span>(cryosection_list, metadata_df, comm_clr) {</span>
+<span id="cb10-2"><a href="index.html#cb10-2" tabindex="-1"></a>  cryosection_dfs <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb10-3"><a href="index.html#cb10-3" tabindex="-1"></a>  mantel_results <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb10-4"><a href="index.html#cb10-4" tabindex="-1"></a>  mantelcor_results <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb10-5"><a href="index.html#cb10-5" tabindex="-1"></a>  decay_dfs <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb10-6"><a href="index.html#cb10-6" tabindex="-1"></a>  distance_decay_plots <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb10-7"><a href="index.html#cb10-7" tabindex="-1"></a>  structure_results <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb10-8"><a href="index.html#cb10-8" tabindex="-1"></a></span>
+<span id="cb10-9"><a href="index.html#cb10-9" tabindex="-1"></a>  <span class="cf">for</span> (cryosection <span class="cf">in</span> cryosection_list) {</span>
+<span id="cb10-10"><a href="index.html#cb10-10" tabindex="-1"></a>    <span class="co"># Filter metadata for this section</span></span>
+<span id="cb10-11"><a href="index.html#cb10-11" tabindex="-1"></a>    metadata_data <span class="ot">&lt;-</span> metadata_df <span class="sc">%&gt;%</span></span>
+<span id="cb10-12"><a href="index.html#cb10-12" tabindex="-1"></a>      <span class="fu">filter</span>(cryosection <span class="sc">==</span> <span class="sc">!!</span>cryosection, <span class="sc">!</span><span class="fu">is.na</span>(.data<span class="sc">$</span>Xcoord), <span class="sc">!</span><span class="fu">is.na</span>(.data<span class="sc">$</span>Ycoord))</span>
+<span id="cb10-13"><a href="index.html#cb10-13" tabindex="-1"></a></span>
+<span id="cb10-14"><a href="index.html#cb10-14" tabindex="-1"></a>    <span class="co"># Filter community data</span></span>
+<span id="cb10-15"><a href="index.html#cb10-15" tabindex="-1"></a>    comm_data <span class="ot">&lt;-</span> comm_clr <span class="sc">%&gt;%</span></span>
+<span id="cb10-16"><a href="index.html#cb10-16" tabindex="-1"></a>      <span class="fu">data.frame</span>() <span class="sc">%&gt;%</span></span>
+<span id="cb10-17"><a href="index.html#cb10-17" tabindex="-1"></a>      <span class="fu">rownames_to_column</span>(<span class="at">var =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb10-18"><a href="index.html#cb10-18" tabindex="-1"></a>      <span class="fu">filter</span>(microsample <span class="sc">%in%</span> metadata_data<span class="sc">$</span>microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb10-19"><a href="index.html#cb10-19" tabindex="-1"></a>      <span class="fu">column_to_rownames</span>(<span class="at">var =</span> <span class="st">&quot;microsample&quot;</span>)</span>
+<span id="cb10-20"><a href="index.html#cb10-20" tabindex="-1"></a></span>
+<span id="cb10-21"><a href="index.html#cb10-21" tabindex="-1"></a>    cryosection_dfs[[cryosection]] <span class="ot">&lt;-</span> <span class="fu">list</span>(</span>
+<span id="cb10-22"><a href="index.html#cb10-22" tabindex="-1"></a>      <span class="at">comm_clr =</span> comm_data,</span>
+<span id="cb10-23"><a href="index.html#cb10-23" tabindex="-1"></a>      <span class="at">metadata =</span> metadata_data</span>
+<span id="cb10-24"><a href="index.html#cb10-24" tabindex="-1"></a>    )</span>
+<span id="cb10-25"><a href="index.html#cb10-25" tabindex="-1"></a></span>
+<span id="cb10-26"><a href="index.html#cb10-26" tabindex="-1"></a>    <span class="co"># Mantel correlogram</span></span>
+<span id="cb10-27"><a href="index.html#cb10-27" tabindex="-1"></a>    mantel <span class="ot">&lt;-</span> vegan<span class="sc">::</span><span class="fu">mantel</span>(</span>
+<span id="cb10-28"><a href="index.html#cb10-28" tabindex="-1"></a>      <span class="fu">dist</span>(comm_data),</span>
+<span id="cb10-29"><a href="index.html#cb10-29" tabindex="-1"></a>      <span class="fu">dist</span>(metadata_data[, <span class="fu">c</span>(<span class="st">&quot;Xcoord&quot;</span>, <span class="st">&quot;Ycoord&quot;</span>)]),</span>
+<span id="cb10-30"><a href="index.html#cb10-30" tabindex="-1"></a>      <span class="at">permutations =</span> <span class="dv">999</span></span>
+<span id="cb10-31"><a href="index.html#cb10-31" tabindex="-1"></a>    )</span>
+<span id="cb10-32"><a href="index.html#cb10-32" tabindex="-1"></a>    mantel_results[[cryosection]] <span class="ot">&lt;-</span> mantel</span>
+<span id="cb10-33"><a href="index.html#cb10-33" tabindex="-1"></a></span>
+<span id="cb10-34"><a href="index.html#cb10-34" tabindex="-1"></a>    <span class="co"># Mantel correlogram</span></span>
+<span id="cb10-35"><a href="index.html#cb10-35" tabindex="-1"></a>    correlog <span class="ot">&lt;-</span> vegan<span class="sc">::</span><span class="fu">mantel.correlog</span>(</span>
+<span id="cb10-36"><a href="index.html#cb10-36" tabindex="-1"></a>      <span class="at">D.eco =</span> <span class="fu">dist</span>(comm_data),</span>
+<span id="cb10-37"><a href="index.html#cb10-37" tabindex="-1"></a>      <span class="at">D.geo =</span> <span class="fu">dist</span>(metadata_data[, <span class="fu">c</span>(<span class="st">&quot;Xcoord&quot;</span>, <span class="st">&quot;Ycoord&quot;</span>)]),</span>
+<span id="cb10-38"><a href="index.html#cb10-38" tabindex="-1"></a>      <span class="at">nperm =</span> <span class="dv">999</span></span>
+<span id="cb10-39"><a href="index.html#cb10-39" tabindex="-1"></a>    )</span>
+<span id="cb10-40"><a href="index.html#cb10-40" tabindex="-1"></a>    mantelcor_results[[cryosection]] <span class="ot">&lt;-</span> correlog</span>
+<span id="cb10-41"><a href="index.html#cb10-41" tabindex="-1"></a></span>
+<span id="cb10-42"><a href="index.html#cb10-42" tabindex="-1"></a>    <span class="co"># Distance decay</span></span>
+<span id="cb10-43"><a href="index.html#cb10-43" tabindex="-1"></a>    toplot <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb10-44"><a href="index.html#cb10-44" tabindex="-1"></a>      <span class="at">spat_dist =</span> <span class="fu">as.numeric</span>(<span class="fu">dist</span>(metadata_data[, <span class="fu">c</span>(<span class="st">&quot;Xcoord&quot;</span>, <span class="st">&quot;Ycoord&quot;</span>)])),</span>
+<span id="cb10-45"><a href="index.html#cb10-45" tabindex="-1"></a>      <span class="at">comm_dist =</span> <span class="fu">as.numeric</span>(<span class="fu">dist</span>(comm_data))</span>
+<span id="cb10-46"><a href="index.html#cb10-46" tabindex="-1"></a>    )</span>
+<span id="cb10-47"><a href="index.html#cb10-47" tabindex="-1"></a>    decay_dfs[[cryosection]] <span class="ot">&lt;-</span> toplot</span>
+<span id="cb10-48"><a href="index.html#cb10-48" tabindex="-1"></a></span>
+<span id="cb10-49"><a href="index.html#cb10-49" tabindex="-1"></a>    <span class="co"># Plot</span></span>
+<span id="cb10-50"><a href="index.html#cb10-50" tabindex="-1"></a>    p <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(toplot, <span class="fu">aes</span>(<span class="at">x =</span> spat_dist, <span class="at">y =</span> comm_dist)) <span class="sc">+</span></span>
+<span id="cb10-51"><a href="index.html#cb10-51" tabindex="-1"></a>      <span class="co"># geom_point() +</span></span>
+<span id="cb10-52"><a href="index.html#cb10-52" tabindex="-1"></a>      <span class="fu">geom_smooth</span>() <span class="sc">+</span></span>
+<span id="cb10-53"><a href="index.html#cb10-53" tabindex="-1"></a>      <span class="fu">xlab</span>(<span class="st">&quot;Spatial distance (μm)&quot;</span>) <span class="sc">+</span></span>
+<span id="cb10-54"><a href="index.html#cb10-54" tabindex="-1"></a>      <span class="fu">ylab</span>(<span class="st">&quot;Aitchison </span><span class="sc">\n</span><span class="st">distance&quot;</span>) <span class="sc">+</span></span>
+<span id="cb10-55"><a href="index.html#cb10-55" tabindex="-1"></a>      custom_ggplot_theme <span class="sc">+</span></span>
+<span id="cb10-56"><a href="index.html#cb10-56" tabindex="-1"></a>      <span class="co"># ggtitle(paste(&quot;Distance Decay -&quot;, cryosection))</span></span>
+<span id="cb10-57"><a href="index.html#cb10-57" tabindex="-1"></a>      <span class="fu">ggtitle</span>(<span class="fu">paste</span>(cryosection))</span>
+<span id="cb10-58"><a href="index.html#cb10-58" tabindex="-1"></a>    distance_decay_plots[[cryosection]] <span class="ot">&lt;-</span> p</span>
+<span id="cb10-59"><a href="index.html#cb10-59" tabindex="-1"></a></span>
+<span id="cb10-60"><a href="index.html#cb10-60" tabindex="-1"></a>    <span class="co"># Print summary</span></span>
+<span id="cb10-61"><a href="index.html#cb10-61" tabindex="-1"></a>    <span class="co"># print(paste(&quot;Summary for&quot;, cryosection))</span></span>
+<span id="cb10-62"><a href="index.html#cb10-62" tabindex="-1"></a>    <span class="co"># print(summary(lm(comm_dist ~ spat_dist, data = toplot)))</span></span>
+<span id="cb10-63"><a href="index.html#cb10-63" tabindex="-1"></a></span>
+<span id="cb10-64"><a href="index.html#cb10-64" tabindex="-1"></a>    <span class="do">#### Complex spatial structures</span></span>
+<span id="cb10-65"><a href="index.html#cb10-65" tabindex="-1"></a>    <span class="co"># set.seed(111)</span></span>
+<span id="cb10-66"><a href="index.html#cb10-66" tabindex="-1"></a>    <span class="co"># spat_SWNs&lt;-listw.candidates(data.frame(metadata_data[,c(&quot;Xcoord&quot;,&quot;Ycoord&quot;)]),</span></span>
+<span id="cb10-67"><a href="index.html#cb10-67" tabindex="-1"></a>    <span class="co"># nb = c(&quot;gab&quot;),</span></span>
+<span id="cb10-68"><a href="index.html#cb10-68" tabindex="-1"></a>    <span class="co"># weights = c(&quot;fdown&quot;, &quot;fup&quot;),</span></span>
+<span id="cb10-69"><a href="index.html#cb10-69" tabindex="-1"></a>    <span class="co"># y_fdown = c(2,5), y_fup = c(0.1,0.5))</span></span>
+<span id="cb10-70"><a href="index.html#cb10-70" tabindex="-1"></a>    <span class="co"># W_sel &lt;- listw.select(comm_data, spat_SWNs, MEM.autocor = &quot;positive&quot;,</span></span>
+<span id="cb10-71"><a href="index.html#cb10-71" tabindex="-1"></a>    <span class="co"># p.adjust = T, method=&quot;FWD&quot;)</span></span>
+<span id="cb10-72"><a href="index.html#cb10-72" tabindex="-1"></a>    <span class="co"># structure_results[[cryosection]] &lt;- W_sel</span></span>
+<span id="cb10-73"><a href="index.html#cb10-73" tabindex="-1"></a>  }</span>
+<span id="cb10-74"><a href="index.html#cb10-74" tabindex="-1"></a>  <span class="fu">return</span>(<span class="fu">list</span>(</span>
+<span id="cb10-75"><a href="index.html#cb10-75" tabindex="-1"></a>    <span class="at">cryosection_dfs =</span> cryosection_dfs,</span>
+<span id="cb10-76"><a href="index.html#cb10-76" tabindex="-1"></a>    <span class="at">mantel_results =</span> mantel_results,</span>
+<span id="cb10-77"><a href="index.html#cb10-77" tabindex="-1"></a>    <span class="at">mantelcor_results =</span> mantelcor_results,</span>
+<span id="cb10-78"><a href="index.html#cb10-78" tabindex="-1"></a>    <span class="at">decay_dfs =</span> decay_dfs,</span>
+<span id="cb10-79"><a href="index.html#cb10-79" tabindex="-1"></a>    <span class="at">distance_decay_plots =</span> distance_decay_plots,</span>
+<span id="cb10-80"><a href="index.html#cb10-80" tabindex="-1"></a>    <span class="at">structure_results =</span> structure_results</span>
+<span id="cb10-81"><a href="index.html#cb10-81" tabindex="-1"></a>  ))</span>
+<span id="cb10-82"><a href="index.html#cb10-82" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="lawsonibacter_mantel_analysis" class="section level3 hasAnchor" number="1.3.7">
+<h3><span class="header-section-number">1.3.7</span> lawsonibacter_mantel_analysis<a href="index.html#lawsonibacter_mantel_analysis" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb11"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb11-1"><a href="index.html#cb11-1" tabindex="-1"></a>lawsonibacter_mantel_analysis <span class="ot">&lt;-</span> <span class="cf">function</span>(data, animal_id, circul_selection) {</span>
+<span id="cb11-2"><a href="index.html#cb11-2" tabindex="-1"></a></span>
+<span id="cb11-3"><a href="index.html#cb11-3" tabindex="-1"></a>  <span class="co"># 1. Filter and prepare presence-absence matrix</span></span>
+<span id="cb11-4"><a href="index.html#cb11-4" tabindex="-1"></a>  <span class="cf">if</span> (circul_selection <span class="sc">==</span> <span class="st">&quot;Y&quot;</span>) {</span>
+<span id="cb11-5"><a href="index.html#cb11-5" tabindex="-1"></a>    filtered_data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb11-6"><a href="index.html#cb11-6" tabindex="-1"></a>      <span class="fu">filter</span>(</span>
+<span id="cb11-7"><a href="index.html#cb11-7" tabindex="-1"></a>        cryosection <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;G121eI103A&quot;</span>, <span class="st">&quot;G103bI301A&quot;</span>),</span>
+<span id="cb11-8"><a href="index.html#cb11-8" tabindex="-1"></a>        <span class="sc">!</span>microsample <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;M300840&quot;</span>, <span class="st">&quot;M301068&quot;</span>, <span class="st">&quot;M301085&quot;</span>, <span class="st">&quot;M301084&quot;</span>),</span>
+<span id="cb11-9"><a href="index.html#cb11-9" tabindex="-1"></a>        circul <span class="sc">==</span> circul_selection,</span>
+<span id="cb11-10"><a href="index.html#cb11-10" tabindex="-1"></a>        animal <span class="sc">==</span> animal_id</span>
+<span id="cb11-11"><a href="index.html#cb11-11" tabindex="-1"></a>      )</span>
+<span id="cb11-12"><a href="index.html#cb11-12" tabindex="-1"></a>  } <span class="cf">else</span> {</span>
+<span id="cb11-13"><a href="index.html#cb11-13" tabindex="-1"></a>    <span class="fu">message</span>(<span class="st">&quot;circul_selection is not &#39;Y&#39;; skipping circul filter.&quot;</span>)</span>
+<span id="cb11-14"><a href="index.html#cb11-14" tabindex="-1"></a>    filtered_data <span class="ot">&lt;-</span> data <span class="sc">%&gt;%</span></span>
+<span id="cb11-15"><a href="index.html#cb11-15" tabindex="-1"></a>      <span class="fu">filter</span>(</span>
+<span id="cb11-16"><a href="index.html#cb11-16" tabindex="-1"></a>        cryosection <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;G121eI103A&quot;</span>, <span class="st">&quot;G103bI301A&quot;</span>),</span>
+<span id="cb11-17"><a href="index.html#cb11-17" tabindex="-1"></a>        <span class="sc">!</span>microsample <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;M300840&quot;</span>, <span class="st">&quot;M301068&quot;</span>, <span class="st">&quot;M301085&quot;</span>, <span class="st">&quot;M301084&quot;</span>),</span>
+<span id="cb11-18"><a href="index.html#cb11-18" tabindex="-1"></a>        animal <span class="sc">==</span> animal_id</span>
+<span id="cb11-19"><a href="index.html#cb11-19" tabindex="-1"></a>      )</span>
+<span id="cb11-20"><a href="index.html#cb11-20" tabindex="-1"></a>  }</span>
+<span id="cb11-21"><a href="index.html#cb11-21" tabindex="-1"></a></span>
+<span id="cb11-22"><a href="index.html#cb11-22" tabindex="-1"></a>  <span class="co"># Presence Absence</span></span>
+<span id="cb11-23"><a href="index.html#cb11-23" tabindex="-1"></a>  <span class="co"># 1. Build presence-absence matrix</span></span>
+<span id="cb11-24"><a href="index.html#cb11-24" tabindex="-1"></a>  lawsonibacter_pa <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span></span>
+<span id="cb11-25"><a href="index.html#cb11-25" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="at">presence =</span> <span class="fu">ifelse</span>(abundance <span class="sc">&gt;</span> <span class="dv">0</span>, <span class="dv">1</span>, <span class="dv">0</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb11-26"><a href="index.html#cb11-26" tabindex="-1"></a>    <span class="fu">select</span>(microsample, genome, presence) <span class="sc">%&gt;%</span></span>
+<span id="cb11-27"><a href="index.html#cb11-27" tabindex="-1"></a>    <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> genome, <span class="at">values_from =</span> presence, <span class="at">values_fill =</span> <span class="dv">0</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb11-28"><a href="index.html#cb11-28" tabindex="-1"></a>    <span class="fu">column_to_rownames</span>(<span class="st">&quot;microsample&quot;</span>)</span>
+<span id="cb11-29"><a href="index.html#cb11-29" tabindex="-1"></a>  <span class="co"># 2. Community distance</span></span>
+<span id="cb11-30"><a href="index.html#cb11-30" tabindex="-1"></a>  comm_dist_pa <span class="ot">&lt;-</span> vegan<span class="sc">::</span><span class="fu">vegdist</span>(lawsonibacter_pa, <span class="at">method =</span> <span class="st">&quot;jaccard&quot;</span>)</span>
+<span id="cb11-31"><a href="index.html#cb11-31" tabindex="-1"></a>  <span class="co"># 3. Spatial coordinates</span></span>
+<span id="cb11-32"><a href="index.html#cb11-32" tabindex="-1"></a>  coords_pa <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span></span>
+<span id="cb11-33"><a href="index.html#cb11-33" tabindex="-1"></a>    <span class="fu">distinct</span>(microsample, Xcoord, Ycoord) <span class="sc">%&gt;%</span></span>
+<span id="cb11-34"><a href="index.html#cb11-34" tabindex="-1"></a>    <span class="fu">arrange</span>(microsample)</span>
+<span id="cb11-35"><a href="index.html#cb11-35" tabindex="-1"></a>  coords_pa <span class="ot">&lt;-</span> coords_pa[<span class="fu">match</span>(<span class="fu">rownames</span>(lawsonibacter_pa), coords_pa<span class="sc">$</span>microsample), ]</span>
+<span id="cb11-36"><a href="index.html#cb11-36" tabindex="-1"></a>  <span class="co"># 4. Spatial distance</span></span>
+<span id="cb11-37"><a href="index.html#cb11-37" tabindex="-1"></a>  spatial_dist_pa <span class="ot">&lt;-</span> <span class="fu">dist</span>(coords_pa[, <span class="fu">c</span>(<span class="st">&quot;Xcoord&quot;</span>, <span class="st">&quot;Ycoord&quot;</span>)])</span>
+<span id="cb11-38"><a href="index.html#cb11-38" tabindex="-1"></a>  <span class="co"># 5. Mantel test</span></span>
+<span id="cb11-39"><a href="index.html#cb11-39" tabindex="-1"></a>  mantel_result_pa <span class="ot">&lt;-</span> vegan<span class="sc">::</span><span class="fu">mantel</span>(comm_dist_pa, spatial_dist_pa, <span class="at">permutations =</span> <span class="dv">999</span>)</span>
+<span id="cb11-40"><a href="index.html#cb11-40" tabindex="-1"></a>  <span class="co"># 6. Mantel correlogram</span></span>
+<span id="cb11-41"><a href="index.html#cb11-41" tabindex="-1"></a>  mantelcor_result_pa <span class="ot">&lt;-</span> vegan<span class="sc">::</span><span class="fu">mantel.correlog</span>(</span>
+<span id="cb11-42"><a href="index.html#cb11-42" tabindex="-1"></a>    <span class="at">D.eco =</span> comm_dist_pa,</span>
+<span id="cb11-43"><a href="index.html#cb11-43" tabindex="-1"></a>    <span class="at">D.geo =</span> spatial_dist_pa,</span>
+<span id="cb11-44"><a href="index.html#cb11-44" tabindex="-1"></a>    <span class="at">nperm =</span> <span class="dv">999</span></span>
+<span id="cb11-45"><a href="index.html#cb11-45" tabindex="-1"></a>  )</span>
+<span id="cb11-46"><a href="index.html#cb11-46" tabindex="-1"></a>  </span>
+<span id="cb11-47"><a href="index.html#cb11-47" tabindex="-1"></a>  <span class="co"># CLR</span></span>
+<span id="cb11-48"><a href="index.html#cb11-48" tabindex="-1"></a>  <span class="co"># 1. Build count matrix and CLR transformation</span></span>
+<span id="cb11-49"><a href="index.html#cb11-49" tabindex="-1"></a>  lawsonibacter_clr <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span></span>
+<span id="cb11-50"><a href="index.html#cb11-50" tabindex="-1"></a>    <span class="fu">select</span>(microsample, genome, abundance) <span class="sc">%&gt;%</span></span>
+<span id="cb11-51"><a href="index.html#cb11-51" tabindex="-1"></a>    <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> genome, <span class="at">values_from =</span> abundance, <span class="at">values_fill =</span> <span class="dv">0</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb11-52"><a href="index.html#cb11-52" tabindex="-1"></a>    <span class="fu">column_to_rownames</span>(<span class="st">&quot;microsample&quot;</span>)</span>
+<span id="cb11-53"><a href="index.html#cb11-53" tabindex="-1"></a>  lawsonibacter_clr <span class="ot">&lt;-</span> <span class="fu">cmultRepl</span>(lawsonibacter_clr, <span class="at">method =</span> <span class="st">&quot;GBM&quot;</span>, <span class="at">output =</span> <span class="st">&quot;prop&quot;</span>, <span class="at">z.warning =</span> <span class="fl">0.95</span>)</span>
+<span id="cb11-54"><a href="index.html#cb11-54" tabindex="-1"></a>  clr_transform <span class="ot">&lt;-</span> <span class="cf">function</span>(x) {</span>
+<span id="cb11-55"><a href="index.html#cb11-55" tabindex="-1"></a>    <span class="fu">log</span>(x) <span class="sc">-</span> <span class="fu">mean</span>(<span class="fu">log</span>(x), <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb11-56"><a href="index.html#cb11-56" tabindex="-1"></a>    }</span>
+<span id="cb11-57"><a href="index.html#cb11-57" tabindex="-1"></a>  lawsonibacter_clr <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(<span class="fu">t</span>(<span class="fu">apply</span>(lawsonibacter_clr, <span class="dv">1</span>, clr_transform)))</span>
+<span id="cb11-58"><a href="index.html#cb11-58" tabindex="-1"></a>  <span class="co"># 2. Community distance</span></span>
+<span id="cb11-59"><a href="index.html#cb11-59" tabindex="-1"></a>  comm_dist_clr <span class="ot">&lt;-</span> vegan<span class="sc">::</span><span class="fu">vegdist</span>(lawsonibacter_clr, <span class="at">method =</span> <span class="st">&quot;euclidean&quot;</span>)</span>
+<span id="cb11-60"><a href="index.html#cb11-60" tabindex="-1"></a>  <span class="co"># 2. Spatial coordinates</span></span>
+<span id="cb11-61"><a href="index.html#cb11-61" tabindex="-1"></a>  coords_clr <span class="ot">&lt;-</span> filtered_data <span class="sc">%&gt;%</span></span>
+<span id="cb11-62"><a href="index.html#cb11-62" tabindex="-1"></a>    <span class="fu">distinct</span>(microsample, Xcoord, Ycoord) <span class="sc">%&gt;%</span></span>
+<span id="cb11-63"><a href="index.html#cb11-63" tabindex="-1"></a>    <span class="fu">arrange</span>(microsample) <span class="sc">%&gt;%</span> </span>
+<span id="cb11-64"><a href="index.html#cb11-64" tabindex="-1"></a>    <span class="fu">filter</span>(microsample <span class="sc">%in%</span> <span class="fu">c</span>(<span class="fu">rownames</span>(lawsonibacter_clr)))</span>
+<span id="cb11-65"><a href="index.html#cb11-65" tabindex="-1"></a>  coords_clr <span class="ot">&lt;-</span> coords_clr[<span class="fu">match</span>(<span class="fu">rownames</span>(lawsonibacter_clr), coords_clr<span class="sc">$</span>microsample), ]</span>
+<span id="cb11-66"><a href="index.html#cb11-66" tabindex="-1"></a>  <span class="co"># 4. Spatial distance</span></span>
+<span id="cb11-67"><a href="index.html#cb11-67" tabindex="-1"></a>  spatial_dist_clr <span class="ot">&lt;-</span> <span class="fu">dist</span>(coords_clr[, <span class="fu">c</span>(<span class="st">&quot;Xcoord&quot;</span>, <span class="st">&quot;Ycoord&quot;</span>)])</span>
+<span id="cb11-68"><a href="index.html#cb11-68" tabindex="-1"></a>  <span class="co"># 5. Mantel test</span></span>
+<span id="cb11-69"><a href="index.html#cb11-69" tabindex="-1"></a>  mantel_result_clr <span class="ot">&lt;-</span> vegan<span class="sc">::</span><span class="fu">mantel</span>(comm_dist_clr, spatial_dist_clr, <span class="at">permutations =</span> <span class="dv">999</span>)</span>
+<span id="cb11-70"><a href="index.html#cb11-70" tabindex="-1"></a>  <span class="co"># 6. Mantel correlogram</span></span>
+<span id="cb11-71"><a href="index.html#cb11-71" tabindex="-1"></a>  mantelcor_result_clr <span class="ot">&lt;-</span> vegan<span class="sc">::</span><span class="fu">mantel.correlog</span>(</span>
+<span id="cb11-72"><a href="index.html#cb11-72" tabindex="-1"></a>    <span class="at">D.eco =</span> comm_dist_clr,</span>
+<span id="cb11-73"><a href="index.html#cb11-73" tabindex="-1"></a>    <span class="at">D.geo =</span> spatial_dist_clr,</span>
+<span id="cb11-74"><a href="index.html#cb11-74" tabindex="-1"></a>    <span class="at">nperm =</span> <span class="dv">999</span></span>
+<span id="cb11-75"><a href="index.html#cb11-75" tabindex="-1"></a>    )</span>
+<span id="cb11-76"><a href="index.html#cb11-76" tabindex="-1"></a>  </span>
+<span id="cb11-77"><a href="index.html#cb11-77" tabindex="-1"></a>  distance_clr_df <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb11-78"><a href="index.html#cb11-78" tabindex="-1"></a>      <span class="at">spat_dist =</span> <span class="fu">as.numeric</span>(spatial_dist_clr),</span>
+<span id="cb11-79"><a href="index.html#cb11-79" tabindex="-1"></a>      <span class="at">comm_dist =</span> <span class="fu">as.numeric</span>(comm_dist_clr)</span>
+<span id="cb11-80"><a href="index.html#cb11-80" tabindex="-1"></a>    )</span>
+<span id="cb11-81"><a href="index.html#cb11-81" tabindex="-1"></a>  </span>
+<span id="cb11-82"><a href="index.html#cb11-82" tabindex="-1"></a>  clr_lm <span class="ot">&lt;-</span> <span class="fu">aovperm</span>(<span class="fu">lmperm</span>(comm_dist <span class="sc">~</span> spat_dist, <span class="at">data =</span> distance_clr_df, <span class="at">np=</span><span class="dv">10000</span>))</span>
+<span id="cb11-83"><a href="index.html#cb11-83" tabindex="-1"></a>  </span>
+<span id="cb11-84"><a href="index.html#cb11-84" tabindex="-1"></a>                    <span class="fu">return</span>(<span class="fu">list</span>(</span>
+<span id="cb11-85"><a href="index.html#cb11-85" tabindex="-1"></a>    <span class="at">animal =</span> animal_id,</span>
+<span id="cb11-86"><a href="index.html#cb11-86" tabindex="-1"></a>    <span class="at">mantel_pa =</span> mantel_result_pa,</span>
+<span id="cb11-87"><a href="index.html#cb11-87" tabindex="-1"></a>    <span class="at">correlogram_pa =</span> mantelcor_result_pa,</span>
+<span id="cb11-88"><a href="index.html#cb11-88" tabindex="-1"></a>    <span class="at">mantel_clr =</span> mantel_result_clr,</span>
+<span id="cb11-89"><a href="index.html#cb11-89" tabindex="-1"></a>    <span class="at">correlogram_clr =</span> mantelcor_result_clr,</span>
+<span id="cb11-90"><a href="index.html#cb11-90" tabindex="-1"></a>    <span class="at">clr_lm =</span> clr_lm</span>
+<span id="cb11-91"><a href="index.html#cb11-91" tabindex="-1"></a>  ))</span>
+<span id="cb11-92"><a href="index.html#cb11-92" tabindex="-1"></a>}</span></code></pre></div>
+
+</div>
+</div>
+</div>
+<div class="footnotes">
+<hr />
+<ol start="1">
+<li id="fn1"><p>University of Copenhagen, <a href="mailto:carlotta.pietroni@sund.ku.dk" class="email">carlotta.pietroni@sund.ku.dk</a><a href="#fnref1" class="footnote-back">↩︎</a></p></li>
+<li id="fn2"><p>University of Copenhagen, <a href="mailto:antton.alberdi@sund.ku.dk" class="email">antton.alberdi@sund.ku.dk</a><a href="#fnref2" class="footnote-back">↩︎</a></p></li>
+<li id="fn3"><p>University of Copenhagen, <a href="mailto:amalia.bogri@sund.ku.dk" class="email">amalia.bogri@sund.ku.dk</a><a href="#fnref3" class="footnote-back">↩︎</a></p></li>
+</ol>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+
+<a href="loading-and-tidying-data.html" class="navigation navigation-next navigation-unique" aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+  "sharing": {
+    "github": false,
+    "facebook": true,
+    "twitter": true,
+    "linkedin": false,
+    "weibo": false,
+    "instapaper": false,
+    "vk": false,
+    "whatsapp": false,
+    "all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+  },
+  "fontsettings": {
+    "theme": "white",
+    "family": "sans",
+    "size": 2
+  },
+  "edit": {
+    "link": "https://github.com/USERNAME/REPO/edit/BRANCH/index.Rmd",
+    "text": "Edit"
+  },
+  "history": {
+    "link": null,
+    "text": null
+  },
+  "view": {
+    "link": null,
+    "text": null
+  },
+  "download": ["_main.pdf", "_main.epub"],
+  "search": {
+    "engine": "fuse",
+    "options": null
+  },
+  "toc": {
+    "collapse": "subsection"
+  }
+});
+});
+</script>
+
+</body>
+
+</html>

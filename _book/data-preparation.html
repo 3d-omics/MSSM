@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Chapter 2 Data Preparation | 3D’omics | Micro-scale spatial metagenomics (MSSM) manuscript</title>
+  <meta name="description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  <meta name="generator" content="bookdown 0.43.2 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Chapter 2 Data Preparation | 3D’omics | Micro-scale spatial metagenomics (MSSM) manuscript" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  <meta name="github-repo" content="3d-omics/XXX" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 2 Data Preparation | 3D’omics | Micro-scale spatial metagenomics (MSSM) manuscript" />
+  
+  <meta name="twitter:description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  
+
+<meta name="author" content="Carlotta Pietroni" />
+<meta name="author" content="Antton Alberdi" />
+<meta name="author" content="Amalia Bogri" />
+
+
+<meta name="date" content="2025-07-10" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="index.html"/>
+
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">A Minimal Book Example</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#prepare-the-r-environment"><i class="fa fa-check"></i><b>1.1</b> Prepare the R environment</a>
+<ul>
+<li class="chapter" data-level="1.1.1" data-path="index.html"><a href="index.html#environment"><i class="fa fa-check"></i><b>1.1.1</b> Environment</a></li>
+<li class="chapter" data-level="1.1.2" data-path="index.html"><a href="index.html#libraries"><i class="fa fa-check"></i><b>1.1.2</b> Libraries</a></li>
+<li class="chapter" data-level="1.1.3" data-path="index.html"><a href="index.html#notes"><i class="fa fa-check"></i><b>1.1.3</b> Notes:</a></li>
+</ul></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#define-plotting-settings"><i class="fa fa-check"></i><b>1.2</b> Define Plotting Settings</a>
+<ul>
+<li class="chapter" data-level="1.2.1" data-path="index.html"><a href="index.html#color-schemes"><i class="fa fa-check"></i><b>1.2.1</b> Color Schemes</a></li>
+<li class="chapter" data-level="1.2.2" data-path="index.html"><a href="index.html#plotting-theme"><i class="fa fa-check"></i><b>1.2.2</b> Plotting Theme</a></li>
+</ul></li>
+<li class="chapter" data-level="1.3" data-path="index.html"><a href="index.html#load-functions"><i class="fa fa-check"></i><b>1.3</b> Load Functions</a>
+<ul>
+<li class="chapter" data-level="1.3.1" data-path="index.html"><a href="index.html#parse_fastp_function"><i class="fa fa-check"></i><b>1.3.1</b> parse_fastp_function</a></li>
+<li class="chapter" data-level="1.3.2" data-path="index.html"><a href="index.html#calculate_alpha_diversity"><i class="fa fa-check"></i><b>1.3.2</b> calculate_alpha_diversity</a></li>
+<li class="chapter" data-level="1.3.3" data-path="index.html"><a href="index.html#amalia-perform_pca"><i class="fa fa-check"></i><b>1.3.3</b> Amalia: perform_pca</a></li>
+<li class="chapter" data-level="1.3.4" data-path="index.html"><a href="index.html#fit_and_analyze_model"><i class="fa fa-check"></i><b>1.3.4</b> fit_and_analyze_model</a></li>
+<li class="chapter" data-level="1.3.5" data-path="index.html"><a href="index.html#pivot_phylo"><i class="fa fa-check"></i><b>1.3.5</b> pivot_phylo</a></li>
+<li class="chapter" data-level="1.3.6" data-path="index.html"><a href="index.html#spatial_cryosections"><i class="fa fa-check"></i><b>1.3.6</b> spatial_cryosections</a></li>
+<li class="chapter" data-level="1.3.7" data-path="index.html"><a href="index.html#lawsonibacter_mantel_analysis"><i class="fa fa-check"></i><b>1.3.7</b> lawsonibacter_mantel_analysis</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="data-preparation.html"><a href="data-preparation.html"><i class="fa fa-check"></i><b>2</b> Data Preparation</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="data-preparation.html"><a href="data-preparation.html#micro-scale-spatial-metagenomics-mssm"><i class="fa fa-check"></i><b>2.1</b> Micro-scale Spatial Metagenomics (MSSM)</a>
+<ul>
+<li class="chapter" data-level="2.1.1" data-path="data-preparation.html"><a href="data-preparation.html#import-sample-metadata"><i class="fa fa-check"></i><b>2.1.1</b> Import Sample metadata</a></li>
+</ul></li>
+</ul></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">3D’omics | Micro-scale spatial metagenomics (MSSM) manuscript</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="data-preparation" class="section level1 hasAnchor" number="2">
+<h1><span class="header-section-number">Chapter 2</span> Data Preparation<a href="data-preparation.html#data-preparation" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<div id="micro-scale-spatial-metagenomics-mssm" class="section level2 hasAnchor" number="2.1">
+<h2><span class="header-section-number">2.1</span> Micro-scale Spatial Metagenomics (MSSM)<a href="data-preparation.html#micro-scale-spatial-metagenomics-mssm" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="import-sample-metadata" class="section level3 hasAnchor" number="2.1.1">
+<h3><span class="header-section-number">2.1.1</span> Import Sample metadata<a href="data-preparation.html#import-sample-metadata" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb12-1"><a href="data-preparation.html#cb12-1" tabindex="-1"></a><span class="co">#mssm_sample_metadata &lt;- airtable(&quot;4-MSE-Info&quot;, &quot;appKakM1bnKSekwuW&quot;) %&gt;% # get base ID from Airtable browser URL</span></span>
+<span id="cb12-2"><a href="data-preparation.html#cb12-2" tabindex="-1"></a><span class="co">#  read_airtable(., fields = c(</span></span>
+<span id="cb12-3"><a href="data-preparation.html#cb12-3" tabindex="-1"></a><span class="co">#    &quot;ID&quot;, &quot;LabBatch_text&quot;, &quot;IntestinalSection&quot;, &quot;SampleType&quot;,</span></span>
+<span id="cb12-4"><a href="data-preparation.html#cb12-4" tabindex="-1"></a><span class="co">#    &quot;Xcoord&quot;, &quot;Ycoord&quot;, &quot;SizeApprox&quot;, &quot;cryosection_text&quot;, &quot;buffer_text&quot;, &quot;Collection_method_text&quot;,</span></span>
+<span id="cb12-5"><a href="data-preparation.html#cb12-5" tabindex="-1"></a><span class="co">#    &quot;Collection_Success&quot;, &quot;Collection_attempts&quot;, &quot;UsedCycles&quot;, &quot;animal_temp&quot;, &quot;Protocol_text&quot;,</span></span>
+<span id="cb12-6"><a href="data-preparation.html#cb12-6" tabindex="-1"></a><span class="co">#    &quot;adapter_type_text&quot;</span></span>
+<span id="cb12-7"><a href="data-preparation.html#cb12-7" tabindex="-1"></a><span class="co">#  ), id_to_col = TRUE) %&gt;%</span></span>
+<span id="cb12-8"><a href="data-preparation.html#cb12-8" tabindex="-1"></a><span class="co">#  filter(</span></span>
+<span id="cb12-9"><a href="data-preparation.html#cb12-9" tabindex="-1"></a><span class="co">#    LabBatch_text %in% c(</span></span>
+<span id="cb12-10"><a href="data-preparation.html#cb12-10" tabindex="-1"></a><span class="co">#      # &quot;MSEB0001&quot;, &quot;MSEB0002&quot;, &quot;MSEB0003&quot;, &quot;MSEB0004&quot;, &quot;MSEB0005&quot;,</span></span>
+<span id="cb12-11"><a href="data-preparation.html#cb12-11" tabindex="-1"></a><span class="co">#      &quot;MSEB0006&quot;, &quot;MSEB0009&quot;, &quot;MSEB0010&quot;, &quot;MSEB0011&quot;, &quot;MSEB0012&quot;,</span></span>
+<span id="cb12-12"><a href="data-preparation.html#cb12-12" tabindex="-1"></a><span class="co">#      &quot;MSEB0014&quot;, &quot;MSEB0015&quot;</span></span>
+<span id="cb12-13"><a href="data-preparation.html#cb12-13" tabindex="-1"></a><span class="co">#    ),</span></span>
+<span id="cb12-14"><a href="data-preparation.html#cb12-14" tabindex="-1"></a><span class="co">#    !SampleType %in% c(&quot;ControlHuman&quot;)</span></span>
+<span id="cb12-15"><a href="data-preparation.html#cb12-15" tabindex="-1"></a><span class="co">#  ) %&gt;%</span></span>
+<span id="cb12-16"><a href="data-preparation.html#cb12-16" tabindex="-1"></a><span class="co">#  rename(</span></span>
+<span id="cb12-17"><a href="data-preparation.html#cb12-17" tabindex="-1"></a><span class="co">#    batch = LabBatch_text, microsample = ID, section = IntestinalSection, </span></span>
+<span id="cb12-18"><a href="data-preparation.html#cb12-18" tabindex="-1"></a><span class="co">#    type = SampleType, cryosection = cryosection_text, </span></span>
+<span id="cb12-19"><a href="data-preparation.html#cb12-19" tabindex="-1"></a><span class="co">#    buffer = buffer_text, collection_method = Collection_method_text,</span></span>
+<span id="cb12-20"><a href="data-preparation.html#cb12-20" tabindex="-1"></a><span class="co">#    collection = Collection_Success, collection_attempts = Collection_attempts,</span></span>
+<span id="cb12-21"><a href="data-preparation.html#cb12-21" tabindex="-1"></a><span class="co">#    cycles = UsedCycles, animal = animal_temp, size = SizeApprox, </span></span>
+<span id="cb12-22"><a href="data-preparation.html#cb12-22" tabindex="-1"></a><span class="co">#    protocol = Protocol_text, adapter = adapter_type_text</span></span>
+<span id="cb12-23"><a href="data-preparation.html#cb12-23" tabindex="-1"></a><span class="co">#  ) %&gt;%</span></span>
+<span id="cb12-24"><a href="data-preparation.html#cb12-24" tabindex="-1"></a><span class="co">#  select(</span></span>
+<span id="cb12-25"><a href="data-preparation.html#cb12-25" tabindex="-1"></a><span class="co">#    microsample, section, type, batch, cryosection, buffer, Xcoord, Ycoord, </span></span>
+<span id="cb12-26"><a href="data-preparation.html#cb12-26" tabindex="-1"></a><span class="co">#    size, collection_method, collection, collection_attempts, cycles, animal, </span></span>
+<span id="cb12-27"><a href="data-preparation.html#cb12-27" tabindex="-1"></a><span class="co">#    protocol, adapter</span></span>
+<span id="cb12-28"><a href="data-preparation.html#cb12-28" tabindex="-1"></a><span class="co">#  ) %&gt;%</span></span>
+<span id="cb12-29"><a href="data-preparation.html#cb12-29" tabindex="-1"></a><span class="co">#  mutate(</span></span>
+<span id="cb12-30"><a href="data-preparation.html#cb12-30" tabindex="-1"></a><span class="co">#    type_binomial = ifelse(type == &quot;Positive&quot;, &quot;positive&quot;, &quot;negative&quot;),</span></span>
+<span id="cb12-31"><a href="data-preparation.html#cb12-31" tabindex="-1"></a><span class="co">#    buffer = case_when(</span></span>
+<span id="cb12-32"><a href="data-preparation.html#cb12-32" tabindex="-1"></a><span class="co">#      buffer == &quot;B01&quot; ~ &quot;L01&quot;,</span></span>
+<span id="cb12-33"><a href="data-preparation.html#cb12-33" tabindex="-1"></a><span class="co">#      buffer == &quot;B02&quot; ~ &quot;L02&quot;,</span></span>
+<span id="cb12-34"><a href="data-preparation.html#cb12-34" tabindex="-1"></a><span class="co">#      buffer == &quot;B03&quot; ~ &quot;L03&quot;,</span></span>
+<span id="cb12-35"><a href="data-preparation.html#cb12-35" tabindex="-1"></a><span class="co">#      buffer == &quot;B04&quot; ~ &quot;L04&quot;,</span></span>
+<span id="cb12-36"><a href="data-preparation.html#cb12-36" tabindex="-1"></a><span class="co">#      buffer == &quot;B09&quot; ~ &quot;L05&quot;,</span></span>
+<span id="cb12-37"><a href="data-preparation.html#cb12-37" tabindex="-1"></a><span class="co">#      buffer == &quot;B11&quot; ~ &quot;L06&quot;,</span></span>
+<span id="cb12-38"><a href="data-preparation.html#cb12-38" tabindex="-1"></a><span class="co">#      buffer == &quot;B12&quot; ~ &quot;L07&quot;,</span></span>
+<span id="cb12-39"><a href="data-preparation.html#cb12-39" tabindex="-1"></a><span class="co">#      buffer == &quot;B13&quot; ~ &quot;L08&quot;,</span></span>
+<span id="cb12-40"><a href="data-preparation.html#cb12-40" tabindex="-1"></a><span class="co">#      TRUE ~ buffer</span></span>
+<span id="cb12-41"><a href="data-preparation.html#cb12-41" tabindex="-1"></a><span class="co">#    )</span></span>
+<span id="cb12-42"><a href="data-preparation.html#cb12-42" tabindex="-1"></a><span class="co">#  ) %&gt;%</span></span>
+<span id="cb12-43"><a href="data-preparation.html#cb12-43" tabindex="-1"></a><span class="co">#  unnest(c(section, Xcoord, Ycoord, size, collection, cycles)) %&gt;%</span></span>
+<span id="cb12-44"><a href="data-preparation.html#cb12-44" tabindex="-1"></a><span class="co">#  arrange(microsample)</span></span>
+<span id="cb12-45"><a href="data-preparation.html#cb12-45" tabindex="-1"></a><span class="co">#write.table(mssm_sample_metadata, &quot;data/mssm_sample_metadata.tsv&quot;)</span></span>
+<span id="cb12-46"><a href="data-preparation.html#cb12-46" tabindex="-1"></a>mssm_sample_metadata <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="st">&quot;data/mssm_sample_metadata.tsv&quot;</span>)</span></code></pre></div>
+
+</div>
+</div>
+</div>
+
+
+
+
+
+
+
+
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="index.html" class="navigation navigation-prev navigation-unique" aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+  "sharing": {
+    "github": false,
+    "facebook": true,
+    "twitter": true,
+    "linkedin": false,
+    "weibo": false,
+    "instapaper": false,
+    "vk": false,
+    "whatsapp": false,
+    "all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+  },
+  "fontsettings": {
+    "theme": "white",
+    "family": "sans",
+    "size": 2
+  },
+  "edit": {
+    "link": "https://github.com/USERNAME/REPO/edit/BRANCH/01-data_preparation.Rmd",
+    "text": "Edit"
+  },
+  "history": {
+    "link": null,
+    "text": null
+  },
+  "view": {
+    "link": null,
+    "text": null
+  },
+  "download": ["_main.pdf", "_main.epub"],
+  "search": {
+    "engine": "fuse",
+    "options": null
+  },
+  "toc": {
+    "collapse": "subsection"
+  }
+});
+});
+</script>
+
+</body>
+
+</html>

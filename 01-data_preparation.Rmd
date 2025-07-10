@@ -1,0 +1,383 @@
+# Loading and Tidying Data
+**Note:** This step requires access to the raw data files located at xxxx. If you prefer to skip this step, you can proceed to the next section, making sure to load the R object that contains the necessary files for the subsequent analysis in location.
+
+## Import Sample metadata
+```{r sample_metadata_mssm, message=FALSE, eval=FALSE}
+mssm_sample_metadata <- airtable("4-MSE-Info", "appKakM1bnKSekwuW") %>%  get base ID from Airtable browser URL
+  read_airtable(., fields = c(
+    "ID", "LabBatch_text", "IntestinalSection", "SampleType",
+    "Xcoord", "Ycoord", "SizeApprox", "cryosection_text", "buffer_text", "Collection_method_text",
+    "Collection_Success", "Collection_attempts", "UsedCycles", "animal_temp", "Protocol_text",
+    "adapter_type_text"
+  ), id_to_col = TRUE) %>%
+  filter(
+    LabBatch_text %in% c(
+       "MSEB0001", "MSEB0002", "MSEB0003", "MSEB0004", "MSEB0005",
+      "MSEB0006", "MSEB0009", "MSEB0010", "MSEB0011", "MSEB0012",
+      "MSEB0014", "MSEB0015"
+    ),
+    !SampleType %in% c("ControlHuman")
+  ) %>%
+  rename(
+    batch = LabBatch_text, microsample = ID, section = IntestinalSection, 
+    type = SampleType, cryosection = cryosection_text, 
+    buffer = buffer_text, collection_method = Collection_method_text,
+    collection = Collection_Success, collection_attempts = Collection_attempts,
+    cycles = UsedCycles, animal = animal_temp, size = SizeApprox, 
+    protocol = Protocol_text, adapter = adapter_type_text
+  ) %>%
+  select(
+    microsample, section, type, batch, cryosection, buffer, Xcoord, Ycoord, 
+    size, collection_method, collection, collection_attempts, cycles, animal, 
+    protocol, adapter
+  ) %>%
+  mutate(
+    type_binomial = ifelse(type == "Positive", "positive", "negative"),
+    buffer = case_when(
+      buffer == "B01" ~ "L01",
+      buffer == "B02" ~ "L02",
+      buffer == "B03" ~ "L03",
+      buffer == "B04" ~ "L04",
+      buffer == "B09" ~ "L05",
+      buffer == "B11" ~ "L06",
+      buffer == "B12" ~ "L07",
+      buffer == "B13" ~ "L08",
+      TRUE ~ buffer
+    )
+  ) %>%
+  unnest(c(section, Xcoord, Ycoord, size, collection, cycles)) %>%
+  arrange(microsample)
+#write.table(mssm_sample_metadata, "data/mssm_sample_metadata.tsv")
+#mssm_sample_metadata <- read.table("data/mssm_sample_metadata.tsv")
+```
+
+## Sequencing Data Quality 
+
+### Read Quality: Pre- vs Post-Filtering (fastp)
+**Note:** The parse_fastp() function in index needs to be loaded.
+```{r read_quality, warning=FALSE, message=FALSE, comments=""}
+mssm_json_data <- fromJSON("data/multiqc_data.json") # Download file from ERDA
+mssm_fastp <- parse_fastp(mssm_json_data) %>%
+  rename_with(~ gsub("^(summary|filtering_result|adapter_cutting|polyx_trimming)\\.", "", .)) %>%
+  select(
+    sample_id,
+    before_filtering.total_reads,
+    after_filtering.total_reads,
+    before_filtering.total_bases,
+    after_filtering.total_bases,
+    before_filtering.gc_content,
+    after_filtering.gc_content,
+    low_quality_reads,
+    adapter_trimmed_reads,
+    adapter_trimmed_bases,
+    duplication.rate
+  ) %>%
+  mutate(microsample = str_remove(sample_id, "\\.lib\\d+$")) %>%
+  filter(grepl("^M", microsample)) %>%
+  group_by(microsample) %>%
+  summarise(
+    across(contains("reads"), sum, .names = "total_{.col}"),
+    across(contains("bases"), sum, .names = "total_{.col}"),
+    across(ends_with("content"), mean, .names = "percent_{.col}"),
+    across(ends_with("rate"), mean, .names = "percent_{.col}")
+  )
+```
+
+
+### Contamination Assessment: Host, Human, and Environmental Reads
+```{r mapping_eukaryots_references, warning=FALSE, comments="", message=FALSE}
+mssm_euk_mapping <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_bowtie2_multiqc_report_data/multiqc_samtools_stats.txt") %>%
+  mutate(
+    reference = case_when(
+      grepl("GRCh38", Sample, ignore.case = TRUE) ~ "human",
+      grepl("GRCg7b", Sample, ignore.case = TRUE) ~ "chicken",
+      grepl("Sscrofa11.1", Sample, ignore.case = TRUE) ~ "pig",
+      TRUE ~ NA_character_
+    ),
+    microsample = str_extract(Sample, "M\\d+")
+  ) %>%
+  filter(
+    !is.na(reference), # Remove rows where reference is NA
+    grepl("^M", microsample)
+  ) %>%
+  select(Sample, microsample, reference, raw_total_sequences, reads_mapped, reads_unmapped) %>%
+  group_by(microsample, reference) %>%
+  summarise(
+    raw_total_sequences = sum(raw_total_sequences, na.rm = TRUE),
+    reads_mapped = sum(reads_mapped, na.rm = TRUE),
+    reads_unmapped = sum(reads_unmapped, na.rm = TRUE)
+  ) %>%
+  pivot_wider(names_from = reference, values_from = c(raw_total_sequences, reads_mapped, reads_unmapped))
+```
+
+### Genome-Centric Mapping Statistics: Macroscale MAG Catalogue
+```{r mapping_macro_catalogue, warning=FALSE, comments="", message=FALSE}
+# download.file("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify.zip", "data/quantify.zip", mode = "wb")
+mssm_mag_mapping <- read.table(unz("data/quantify.zip", "multiqc_samtools_stats.txt"), header = T, sep = "\t", quote = "\"") %>%
+  mutate(microsample = str_extract(Sample, "M\\d+")) %>%
+  filter(grepl("^M", microsample)) %>%
+  select(Sample, microsample, raw_total_sequences, reads_mapped, reads_unmapped) %>%
+  group_by(microsample) %>%
+  summarise(
+    raw_total_sequences_mag = sum(raw_total_sequences, na.rm = TRUE),
+    reads_mapped_mag = sum(reads_mapped, na.rm = TRUE),
+    reads_unmapped_mag = sum(reads_unmapped, na.rm = TRUE)
+  )
+```
+
+### Read-Centric Mapping Statistics: Kraken (genomes) and SingleM (single-copy marker genes)
+```{r mapping_singlem, warning=FALSE, comments="", message=FALSE}
+mssm_singlem <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess/singlem/microbial_fraction.tsv") %>%
+  mutate(microsample = str_extract(sample, "M\\d+")) %>%
+  filter(grepl("^M", microsample)) %>%
+  select(-c(warning, sample)) %>%
+  group_by(microsample) %>%
+  summarise(
+    read_fraction_singlem = (mean(read_fraction, na.rm = TRUE)) / 100 #,
+    # bacterial_archaeal_bases_singlem = sum(bacterial_archaeal_bases, na.rm = TRUE),
+    # average_bacterial_archaeal_genome_size_singlem = mean(average_bacterial_archaeal_genome_size, na.rm = TRUE)
+  )
+```
+
+```{r mapping_kraken, warning=FALSE, comments="", message=FALSE}
+mssm_kraken <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_kraken2_multiqc_report_data/multiqc_kraken.txt") %>%
+  mutate(microsample = str_extract(Sample, "M\\d+")) %>%
+  filter(grepl("^M", microsample)) %>%
+  select(Sample, microsample, D) %>%
+  separate(D, into = c("Eukaryota", "Bacteria", "Archaea", "Viruses"), sep = ", ", remove = TRUE) %>%
+  mutate(across(!all_of("microsample"), ~ parse_number(.))) %>%
+  group_by(microsample) %>%
+  summarise(
+    kr_Eukaryota = sum(Eukaryota, na.rm = TRUE),
+    kr_Bacteria = sum(Bacteria, na.rm = TRUE),
+    kr_Archaea = sum(Archaea, na.rm = TRUE),
+    kr_Viruses = sum(Viruses, na.rm = TRUE),
+  ) %>%
+  mutate(
+    total_kraken = kr_Eukaryota + kr_Bacteria + kr_Archaea + kr_Viruses,
+    bacteria_pct_kraken = kr_Bacteria / total_kraken,
+    eukaryota_pct_kraken = kr_Eukaryota / total_kraken
+  )
+```
+
+### Redundancy & Coverage Estimation: Nonpareil
+```{r estimates_nonpareil, warning=FALSE, comments="", message=FALSE}
+mssm_nonpareil <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_nonpareil_multiqc_report_data/nonpareil-table.txt") %>%
+  mutate(microsample = str_extract(Sample, "M\\d+")) %>%
+  filter(grepl("^M", microsample)) %>%
+  select(microsample, Redundancy, Coverage, Diversity) %>%
+  group_by(microsample) %>%
+  summarise(
+    redundancy_nonpareil = (mean(Redundancy, na.rm = TRUE)) / 100,
+    coverage_nonpareil = (mean(Coverage, na.rm = TRUE)) / 100,
+    diversity_nonpareil = mean(Diversity, na.rm = TRUE)
+  )
+```
+
+### Combined Quality Statistics
+```{r data_quality_df, warning=FALSE, comments="", message=FALSE, eval=exists("mssm_sample_metadata")}
+ls()
+mssm_quality <- mssm_sample_metadata %>%
+  full_join(mssm_fastp, by = "microsample") %>%
+  full_join(mssm_euk_mapping, by = "microsample") %>%
+  full_join(mssm_mag_mapping, by = "microsample") %>%
+  full_join(mssm_singlem, by = "microsample") %>%
+  full_join(mssm_kraken, by = "microsample") %>%
+  full_join(mssm_nonpareil, by = "microsample") %>%
+  mutate(
+    lowquality_reads_pct = ((total_before_filtering.total_reads - total_after_filtering.total_reads) / total_before_filtering.total_reads),
+    adapter_contamination_pct = (total_adapter_trimmed_bases / total_before_filtering.total_bases),
+    host_pct = (reads_mapped_chicken / total_before_filtering.total_reads),
+    human_pct = (reads_mapped_human / total_before_filtering.total_reads),
+    pig_pct = (reads_mapped_pig / total_before_filtering.total_reads),
+    prokreads_pct = (raw_total_sequences_mag / total_before_filtering.total_reads),
+    mapmag_rawreads_pct = (reads_mapped_mag / total_before_filtering.total_reads),
+    mapmag_filteredreads_pct = (reads_mapped_mag / total_after_filtering.total_reads),
+    mapmag_prokreads_pct = (reads_mapped_mag / raw_total_sequences_mag)
+  ) %>%
+  filter(microsample %in% c(mssm_sample_metadata$microsample))
+```
+
+## Input Preparation For Metagenomic Analysis
+
+### Abundance Estimation Using Macro-scale MAGs Catalogue 95 ANI
+
+#### Import Genome Counts
+
+```{r mag_readcount_macroquant, message=FALSE, eval=FALSE, warning=FALSE, comments=""}
+macroquant_read_counts <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify/coverm/genome.count.REF0015-g_mg_hybrid-0.95.tsv.gz", show_col_types = FALSE) %>%
+  rename(genome = 1) %>%
+  pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
+  mutate(sample = substr(data, 1, 7)) %>%
+  group_by(genome, sample) %>%
+  summarise(counts = sum(counts), .groups = "drop") %>%
+  pivot_wider(names_from = "sample", values_from = "counts") 
+```
+
+```{r mag_coveredbases_macroquant, message=FALSE, eval=FALSE}
+macroquant_covered_bases <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify/coverm/genome.covered_bases.REF0015-g_mg_hybrid-0.95.tsv.gz", show_col_types = FALSE) %>%
+  rename(genome = 1) %>%
+  pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
+  mutate(sample = substr(data, 1, 7)) %>%
+  group_by(genome, sample) %>%
+  summarise(counts = sum(counts), .groups = "drop") %>%
+  pivot_wider(names_from = "sample", values_from = "counts")
+```
+
+#### Macro-scale MAGs Catalogue
+##### Taxonomy
+This is the raw taxonomy table generated by GTDBtk, which is simplified for downstream analyses.
+```{r mag_taxonomy_macro, message=FALSE, eval=FALSE}
+macromag_taxonomy <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/gtdbtk.summary.tsv.gz", show_col_types = FALSE) %>%
+  rename(genome = user_genome) %>%
+  mutate(genome = str_replace_all(genome, "\\.fa", "")) %>%
+  separate(classification, c("domain", "phylum", "class", "order", "family", "genus", "species"), sep = ";") %>%
+  select(genome, domain, phylum, class, order, family, genus, species) %>%
+  mutate(
+    domain = sub("^d__", "", domain), # Remove prefix
+    phylum = sub("^p__", "", phylum),
+    class = sub("^c__", "", class),
+    order = sub("^o__", "", order),
+    family = sub("^f__", "", family),
+    genus = sub("^g__", "", genus),
+    species = sub("^s__", "", species)
+  ) %>%
+  arrange(match(genome, macroquant_read_counts$genome)) %>%
+  filter(genome %in% macroquant_read_counts$genome) %>%
+  mutate(
+    species = if_else(
+      is.na(species) | species == "",
+      paste0("unclassified_", genus),
+      species
+    )
+  ) %>%
+  mutate(
+    species = if_else(
+      is.na(species) | species == "unclassified_",
+      paste0("unclassified_", family),
+      species
+    )
+  ) %>%
+  mutate(
+    genus = if_else(
+      is.na(genus) | genus == "",
+      paste0("unclassified_", family),
+      genus
+    )
+  )
+```
+
+##### Quality
+```{r mag_quality_macro, message=FALSE, eval=FALSE}
+macromag_quality <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/checkm2.quality_report.tsv.gz", show_col_types = FALSE) %>%
+  # rename first column
+  rename(genome = 1) %>%
+  # remove .fa from the end of each genome name
+  mutate(genome = str_replace_all(genome, "\\.fa", "")) %>%
+  # select relevant columns and rename
+  select(genome, Completeness, Contamination, Coding_Density, Genome_Size, Contig_N50) %>%
+  rename(
+    completeness = Completeness,
+    contamination = Contamination,
+    coding_density = Coding_Density,
+    length = Genome_Size,
+    N50_length = Contig_N50
+  ) %>%
+  # estimate genome circularity (N50 should be equal to genome length)
+  mutate(circularity = N50_length / length) %>%
+  mutate(circularity = ifelse(circularity >= 1, "1", "0")) %>%
+  # update completeness and contamination for genomes with circularity of 1
+  mutate(
+    completeness = ifelse(circularity == "1", 100, completeness),
+    contamination = ifelse(circularity == "1", 0, contamination)
+  ) %>%
+  # estimate ratio of: genome length / median bacterial genome length
+  mutate(length_ratio = length / median(length, na.rm = TRUE))
+
+macromag_genomemetadata <- macromag_taxonomy %>%
+  left_join(macromag_quality, by = join_by(genome == genome)) %>% # join quality
+  arrange(match(genome, macroquant_read_counts$genome)) %>%
+  filter(genome %in% macroquant_read_counts$genome)
+
+```
+
+##### Functional Annotation
+
+```{r mag_annotation_macro, message=FALSE, eval=FALSE}
+# macromag_annotations <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/dram.annotations.tsv.gz", show_col_types = FALSE) %>%
+macromag_annotations <- read_tsv("data/annotations.tsv", show_col_types = FALSE) %>%
+  rename(gene = 1, genome = 2) %>%
+  filter(genome %in% macroquant_read_counts$genome)
+macromag_gifts <- distill(macromag_annotations, GIFT_db, genomecol = 2, annotcol = c(9, 10, 19))
+```
+
+##### Phylogenetic Tree
+
+```{r mag_tree_macro, message=FALSE, warning=FALSE, eval=FALSE}
+macromag_tree <- read.tree("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/gtdbtk.backbone.bac120.classify.tree")
+macromag_tree$tip.label <- str_replace_all(macromag_tree$tip.label, "'", "") # remove single quotes in MAG names
+macromag_tree <- keep.tip(macromag_tree, tip = macroquant_read_counts$genome) # keep only MAG tips
+```
+
+#### Coverage Filtering & Genome Count Normalization
+
+##### Coverage filtering
+**Note:** Genomes that have less than 30% of their length covered by reads are turned into zeros to account for the random allocation of reads across genomes due to mapping heuristics. 
+```{r coverage_fitering_macroquant, eval=FALSE}
+macroquant_coverage <- macroquant_covered_bases %>% # calculate coverage values by dividing the number of covered bases by the length of each genome
+  mutate(across(where(is.numeric), ~ . / macromag_genomemetadata$length))
+
+macroquant_read_counts_filtered <- list()
+macroquant_summary_filtered <- list()
+# Define thresholds
+coverage_thresholds <- c(0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05)
+# Loop over thresholds
+for (threshold in coverage_thresholds) {
+  df <- macroquant_coverage %>%
+    mutate(across(where(is.numeric), ~ ifelse(. > threshold, 1, 0))) %>%
+    mutate(across(-1, ~ . * macroquant_read_counts[[cur_column()]]))
+  summary <- df %>%
+    summarise(across(where(is.numeric), \(x) sum(x, na.rm = TRUE))) %>%
+    pivot_longer(
+      cols = where(is.numeric), # columns to pivot (all numeric here)
+      names_to = "microsample", # new column for former column names
+      values_to = paste0("read_count_", threshold * 100) # new column for values
+    )
+  name <- paste0("filt_", threshold * 100)
+  macroquant_read_counts_filtered[[name]] <- df
+  macroquant_summary_filtered[[name]] <- summary
+}
+macroquant_merged_summary <- reduce(macroquant_summary_filtered, left_join, by = "microsample")
+
+min_coverage <- 0.3
+macroquant_read_counts_filt_30 <- macroquant_coverage %>%
+  mutate(across(where(is.numeric), ~ ifelse(. > min_coverage, 1, 0))) %>%
+  mutate(across(-1, ~ . * macroquant_read_counts[[cur_column()]]))
+
+all(macroquant_read_counts_filtered$filt_30 == macroquant_read_counts_filt_30)
+
+```
+
+##### Generate genome count table
+After filtering the low-coverage reads, read counts are transformed into genome counts using genome-length and read-length information.
+```{r genome_counts_macroquant, eval=FALSE}
+readlength <- 150 # change if sequencing read length is different
+macroquant_genome_counts_filt_30 <- macroquant_read_counts_filt_30 %>%
+  mutate(across(where(is.numeric), ~ . / (macromag_genomemetadata$length / readlength))) 
+macroquant_genome_counts  <- macroquant_read_counts %>%
+  mutate(across(where(is.numeric), ~ . / (macromag_genomemetadata$length / readlength))) 
+```
+
+#### Alpha Diversity
+**Note:** The calculate_alpha_diversity() function needs to be loaded.
+```{r alpha_diversities_macroquant, warning=TRUE, comments="", message=FALSE, eval=exists("macroquant_genome_counts_filt_30")}
+# Calculate alpha diversity for filtered genome counts data
+macroquant_metrics_filt_30 <- calculate_alpha_diversity(
+  input_data = macroquant_genome_counts_filt_30,
+  metadata_name = mssm_quality,
+  dataset_name = "filt_30",
+  tree_name = macromag_tree
+) %>% filter(!microsample %in% c("Undeter"))
+``` 
+
+
