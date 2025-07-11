@@ -2,7 +2,7 @@
 
 ## Load data
 ```{r load_data_main_manuscript, warning = FALSE, comments = "", message = FALSE}
-load("data/25_07_10_selected_data.Rdata") # load the data from 1-data_preparation
+load("data/25_07_11_selected_data.Rdata") # load the data from 1-data_preparation
 ```
 
 ## Microbial Genomic Reference Data
@@ -2530,9 +2530,9 @@ plot(rlqmix, env = pcaenv$tab, ax = 2, type = "Q", wh = "E")
 ```
 
 
-#### Subspecies Segregation and Spatial Structuring
+### Subspecies Segregation and Spatial Structuring
 
-##### Visual Distribution Lawsonibacter subspecies
+#### Visual Distribution Lawsonibacter subspecies
 ```{r plot_98ANI, warning = FALSE, comments = "", message = FALSE}
 macroquant_lawsonibacter <- macroquant_counts_filt_30_98 %>%
   filter(genome %in% c(macromag_genomemetadata_98 %>%
@@ -2608,9 +2608,9 @@ ggsave(
 )
 ```
 
-##### Test Spatial Distribution Lawsonibacter subspecies
+#### Test Spatial Distribution Lawsonibacter subspecies
 **Note:** The lawsonibacter_mantel_analysis() function needs to be loaded.
-###### 35 Days Animal (G121e)
+##### 35 Days Animal (G121e)
 ```{r lawsonibacter_mantel_G121e, warning = FALSE, comments = "", message = FALSE}
 lawsonibacter_G121e <- lawsonibacter_mantel_analysis(
   data = macroquant_lawsonibacter,
@@ -2620,7 +2620,7 @@ lawsonibacter_G121e <- lawsonibacter_mantel_analysis(
 lawsonibacter_G121e
 ```
 
-###### 14 Days Animal (G103b)
+##### 14 Days Animal (G103b)
 
 ```{r lawsonibacter_mantel_G103b, warning = FALSE, comments = "", message = FALSE}
 lawsonibacter_G103b <- lawsonibacter_mantel_analysis(
@@ -2632,8 +2632,8 @@ lawsonibacter_G103b
 ```
 
 
-#### SNP level microdiversity (Lorikeet)
-##### Visual PopANI for GPB_bin_000044
+### SNP level microdiversity (Lorikeet)
+#### Visual PopANI for GPB_bin_000044
 ```{r lawsonibacter_popANI, warning = FALSE, comments = "", message = FALSE}
 lawsonibacter_popANI <- map_dfr(names(ani_list), function(bin_id) {
   ani_mat <- ani_list[[bin_id]]
@@ -2679,7 +2679,7 @@ lawsonibacter_popANI_df <- lawsonibacter_popANI %>%
   rename(animal_microsample_2 = animal)
 ```
 
-###### Distribution popANI by Group (Fig6_c)
+##### Distribution popANI by Group (Fig6_c)
 
 ```{r Fig6_c, warning = FALSE, comments = "", message = FALSE}
 fig6_c <- lawsonibacter_popANI_df %>%
@@ -2725,7 +2725,7 @@ fig6_c
 # ggsave(filename = "mssm_figures/Fig6_c.png", fig6_c, width = 10, height = 5)
 ```
 
-###### Heatmap popANI (Fig6_b)
+##### Heatmap popANI (Fig6_b)
 ```{r Fig6_b, warning = FALSE, comments = "", message = FALSE}
 # Remove pairs with NA for visualisation
 popani_044 <- ani_list$GPB_bin_000044[rownames(ani_list$GPB_bin_000044) %in% lawsonibacter_popANI_meta$microsample, ] %>%
@@ -2776,9 +2776,9 @@ fig6_b
 
 
 
-##### Test Distance-decay Relationship Microdiversity
+#### Test Distance-decay Relationship Microdiversity
 
-###### Strategy 1 
+##### Strategy 1 
 ```{r distance_decay_1, warning = FALSE, comments = "", message = FALSE}
 set.seed(1234)
 ids_35day <- lawsonibacter_popANI_meta %>%
