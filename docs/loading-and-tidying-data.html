@@ -1,0 +1,1347 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+<head>
+
+  <meta charset="utf-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <title>Chapter 2 Loading and Tidying Data | 3D’omics | Micro-scale spatial metagenomics (MSSM)</title>
+  <meta name="description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  <meta name="generator" content="bookdown 0.43.2 and GitBook 2.6.7" />
+
+  <meta property="og:title" content="Chapter 2 Loading and Tidying Data | 3D’omics | Micro-scale spatial metagenomics (MSSM)" />
+  <meta property="og:type" content="book" />
+  
+  <meta property="og:description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  <meta name="github-repo" content="3d-omics/XXX" />
+
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Chapter 2 Loading and Tidying Data | 3D’omics | Micro-scale spatial metagenomics (MSSM)" />
+  
+  <meta name="twitter:description" content="Data analysis code for 3D’omics microdissection methods manuscript (MSSM)" />
+  
+
+<meta name="author" content="Carlotta Pietroni" />
+<meta name="author" content="Jorge Langa" />
+<meta name="author" content="Iñaki Odriozola Larrañaga" />
+<meta name="author" content="Amalia Bogri" />
+<meta name="author" content="Antton Alberdi" />
+
+
+<meta name="date" content="2025-07-11" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  
+  
+<link rel="prev" href="index.html"/>
+<link rel="next" href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"/>
+<script src="libs/jquery-3.6.0/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@6.4.6/dist/fuse.min.js"></script>
+<link href="libs/gitbook-2.6.7/css/style.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-table.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-bookdown.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-highlight.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-search.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-fontsettings.css" rel="stylesheet" />
+<link href="libs/gitbook-2.6.7/css/plugin-clipboard.css" rel="stylesheet" />
+
+
+
+
+
+
+
+
+<link href="libs/anchor-sections-1.1.0/anchor-sections.css" rel="stylesheet" />
+<link href="libs/anchor-sections-1.1.0/anchor-sections-hash.css" rel="stylesheet" />
+<script src="libs/anchor-sections-1.1.0/anchor-sections.js"></script>
+
+
+<style type="text/css">
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+    color: #aaaaaa;
+  }
+pre.numberSource { margin-left: 3em; border-left: 1px solid #aaaaaa;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+code span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code span.at { color: #7d9029; } /* Attribute */
+code span.bn { color: #40a070; } /* BaseN */
+code span.bu { color: #008000; } /* BuiltIn */
+code span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code span.ch { color: #4070a0; } /* Char */
+code span.cn { color: #880000; } /* Constant */
+code span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code span.dt { color: #902000; } /* DataType */
+code span.dv { color: #40a070; } /* DecVal */
+code span.er { color: #ff0000; font-weight: bold; } /* Error */
+code span.ex { } /* Extension */
+code span.fl { color: #40a070; } /* Float */
+code span.fu { color: #06287e; } /* Function */
+code span.im { color: #008000; font-weight: bold; } /* Import */
+code span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+code span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code span.op { color: #666666; } /* Operator */
+code span.ot { color: #007020; } /* Other */
+code span.pp { color: #bc7a00; } /* Preprocessor */
+code span.sc { color: #4070a0; } /* SpecialChar */
+code span.ss { color: #bb6688; } /* SpecialString */
+code span.st { color: #4070a0; } /* String */
+code span.va { color: #19177c; } /* Variable */
+code span.vs { color: #4070a0; } /* VerbatimString */
+code span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+</style>
+
+<style type="text/css">
+  
+  div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+</style>
+
+<link rel="stylesheet" href="style.css" type="text/css" />
+</head>
+
+<body>
+
+
+
+  <div class="book without-animation with-summary font-size-2 font-family-1" data-basepath=".">
+
+    <div class="book-summary">
+      <nav role="navigation">
+
+<ul class="summary">
+<li><a href="./">A Minimal Book Example</a></li>
+
+<li class="divider"></li>
+<li class="chapter" data-level="1" data-path="index.html"><a href="index.html"><i class="fa fa-check"></i><b>1</b> Introduction</a>
+<ul>
+<li class="chapter" data-level="1.1" data-path="index.html"><a href="index.html#prepare-the-r-environment"><i class="fa fa-check"></i><b>1.1</b> Prepare the R environment</a>
+<ul>
+<li class="chapter" data-level="1.1.1" data-path="index.html"><a href="index.html#environment"><i class="fa fa-check"></i><b>1.1.1</b> Environment</a></li>
+<li class="chapter" data-level="1.1.2" data-path="index.html"><a href="index.html#libraries"><i class="fa fa-check"></i><b>1.1.2</b> Libraries</a></li>
+<li class="chapter" data-level="1.1.3" data-path="index.html"><a href="index.html#notes"><i class="fa fa-check"></i><b>1.1.3</b> Notes:</a></li>
+</ul></li>
+<li class="chapter" data-level="1.2" data-path="index.html"><a href="index.html#define-plotting-settings"><i class="fa fa-check"></i><b>1.2</b> Define Plotting Settings</a>
+<ul>
+<li class="chapter" data-level="1.2.1" data-path="index.html"><a href="index.html#color-schemes"><i class="fa fa-check"></i><b>1.2.1</b> Color Schemes</a></li>
+<li class="chapter" data-level="1.2.2" data-path="index.html"><a href="index.html#plotting-theme"><i class="fa fa-check"></i><b>1.2.2</b> Plotting Theme</a></li>
+</ul></li>
+<li class="chapter" data-level="1.3" data-path="index.html"><a href="index.html#load-functions"><i class="fa fa-check"></i><b>1.3</b> Load Functions</a>
+<ul>
+<li class="chapter" data-level="1.3.1" data-path="index.html"><a href="index.html#parse_fastp_function"><i class="fa fa-check"></i><b>1.3.1</b> parse_fastp_function</a></li>
+<li class="chapter" data-level="1.3.2" data-path="index.html"><a href="index.html#calculate_alpha_diversity"><i class="fa fa-check"></i><b>1.3.2</b> calculate_alpha_diversity</a></li>
+<li class="chapter" data-level="1.3.3" data-path="index.html"><a href="index.html#amalia-perform_pca"><i class="fa fa-check"></i><b>1.3.3</b> Amalia: perform_pca</a></li>
+<li class="chapter" data-level="1.3.4" data-path="index.html"><a href="index.html#fit_and_analyze_model"><i class="fa fa-check"></i><b>1.3.4</b> fit_and_analyze_model</a></li>
+<li class="chapter" data-level="1.3.5" data-path="index.html"><a href="index.html#pivot_phylo"><i class="fa fa-check"></i><b>1.3.5</b> pivot_phylo</a></li>
+<li class="chapter" data-level="1.3.6" data-path="index.html"><a href="index.html#spatial_cryosections"><i class="fa fa-check"></i><b>1.3.6</b> spatial_cryosections</a></li>
+<li class="chapter" data-level="1.3.7" data-path="index.html"><a href="index.html#lawsonibacter_mantel_analysis"><i class="fa fa-check"></i><b>1.3.7</b> lawsonibacter_mantel_analysis</a></li>
+</ul></li>
+</ul></li>
+<li class="chapter" data-level="2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html"><i class="fa fa-check"></i><b>2</b> Loading and Tidying Data</a>
+<ul>
+<li class="chapter" data-level="2.1" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#import-sample-metadata"><i class="fa fa-check"></i><b>2.1</b> Import Sample metadata</a></li>
+<li class="chapter" data-level="2.2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#sequencing-data-quality"><i class="fa fa-check"></i><b>2.2</b> Sequencing Data Quality</a>
+<ul>
+<li class="chapter" data-level="2.2.1" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#read-quality-pre--vs-post-filtering-fastp"><i class="fa fa-check"></i><b>2.2.1</b> Read Quality: Pre- vs Post-Filtering (fastp)</a></li>
+<li class="chapter" data-level="2.2.2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#contamination-assessment-host-human-and-environmental-reads"><i class="fa fa-check"></i><b>2.2.2</b> Contamination Assessment: Host, Human, and Environmental Reads</a></li>
+<li class="chapter" data-level="2.2.3" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#genome-centric-mapping-statistics-macroscale-mag-catalogue"><i class="fa fa-check"></i><b>2.2.3</b> Genome-Centric Mapping Statistics: Macroscale MAG Catalogue</a></li>
+<li class="chapter" data-level="2.2.4" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#read-centric-mapping-statistics-kraken-genomes-and-singlem-single-copy-marker-genes"><i class="fa fa-check"></i><b>2.2.4</b> Read-Centric Mapping Statistics: Kraken (genomes) and SingleM (single-copy marker genes)</a></li>
+<li class="chapter" data-level="2.2.5" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#redundancy-coverage-estimation-nonpareil"><i class="fa fa-check"></i><b>2.2.5</b> Redundancy &amp; Coverage Estimation: Nonpareil</a></li>
+<li class="chapter" data-level="2.2.6" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#combined-quality-statistics"><i class="fa fa-check"></i><b>2.2.6</b> Combined Quality Statistics</a></li>
+</ul></li>
+<li class="chapter" data-level="2.3" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#input-preparation-for-metagenomic-analysis"><i class="fa fa-check"></i><b>2.3</b> Input Preparation For Metagenomic Analysis</a>
+<ul>
+<li class="chapter" data-level="2.3.1" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#abundance-estimation-using-macro-scale-mags-catalogue-95-ani"><i class="fa fa-check"></i><b>2.3.1</b> Abundance Estimation Using Macro-scale MAGs Catalogue 95 ANI</a></li>
+<li class="chapter" data-level="2.3.2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#abundance-estimation-using-micro-scale-mags-catalogue"><i class="fa fa-check"></i><b>2.3.2</b> Abundance Estimation Using Micro-scale MAGs Catalogue</a></li>
+<li class="chapter" data-level="2.3.3" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#abundance-estimation-using-macro-scale-mags-catalogue-98-ani"><i class="fa fa-check"></i><b>2.3.3</b> Abundance Estimation Using Macro-scale MAGs Catalogue 98 ANI</a></li>
+</ul></li>
+<li class="chapter" data-level="2.4" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#macro-scale-metagenomics-macro"><i class="fa fa-check"></i><b>2.4</b> Macro-scale Metagenomics (MACRO)</a>
+<ul>
+<li class="chapter" data-level="2.4.1" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#merge-genome-count-to-mssm"><i class="fa fa-check"></i><b>2.4.1</b> Merge Genome Count to MSSM</a></li>
+<li class="chapter" data-level="2.4.2" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#merge-metadata-to-mssm"><i class="fa fa-check"></i><b>2.4.2</b> Merge Metadata to MSSM</a></li>
+<li class="chapter" data-level="2.4.3" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#combined-phyloseq-object"><i class="fa fa-check"></i><b>2.4.3</b> Combined Phyloseq Object</a></li>
+<li class="chapter" data-level="2.4.4" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#amalia-mock-community-bac"><i class="fa fa-check"></i><b>2.4.4</b> Amalia: Mock Community (BAC)</a></li>
+<li class="chapter" data-level="2.4.5" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#amalia-fluorescence-in-situ-hybridization-fish"><i class="fa fa-check"></i><b>2.4.5</b> Amalia: Fluorescence In Situ hybridization (FISH)</a></li>
+<li class="chapter" data-level="2.4.6" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#confocal-microscopy-of-dapi-stained-microsections"><i class="fa fa-check"></i><b>2.4.6</b> Confocal microscopy of DAPI-stained microsections</a></li>
+</ul></li>
+<li class="chapter" data-level="2.5" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#fragment-analyzer"><i class="fa fa-check"></i><b>2.5</b> Fragment Analyzer</a></li>
+<li class="chapter" data-level="2.6" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#snp-level-microdiversity-lorikeet"><i class="fa fa-check"></i><b>2.6</b> SNP level microdiversity (Lorikeet)</a></li>
+<li class="chapter" data-level="2.7" data-path="loading-and-tidying-data.html"><a href="loading-and-tidying-data.html#wrap-working-objects"><i class="fa fa-check"></i><b>2.7</b> Wrap working objects</a></li>
+</ul></li>
+<li class="chapter" data-level="3" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><i class="fa fa-check"></i><b>3</b> Micro-scale Spatial Metagenomics (MSSM): Main Manuscript</a>
+<ul>
+<li class="chapter" data-level="3.1" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#load-data"><i class="fa fa-check"></i><b>3.1</b> Load data</a></li>
+<li class="chapter" data-level="3.2" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#microbial-genomic-reference-data"><i class="fa fa-check"></i><b>3.2</b> Microbial Genomic Reference Data</a>
+<ul>
+<li class="chapter" data-level="3.2.1" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#macro-scale-mags-catalogue-summary-statistics"><i class="fa fa-check"></i><b>3.2.1</b> Macro-scale MAGs Catalogue Summary Statistics</a></li>
+<li class="chapter" data-level="3.2.2" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#micro-scale-mags-catalogue-summary-statistics"><i class="fa fa-check"></i><b>3.2.2</b> Micro-scale MAGs Catalogue Summary Statistics</a></li>
+<li class="chapter" data-level="3.2.3" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#amalia-macro-vs-micro-mags-completeness-and-abundance-fig.-2a"><i class="fa fa-check"></i><b>3.2.3</b> Amalia: Macro vs Micro MAGs: Completeness and Abundance (Fig. 2a)</a></li>
+<li class="chapter" data-level="3.2.4" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#amalia-macro-mags-overview-fig.-2b"><i class="fa fa-check"></i><b>3.2.4</b> Amalia: Macro MAGs Overview (Fig. 2b)</a></li>
+<li class="chapter" data-level="3.2.5" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#amalia-micro-mags-overview-suppl.-fig.-1"><i class="fa fa-check"></i><b>3.2.5</b> Amalia: Micro MAGs Overview (Suppl. Fig. 1)</a></li>
+<li class="chapter" data-level="3.2.6" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#comparative-analysis-of-genome-catalogues-suppl.-note-1"><i class="fa fa-check"></i><b>3.2.6</b> Comparative Analysis of Genome Catalogues (Suppl. Note 1)</a></li>
+</ul></li>
+<li class="chapter" data-level="3.3" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#fish-probes-design"><i class="fa fa-check"></i><b>3.3</b> FISH probes design?</a></li>
+<li class="chapter" data-level="3.4" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#mssm-method-development"><i class="fa fa-check"></i><b>3.4</b> MSSM Method Development</a>
+<ul>
+<li class="chapter" data-level="3.4.1" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#tissue-lysis-and-sequencing-library-preparation-suppl.-note-3"><i class="fa fa-check"></i><b>3.4.1</b> Tissue lysis and sequencing library preparation (Suppl. Note 3)</a></li>
+<li class="chapter" data-level="3.4.2" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#design-considerations-controls-suppl.-note-3.4"><i class="fa fa-check"></i><b>3.4.2</b> Design considerations: Controls (Suppl. Note 3.4)</a></li>
+<li class="chapter" data-level="3.4.3" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#amalia-design-considerations-microsample-sizes"><i class="fa fa-check"></i><b>3.4.3</b> Amalia: Design considerations: Microsample Sizes</a></li>
+<li class="chapter" data-level="3.4.4" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#resource-optimisation-and-throughput-suppl.-note-3.5"><i class="fa fa-check"></i><b>3.4.4</b> Resource optimisation and throughput (Suppl. Note 3.5)</a></li>
+</ul></li>
+<li class="chapter" data-level="3.5" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#mssm-method-validation"><i class="fa fa-check"></i><b>3.5</b> MSSM method validation</a>
+<ul>
+<li class="chapter" data-level="3.5.1" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#discriminative-power-and-replicability-of-mssm-data"><i class="fa fa-check"></i><b>3.5.1</b> Discriminative power and replicability of MSSM data</a></li>
+<li class="chapter" data-level="3.5.2" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#amalia-mssm-compared-to-fish-and-macro-scale-metagenomics"><i class="fa fa-check"></i><b>3.5.2</b> Amalia: MSSM compared to FISH and Macro-scale Metagenomics</a></li>
+<li class="chapter" data-level="3.5.3" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#macro-scale-metagenomics-vs-micro-scale-spatial-metagenomics"><i class="fa fa-check"></i><b>3.5.3</b> Macro-scale Metagenomics vs Micro-scale Spatial Metagenomics</a></li>
+</ul></li>
+<li class="chapter" data-level="3.6" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#mssm-method-implementation"><i class="fa fa-check"></i><b>3.6</b> MSSM method implementation</a>
+<ul>
+<li class="chapter" data-level="3.6.1" data-path="micro-scale-spatial-metagenomics-mssm-main-manuscript.html"><a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html#spatial-pattern"><i class="fa fa-check"></i><b>3.6.1</b> Spatial Pattern</a></li>
+</ul></li>
+</ul></li>
+<li class="divider"></li>
+<li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
+
+</ul>
+
+      </nav>
+    </div>
+
+    <div class="book-body">
+      <div class="body-inner">
+        <div class="book-header" role="navigation">
+          <h1>
+            <i class="fa fa-circle-o-notch fa-spin"></i><a href="./">3D’omics | Micro-scale spatial metagenomics (MSSM)</a>
+          </h1>
+        </div>
+
+        <div class="page-wrapper" tabindex="-1" role="main">
+          <div class="page-inner">
+
+            <section class="normal" id="section-">
+<div id="loading-and-tidying-data" class="section level1 hasAnchor" number="2">
+<h1><span class="header-section-number">Chapter 2</span> Loading and Tidying Data<a href="loading-and-tidying-data.html#loading-and-tidying-data" class="anchor-section" aria-label="Anchor link to header"></a></h1>
+<p><strong>Note:</strong> This step requires access to the raw data files located at xxxx. If you prefer to skip this step, you can proceed to the next section, making sure to load the R object that contains the necessary files for the subsequent analysis in location.</p>
+<div id="import-sample-metadata" class="section level2 hasAnchor" number="2.1">
+<h2><span class="header-section-number">2.1</span> Import Sample metadata<a href="loading-and-tidying-data.html#import-sample-metadata" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div class="sourceCode" id="cb12"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb12-1"><a href="loading-and-tidying-data.html#cb12-1" tabindex="-1"></a>mssm_sample_metadata <span class="ot">&lt;-</span> <span class="fu">airtable</span>(<span class="st">&quot;4-MSE-Info&quot;</span>, <span class="st">&quot;appKakM1bnKSekwuW&quot;</span>) <span class="sc">%&gt;%</span>  <span class="co">#get base ID from Airtable browser URL</span></span>
+<span id="cb12-2"><a href="loading-and-tidying-data.html#cb12-2" tabindex="-1"></a>  <span class="fu">read_airtable</span>(., <span class="at">fields =</span> <span class="fu">c</span>(</span>
+<span id="cb12-3"><a href="loading-and-tidying-data.html#cb12-3" tabindex="-1"></a>    <span class="st">&quot;ID&quot;</span>, <span class="st">&quot;LabBatch_text&quot;</span>, <span class="st">&quot;IntestinalSection&quot;</span>, <span class="st">&quot;SampleType&quot;</span>,</span>
+<span id="cb12-4"><a href="loading-and-tidying-data.html#cb12-4" tabindex="-1"></a>    <span class="st">&quot;Xcoord&quot;</span>, <span class="st">&quot;Ycoord&quot;</span>, <span class="st">&quot;SizeApprox&quot;</span>, <span class="st">&quot;cryosection_text&quot;</span>, <span class="st">&quot;buffer_text&quot;</span>, <span class="st">&quot;Collection_method_text&quot;</span>,</span>
+<span id="cb12-5"><a href="loading-and-tidying-data.html#cb12-5" tabindex="-1"></a>    <span class="st">&quot;Collection_Success&quot;</span>, <span class="st">&quot;Collection_attempts&quot;</span>, <span class="st">&quot;UsedCycles&quot;</span>, <span class="st">&quot;animal_temp&quot;</span>, <span class="st">&quot;Protocol_text&quot;</span>,</span>
+<span id="cb12-6"><a href="loading-and-tidying-data.html#cb12-6" tabindex="-1"></a>    <span class="st">&quot;adapter_type_text&quot;</span></span>
+<span id="cb12-7"><a href="loading-and-tidying-data.html#cb12-7" tabindex="-1"></a>  ), <span class="at">id_to_col =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb12-8"><a href="loading-and-tidying-data.html#cb12-8" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb12-9"><a href="loading-and-tidying-data.html#cb12-9" tabindex="-1"></a>    LabBatch_text <span class="sc">%in%</span> <span class="fu">c</span>(</span>
+<span id="cb12-10"><a href="loading-and-tidying-data.html#cb12-10" tabindex="-1"></a>      <span class="co">#&quot;MSEB0001&quot;, &quot;MSEB0002&quot;, &quot;MSEB0003&quot;, &quot;MSEB0004&quot;, &quot;MSEB0005&quot;,</span></span>
+<span id="cb12-11"><a href="loading-and-tidying-data.html#cb12-11" tabindex="-1"></a>      <span class="st">&quot;MSEB0006&quot;</span>, <span class="st">&quot;MSEB0009&quot;</span>, <span class="st">&quot;MSEB0010&quot;</span>, <span class="st">&quot;MSEB0011&quot;</span>, <span class="st">&quot;MSEB0012&quot;</span>,</span>
+<span id="cb12-12"><a href="loading-and-tidying-data.html#cb12-12" tabindex="-1"></a>      <span class="st">&quot;MSEB0014&quot;</span>, <span class="st">&quot;MSEB0015&quot;</span></span>
+<span id="cb12-13"><a href="loading-and-tidying-data.html#cb12-13" tabindex="-1"></a>    ),</span>
+<span id="cb12-14"><a href="loading-and-tidying-data.html#cb12-14" tabindex="-1"></a>    <span class="sc">!</span>SampleType <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;ControlHuman&quot;</span>)</span>
+<span id="cb12-15"><a href="loading-and-tidying-data.html#cb12-15" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-16"><a href="loading-and-tidying-data.html#cb12-16" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb12-17"><a href="loading-and-tidying-data.html#cb12-17" tabindex="-1"></a>    <span class="at">batch =</span> LabBatch_text, <span class="at">microsample =</span> ID, <span class="at">section =</span> IntestinalSection, </span>
+<span id="cb12-18"><a href="loading-and-tidying-data.html#cb12-18" tabindex="-1"></a>    <span class="at">type =</span> SampleType, <span class="at">cryosection =</span> cryosection_text, </span>
+<span id="cb12-19"><a href="loading-and-tidying-data.html#cb12-19" tabindex="-1"></a>    <span class="at">buffer =</span> buffer_text, <span class="at">collection_method =</span> Collection_method_text,</span>
+<span id="cb12-20"><a href="loading-and-tidying-data.html#cb12-20" tabindex="-1"></a>    <span class="at">collection =</span> Collection_Success, <span class="at">collection_attempts =</span> Collection_attempts,</span>
+<span id="cb12-21"><a href="loading-and-tidying-data.html#cb12-21" tabindex="-1"></a>    <span class="at">cycles =</span> UsedCycles, <span class="at">animal =</span> animal_temp, <span class="at">size =</span> SizeApprox, </span>
+<span id="cb12-22"><a href="loading-and-tidying-data.html#cb12-22" tabindex="-1"></a>    <span class="at">protocol =</span> Protocol_text, <span class="at">adapter =</span> adapter_type_text</span>
+<span id="cb12-23"><a href="loading-and-tidying-data.html#cb12-23" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-24"><a href="loading-and-tidying-data.html#cb12-24" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb12-25"><a href="loading-and-tidying-data.html#cb12-25" tabindex="-1"></a>    microsample, section, type, batch, cryosection, buffer, Xcoord, Ycoord, </span>
+<span id="cb12-26"><a href="loading-and-tidying-data.html#cb12-26" tabindex="-1"></a>    size, collection_method, collection, collection_attempts, cycles, animal, </span>
+<span id="cb12-27"><a href="loading-and-tidying-data.html#cb12-27" tabindex="-1"></a>    protocol, adapter</span>
+<span id="cb12-28"><a href="loading-and-tidying-data.html#cb12-28" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-29"><a href="loading-and-tidying-data.html#cb12-29" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb12-30"><a href="loading-and-tidying-data.html#cb12-30" tabindex="-1"></a>    <span class="at">type_binomial =</span> <span class="fu">ifelse</span>(type <span class="sc">==</span> <span class="st">&quot;Positive&quot;</span>, <span class="st">&quot;positive&quot;</span>, <span class="st">&quot;negative&quot;</span>),</span>
+<span id="cb12-31"><a href="loading-and-tidying-data.html#cb12-31" tabindex="-1"></a>    <span class="at">buffer =</span> <span class="fu">case_when</span>(</span>
+<span id="cb12-32"><a href="loading-and-tidying-data.html#cb12-32" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B01&quot;</span> <span class="sc">~</span> <span class="st">&quot;L01&quot;</span>,</span>
+<span id="cb12-33"><a href="loading-and-tidying-data.html#cb12-33" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B02&quot;</span> <span class="sc">~</span> <span class="st">&quot;L02&quot;</span>,</span>
+<span id="cb12-34"><a href="loading-and-tidying-data.html#cb12-34" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B03&quot;</span> <span class="sc">~</span> <span class="st">&quot;L03&quot;</span>,</span>
+<span id="cb12-35"><a href="loading-and-tidying-data.html#cb12-35" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B04&quot;</span> <span class="sc">~</span> <span class="st">&quot;L04&quot;</span>,</span>
+<span id="cb12-36"><a href="loading-and-tidying-data.html#cb12-36" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B09&quot;</span> <span class="sc">~</span> <span class="st">&quot;L05&quot;</span>,</span>
+<span id="cb12-37"><a href="loading-and-tidying-data.html#cb12-37" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B11&quot;</span> <span class="sc">~</span> <span class="st">&quot;L06&quot;</span>,</span>
+<span id="cb12-38"><a href="loading-and-tidying-data.html#cb12-38" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B12&quot;</span> <span class="sc">~</span> <span class="st">&quot;L07&quot;</span>,</span>
+<span id="cb12-39"><a href="loading-and-tidying-data.html#cb12-39" tabindex="-1"></a>      buffer <span class="sc">==</span> <span class="st">&quot;B13&quot;</span> <span class="sc">~</span> <span class="st">&quot;L08&quot;</span>,</span>
+<span id="cb12-40"><a href="loading-and-tidying-data.html#cb12-40" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> buffer</span>
+<span id="cb12-41"><a href="loading-and-tidying-data.html#cb12-41" tabindex="-1"></a>    )</span>
+<span id="cb12-42"><a href="loading-and-tidying-data.html#cb12-42" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb12-43"><a href="loading-and-tidying-data.html#cb12-43" tabindex="-1"></a>  <span class="fu">unnest</span>(<span class="fu">c</span>(section, Xcoord, Ycoord, size, collection, cycles)) <span class="sc">%&gt;%</span></span>
+<span id="cb12-44"><a href="loading-and-tidying-data.html#cb12-44" tabindex="-1"></a>  <span class="fu">arrange</span>(microsample)</span>
+<span id="cb12-45"><a href="loading-and-tidying-data.html#cb12-45" tabindex="-1"></a><span class="co">#write.table(mssm_sample_metadata, &quot;data/mssm_sample_metadata.tsv&quot;)</span></span>
+<span id="cb12-46"><a href="loading-and-tidying-data.html#cb12-46" tabindex="-1"></a><span class="co">#mssm_sample_metadata &lt;- read.table(&quot;data/mssm_sample_metadata.tsv&quot;)</span></span></code></pre></div>
+</div>
+<div id="sequencing-data-quality" class="section level2 hasAnchor" number="2.2">
+<h2><span class="header-section-number">2.2</span> Sequencing Data Quality<a href="loading-and-tidying-data.html#sequencing-data-quality" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="read-quality-pre--vs-post-filtering-fastp" class="section level3 hasAnchor" number="2.2.1">
+<h3><span class="header-section-number">2.2.1</span> Read Quality: Pre- vs Post-Filtering (fastp)<a href="loading-and-tidying-data.html#read-quality-pre--vs-post-filtering-fastp" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<p><strong>Note:</strong> The parse_fastp() function in index needs to be loaded.</p>
+<div class="sourceCode" id="cb13"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb13-1"><a href="loading-and-tidying-data.html#cb13-1" tabindex="-1"></a>mssm_json_data <span class="ot">&lt;-</span> <span class="fu">fromJSON</span>(<span class="st">&quot;data/multiqc_data.json&quot;</span>) <span class="co"># Download file from ERDA</span></span>
+<span id="cb13-2"><a href="loading-and-tidying-data.html#cb13-2" tabindex="-1"></a>mssm_fastp <span class="ot">&lt;-</span> <span class="fu">parse_fastp</span>(mssm_json_data) <span class="sc">%&gt;%</span></span>
+<span id="cb13-3"><a href="loading-and-tidying-data.html#cb13-3" tabindex="-1"></a>  <span class="fu">rename_with</span>(<span class="sc">~</span> <span class="fu">gsub</span>(<span class="st">&quot;^(summary|filtering_result|adapter_cutting|polyx_trimming)</span><span class="sc">\\</span><span class="st">.&quot;</span>, <span class="st">&quot;&quot;</span>, .)) <span class="sc">%&gt;%</span></span>
+<span id="cb13-4"><a href="loading-and-tidying-data.html#cb13-4" tabindex="-1"></a>  <span class="fu">select</span>(</span>
+<span id="cb13-5"><a href="loading-and-tidying-data.html#cb13-5" tabindex="-1"></a>    sample_id,</span>
+<span id="cb13-6"><a href="loading-and-tidying-data.html#cb13-6" tabindex="-1"></a>    before_filtering.total_reads,</span>
+<span id="cb13-7"><a href="loading-and-tidying-data.html#cb13-7" tabindex="-1"></a>    after_filtering.total_reads,</span>
+<span id="cb13-8"><a href="loading-and-tidying-data.html#cb13-8" tabindex="-1"></a>    before_filtering.total_bases,</span>
+<span id="cb13-9"><a href="loading-and-tidying-data.html#cb13-9" tabindex="-1"></a>    after_filtering.total_bases,</span>
+<span id="cb13-10"><a href="loading-and-tidying-data.html#cb13-10" tabindex="-1"></a>    before_filtering.gc_content,</span>
+<span id="cb13-11"><a href="loading-and-tidying-data.html#cb13-11" tabindex="-1"></a>    after_filtering.gc_content,</span>
+<span id="cb13-12"><a href="loading-and-tidying-data.html#cb13-12" tabindex="-1"></a>    low_quality_reads,</span>
+<span id="cb13-13"><a href="loading-and-tidying-data.html#cb13-13" tabindex="-1"></a>    adapter_trimmed_reads,</span>
+<span id="cb13-14"><a href="loading-and-tidying-data.html#cb13-14" tabindex="-1"></a>    adapter_trimmed_bases,</span>
+<span id="cb13-15"><a href="loading-and-tidying-data.html#cb13-15" tabindex="-1"></a>    duplication.rate</span>
+<span id="cb13-16"><a href="loading-and-tidying-data.html#cb13-16" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb13-17"><a href="loading-and-tidying-data.html#cb13-17" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_remove</span>(sample_id, <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.lib</span><span class="sc">\\</span><span class="st">d+$&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb13-18"><a href="loading-and-tidying-data.html#cb13-18" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb13-19"><a href="loading-and-tidying-data.html#cb13-19" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb13-20"><a href="loading-and-tidying-data.html#cb13-20" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb13-21"><a href="loading-and-tidying-data.html#cb13-21" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">contains</span>(<span class="st">&quot;reads&quot;</span>), sum, <span class="at">.names =</span> <span class="st">&quot;total_{.col}&quot;</span>),</span>
+<span id="cb13-22"><a href="loading-and-tidying-data.html#cb13-22" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">contains</span>(<span class="st">&quot;bases&quot;</span>), sum, <span class="at">.names =</span> <span class="st">&quot;total_{.col}&quot;</span>),</span>
+<span id="cb13-23"><a href="loading-and-tidying-data.html#cb13-23" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">ends_with</span>(<span class="st">&quot;content&quot;</span>), mean, <span class="at">.names =</span> <span class="st">&quot;percent_{.col}&quot;</span>),</span>
+<span id="cb13-24"><a href="loading-and-tidying-data.html#cb13-24" tabindex="-1"></a>    <span class="fu">across</span>(<span class="fu">ends_with</span>(<span class="st">&quot;rate&quot;</span>), mean, <span class="at">.names =</span> <span class="st">&quot;percent_{.col}&quot;</span>)</span>
+<span id="cb13-25"><a href="loading-and-tidying-data.html#cb13-25" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="contamination-assessment-host-human-and-environmental-reads" class="section level3 hasAnchor" number="2.2.2">
+<h3><span class="header-section-number">2.2.2</span> Contamination Assessment: Host, Human, and Environmental Reads<a href="loading-and-tidying-data.html#contamination-assessment-host-human-and-environmental-reads" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb14"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb14-1"><a href="loading-and-tidying-data.html#cb14-1" tabindex="-1"></a>mssm_euk_mapping <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_bowtie2_multiqc_report_data/multiqc_samtools_stats.txt&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb14-2"><a href="loading-and-tidying-data.html#cb14-2" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb14-3"><a href="loading-and-tidying-data.html#cb14-3" tabindex="-1"></a>    <span class="at">reference =</span> <span class="fu">case_when</span>(</span>
+<span id="cb14-4"><a href="loading-and-tidying-data.html#cb14-4" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">&quot;GRCh38&quot;</span>, Sample, <span class="at">ignore.case =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="st">&quot;human&quot;</span>,</span>
+<span id="cb14-5"><a href="loading-and-tidying-data.html#cb14-5" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">&quot;GRCg7b&quot;</span>, Sample, <span class="at">ignore.case =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="st">&quot;chicken&quot;</span>,</span>
+<span id="cb14-6"><a href="loading-and-tidying-data.html#cb14-6" tabindex="-1"></a>      <span class="fu">grepl</span>(<span class="st">&quot;Sscrofa11.1&quot;</span>, Sample, <span class="at">ignore.case =</span> <span class="cn">TRUE</span>) <span class="sc">~</span> <span class="st">&quot;pig&quot;</span>,</span>
+<span id="cb14-7"><a href="loading-and-tidying-data.html#cb14-7" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">NA_character_</span></span>
+<span id="cb14-8"><a href="loading-and-tidying-data.html#cb14-8" tabindex="-1"></a>    ),</span>
+<span id="cb14-9"><a href="loading-and-tidying-data.html#cb14-9" tabindex="-1"></a>    <span class="at">microsample =</span> <span class="fu">str_extract</span>(Sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)</span>
+<span id="cb14-10"><a href="loading-and-tidying-data.html#cb14-10" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-11"><a href="loading-and-tidying-data.html#cb14-11" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb14-12"><a href="loading-and-tidying-data.html#cb14-12" tabindex="-1"></a>    <span class="sc">!</span><span class="fu">is.na</span>(reference), <span class="co"># Remove rows where reference is NA</span></span>
+<span id="cb14-13"><a href="loading-and-tidying-data.html#cb14-13" tabindex="-1"></a>    <span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)</span>
+<span id="cb14-14"><a href="loading-and-tidying-data.html#cb14-14" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-15"><a href="loading-and-tidying-data.html#cb14-15" tabindex="-1"></a>  <span class="fu">select</span>(Sample, microsample, reference, raw_total_sequences, reads_mapped, reads_unmapped) <span class="sc">%&gt;%</span></span>
+<span id="cb14-16"><a href="loading-and-tidying-data.html#cb14-16" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample, reference) <span class="sc">%&gt;%</span></span>
+<span id="cb14-17"><a href="loading-and-tidying-data.html#cb14-17" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb14-18"><a href="loading-and-tidying-data.html#cb14-18" tabindex="-1"></a>    <span class="at">raw_total_sequences =</span> <span class="fu">sum</span>(raw_total_sequences, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb14-19"><a href="loading-and-tidying-data.html#cb14-19" tabindex="-1"></a>    <span class="at">reads_mapped =</span> <span class="fu">sum</span>(reads_mapped, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb14-20"><a href="loading-and-tidying-data.html#cb14-20" tabindex="-1"></a>    <span class="at">reads_unmapped =</span> <span class="fu">sum</span>(reads_unmapped, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb14-21"><a href="loading-and-tidying-data.html#cb14-21" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb14-22"><a href="loading-and-tidying-data.html#cb14-22" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> reference, <span class="at">values_from =</span> <span class="fu">c</span>(raw_total_sequences, reads_mapped, reads_unmapped))</span></code></pre></div>
+</div>
+<div id="genome-centric-mapping-statistics-macroscale-mag-catalogue" class="section level3 hasAnchor" number="2.2.3">
+<h3><span class="header-section-number">2.2.3</span> Genome-Centric Mapping Statistics: Macroscale MAG Catalogue<a href="loading-and-tidying-data.html#genome-centric-mapping-statistics-macroscale-mag-catalogue" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb15"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb15-1"><a href="loading-and-tidying-data.html#cb15-1" tabindex="-1"></a><span class="co"># download.file(&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify.zip&quot;, &quot;data/quantify.zip&quot;, mode = &quot;wb&quot;)</span></span>
+<span id="cb15-2"><a href="loading-and-tidying-data.html#cb15-2" tabindex="-1"></a>mssm_mag_mapping <span class="ot">&lt;-</span> <span class="fu">read.table</span>(<span class="fu">unz</span>(<span class="st">&quot;data/quantify.zip&quot;</span>, <span class="st">&quot;multiqc_samtools_stats.txt&quot;</span>), <span class="at">header =</span> T, <span class="at">sep =</span> <span class="st">&quot;</span><span class="sc">\t</span><span class="st">&quot;</span>, <span class="at">quote =</span> <span class="st">&quot;</span><span class="sc">\&quot;</span><span class="st">&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb15-3"><a href="loading-and-tidying-data.html#cb15-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_extract</span>(Sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-4"><a href="loading-and-tidying-data.html#cb15-4" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb15-5"><a href="loading-and-tidying-data.html#cb15-5" tabindex="-1"></a>  <span class="fu">select</span>(Sample, microsample, raw_total_sequences, reads_mapped, reads_unmapped) <span class="sc">%&gt;%</span></span>
+<span id="cb15-6"><a href="loading-and-tidying-data.html#cb15-6" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb15-7"><a href="loading-and-tidying-data.html#cb15-7" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb15-8"><a href="loading-and-tidying-data.html#cb15-8" tabindex="-1"></a>    <span class="at">raw_total_sequences_mag =</span> <span class="fu">sum</span>(raw_total_sequences, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb15-9"><a href="loading-and-tidying-data.html#cb15-9" tabindex="-1"></a>    <span class="at">reads_mapped_mag =</span> <span class="fu">sum</span>(reads_mapped, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb15-10"><a href="loading-and-tidying-data.html#cb15-10" tabindex="-1"></a>    <span class="at">reads_unmapped_mag =</span> <span class="fu">sum</span>(reads_unmapped, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb15-11"><a href="loading-and-tidying-data.html#cb15-11" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="read-centric-mapping-statistics-kraken-genomes-and-singlem-single-copy-marker-genes" class="section level3 hasAnchor" number="2.2.4">
+<h3><span class="header-section-number">2.2.4</span> Read-Centric Mapping Statistics: Kraken (genomes) and SingleM (single-copy marker genes)<a href="loading-and-tidying-data.html#read-centric-mapping-statistics-kraken-genomes-and-singlem-single-copy-marker-genes" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb16"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb16-1"><a href="loading-and-tidying-data.html#cb16-1" tabindex="-1"></a>mssm_singlem <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess/singlem/microbial_fraction.tsv&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb16-2"><a href="loading-and-tidying-data.html#cb16-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_extract</span>(sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb16-3"><a href="loading-and-tidying-data.html#cb16-3" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb16-4"><a href="loading-and-tidying-data.html#cb16-4" tabindex="-1"></a>  <span class="fu">select</span>(<span class="sc">-</span><span class="fu">c</span>(warning, sample)) <span class="sc">%&gt;%</span></span>
+<span id="cb16-5"><a href="loading-and-tidying-data.html#cb16-5" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb16-6"><a href="loading-and-tidying-data.html#cb16-6" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb16-7"><a href="loading-and-tidying-data.html#cb16-7" tabindex="-1"></a>    <span class="at">read_fraction_singlem =</span> (<span class="fu">mean</span>(read_fraction, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">/</span> <span class="dv">100</span> <span class="co">#,</span></span>
+<span id="cb16-8"><a href="loading-and-tidying-data.html#cb16-8" tabindex="-1"></a>    <span class="co"># bacterial_archaeal_bases_singlem = sum(bacterial_archaeal_bases, na.rm = TRUE),</span></span>
+<span id="cb16-9"><a href="loading-and-tidying-data.html#cb16-9" tabindex="-1"></a>    <span class="co"># average_bacterial_archaeal_genome_size_singlem = mean(average_bacterial_archaeal_genome_size, na.rm = TRUE)</span></span>
+<span id="cb16-10"><a href="loading-and-tidying-data.html#cb16-10" tabindex="-1"></a>  )</span></code></pre></div>
+<div class="sourceCode" id="cb17"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb17-1"><a href="loading-and-tidying-data.html#cb17-1" tabindex="-1"></a>mssm_kraken <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_kraken2_multiqc_report_data/multiqc_kraken.txt&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb17-2"><a href="loading-and-tidying-data.html#cb17-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_extract</span>(Sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb17-3"><a href="loading-and-tidying-data.html#cb17-3" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb17-4"><a href="loading-and-tidying-data.html#cb17-4" tabindex="-1"></a>  <span class="fu">select</span>(Sample, microsample, D) <span class="sc">%&gt;%</span></span>
+<span id="cb17-5"><a href="loading-and-tidying-data.html#cb17-5" tabindex="-1"></a>  <span class="fu">separate</span>(D, <span class="at">into =</span> <span class="fu">c</span>(<span class="st">&quot;Eukaryota&quot;</span>, <span class="st">&quot;Bacteria&quot;</span>, <span class="st">&quot;Archaea&quot;</span>, <span class="st">&quot;Viruses&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;, &quot;</span>, <span class="at">remove =</span> <span class="cn">TRUE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb17-6"><a href="loading-and-tidying-data.html#cb17-6" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="sc">!</span><span class="fu">all_of</span>(<span class="st">&quot;microsample&quot;</span>), <span class="sc">~</span> <span class="fu">parse_number</span>(.))) <span class="sc">%&gt;%</span></span>
+<span id="cb17-7"><a href="loading-and-tidying-data.html#cb17-7" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb17-8"><a href="loading-and-tidying-data.html#cb17-8" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb17-9"><a href="loading-and-tidying-data.html#cb17-9" tabindex="-1"></a>    <span class="at">kr_Eukaryota =</span> <span class="fu">sum</span>(Eukaryota, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb17-10"><a href="loading-and-tidying-data.html#cb17-10" tabindex="-1"></a>    <span class="at">kr_Bacteria =</span> <span class="fu">sum</span>(Bacteria, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb17-11"><a href="loading-and-tidying-data.html#cb17-11" tabindex="-1"></a>    <span class="at">kr_Archaea =</span> <span class="fu">sum</span>(Archaea, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb17-12"><a href="loading-and-tidying-data.html#cb17-12" tabindex="-1"></a>    <span class="at">kr_Viruses =</span> <span class="fu">sum</span>(Viruses, <span class="at">na.rm =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb17-13"><a href="loading-and-tidying-data.html#cb17-13" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb17-14"><a href="loading-and-tidying-data.html#cb17-14" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb17-15"><a href="loading-and-tidying-data.html#cb17-15" tabindex="-1"></a>    <span class="at">total_kraken =</span> kr_Eukaryota <span class="sc">+</span> kr_Bacteria <span class="sc">+</span> kr_Archaea <span class="sc">+</span> kr_Viruses,</span>
+<span id="cb17-16"><a href="loading-and-tidying-data.html#cb17-16" tabindex="-1"></a>    <span class="at">bacteria_pct_kraken =</span> kr_Bacteria <span class="sc">/</span> total_kraken,</span>
+<span id="cb17-17"><a href="loading-and-tidying-data.html#cb17-17" tabindex="-1"></a>    <span class="at">eukaryota_pct_kraken =</span> kr_Eukaryota <span class="sc">/</span> total_kraken</span>
+<span id="cb17-18"><a href="loading-and-tidying-data.html#cb17-18" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="redundancy-coverage-estimation-nonpareil" class="section level3 hasAnchor" number="2.2.5">
+<h3><span class="header-section-number">2.2.5</span> Redundancy &amp; Coverage Estimation: Nonpareil<a href="loading-and-tidying-data.html#redundancy-coverage-estimation-nonpareil" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb18"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb18-1"><a href="loading-and-tidying-data.html#cb18-1" tabindex="-1"></a>mssm_nonpareil <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_nonpareil_multiqc_report_data/nonpareil-table.txt&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb18-2"><a href="loading-and-tidying-data.html#cb18-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">microsample =</span> <span class="fu">str_extract</span>(Sample, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb18-3"><a href="loading-and-tidying-data.html#cb18-3" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">grepl</span>(<span class="st">&quot;^M&quot;</span>, microsample)) <span class="sc">%&gt;%</span></span>
+<span id="cb18-4"><a href="loading-and-tidying-data.html#cb18-4" tabindex="-1"></a>  <span class="fu">select</span>(microsample, Redundancy, Coverage, Diversity) <span class="sc">%&gt;%</span></span>
+<span id="cb18-5"><a href="loading-and-tidying-data.html#cb18-5" tabindex="-1"></a>  <span class="fu">group_by</span>(microsample) <span class="sc">%&gt;%</span></span>
+<span id="cb18-6"><a href="loading-and-tidying-data.html#cb18-6" tabindex="-1"></a>  <span class="fu">summarise</span>(</span>
+<span id="cb18-7"><a href="loading-and-tidying-data.html#cb18-7" tabindex="-1"></a>    <span class="at">redundancy_nonpareil =</span> (<span class="fu">mean</span>(Redundancy, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">/</span> <span class="dv">100</span>,</span>
+<span id="cb18-8"><a href="loading-and-tidying-data.html#cb18-8" tabindex="-1"></a>    <span class="at">coverage_nonpareil =</span> (<span class="fu">mean</span>(Coverage, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)) <span class="sc">/</span> <span class="dv">100</span>,</span>
+<span id="cb18-9"><a href="loading-and-tidying-data.html#cb18-9" tabindex="-1"></a>    <span class="at">diversity_nonpareil =</span> <span class="fu">mean</span>(Diversity, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb18-10"><a href="loading-and-tidying-data.html#cb18-10" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="combined-quality-statistics" class="section level3 hasAnchor" number="2.2.6">
+<h3><span class="header-section-number">2.2.6</span> Combined Quality Statistics<a href="loading-and-tidying-data.html#combined-quality-statistics" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb19"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb19-1"><a href="loading-and-tidying-data.html#cb19-1" tabindex="-1"></a>mssm_quality <span class="ot">&lt;-</span> mssm_sample_metadata <span class="sc">%&gt;%</span></span>
+<span id="cb19-2"><a href="loading-and-tidying-data.html#cb19-2" tabindex="-1"></a>  <span class="fu">full_join</span>(mssm_fastp, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-3"><a href="loading-and-tidying-data.html#cb19-3" tabindex="-1"></a>  <span class="fu">full_join</span>(mssm_euk_mapping, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-4"><a href="loading-and-tidying-data.html#cb19-4" tabindex="-1"></a>  <span class="fu">full_join</span>(mssm_mag_mapping, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-5"><a href="loading-and-tidying-data.html#cb19-5" tabindex="-1"></a>  <span class="fu">full_join</span>(mssm_singlem, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-6"><a href="loading-and-tidying-data.html#cb19-6" tabindex="-1"></a>  <span class="fu">full_join</span>(mssm_kraken, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-7"><a href="loading-and-tidying-data.html#cb19-7" tabindex="-1"></a>  <span class="fu">full_join</span>(mssm_nonpareil, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb19-8"><a href="loading-and-tidying-data.html#cb19-8" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb19-9"><a href="loading-and-tidying-data.html#cb19-9" tabindex="-1"></a>    <span class="at">lowquality_reads_pct =</span> ((total_before_filtering.total_reads <span class="sc">-</span> total_after_filtering.total_reads) <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-10"><a href="loading-and-tidying-data.html#cb19-10" tabindex="-1"></a>    <span class="at">adapter_contamination_pct =</span> (total_adapter_trimmed_bases <span class="sc">/</span> total_before_filtering.total_bases),</span>
+<span id="cb19-11"><a href="loading-and-tidying-data.html#cb19-11" tabindex="-1"></a>    <span class="at">host_pct =</span> (reads_mapped_chicken <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-12"><a href="loading-and-tidying-data.html#cb19-12" tabindex="-1"></a>    <span class="at">human_pct =</span> (reads_mapped_human <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-13"><a href="loading-and-tidying-data.html#cb19-13" tabindex="-1"></a>    <span class="at">pig_pct =</span> (reads_mapped_pig <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-14"><a href="loading-and-tidying-data.html#cb19-14" tabindex="-1"></a>    <span class="at">prokreads_pct =</span> (raw_total_sequences_mag <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-15"><a href="loading-and-tidying-data.html#cb19-15" tabindex="-1"></a>    <span class="at">mapmag_rawreads_pct =</span> (reads_mapped_mag <span class="sc">/</span> total_before_filtering.total_reads),</span>
+<span id="cb19-16"><a href="loading-and-tidying-data.html#cb19-16" tabindex="-1"></a>    <span class="at">mapmag_filteredreads_pct =</span> (reads_mapped_mag <span class="sc">/</span> total_after_filtering.total_reads),</span>
+<span id="cb19-17"><a href="loading-and-tidying-data.html#cb19-17" tabindex="-1"></a>    <span class="at">mapmag_prokreads_pct =</span> (reads_mapped_mag <span class="sc">/</span> raw_total_sequences_mag)</span>
+<span id="cb19-18"><a href="loading-and-tidying-data.html#cb19-18" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb19-19"><a href="loading-and-tidying-data.html#cb19-19" tabindex="-1"></a>  <span class="fu">filter</span>(microsample <span class="sc">%in%</span> <span class="fu">c</span>(mssm_sample_metadata<span class="sc">$</span>microsample))</span></code></pre></div>
+</div>
+</div>
+<div id="input-preparation-for-metagenomic-analysis" class="section level2 hasAnchor" number="2.3">
+<h2><span class="header-section-number">2.3</span> Input Preparation For Metagenomic Analysis<a href="loading-and-tidying-data.html#input-preparation-for-metagenomic-analysis" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="abundance-estimation-using-macro-scale-mags-catalogue-95-ani" class="section level3 hasAnchor" number="2.3.1">
+<h3><span class="header-section-number">2.3.1</span> Abundance Estimation Using Macro-scale MAGs Catalogue 95 ANI<a href="loading-and-tidying-data.html#abundance-estimation-using-macro-scale-mags-catalogue-95-ani" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="import-genome-counts" class="section level4 hasAnchor" number="2.3.1.1">
+<h4><span class="header-section-number">2.3.1.1</span> Import Genome Counts<a href="loading-and-tidying-data.html#import-genome-counts" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<div class="sourceCode" id="cb20"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb20-1"><a href="loading-and-tidying-data.html#cb20-1" tabindex="-1"></a>macroquant_read_counts <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify/coverm/genome.count.REF0015-g_mg_hybrid-0.95.tsv.gz&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-2"><a href="loading-and-tidying-data.html#cb20-2" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-3"><a href="loading-and-tidying-data.html#cb20-3" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">!</span>genome, <span class="at">names_to =</span> <span class="st">&quot;data&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;counts&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-4"><a href="loading-and-tidying-data.html#cb20-4" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sample =</span> <span class="fu">substr</span>(data, <span class="dv">1</span>, <span class="dv">7</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb20-5"><a href="loading-and-tidying-data.html#cb20-5" tabindex="-1"></a>  <span class="fu">group_by</span>(genome, sample) <span class="sc">%&gt;%</span></span>
+<span id="cb20-6"><a href="loading-and-tidying-data.html#cb20-6" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">counts =</span> <span class="fu">sum</span>(counts), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb20-7"><a href="loading-and-tidying-data.html#cb20-7" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">values_from =</span> <span class="st">&quot;counts&quot;</span>) </span></code></pre></div>
+<div class="sourceCode" id="cb21"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb21-1"><a href="loading-and-tidying-data.html#cb21-1" tabindex="-1"></a>macroquant_covered_bases <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify/coverm/genome.covered_bases.REF0015-g_mg_hybrid-0.95.tsv.gz&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-2"><a href="loading-and-tidying-data.html#cb21-2" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-3"><a href="loading-and-tidying-data.html#cb21-3" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">!</span>genome, <span class="at">names_to =</span> <span class="st">&quot;data&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;counts&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-4"><a href="loading-and-tidying-data.html#cb21-4" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sample =</span> <span class="fu">substr</span>(data, <span class="dv">1</span>, <span class="dv">7</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb21-5"><a href="loading-and-tidying-data.html#cb21-5" tabindex="-1"></a>  <span class="fu">group_by</span>(genome, sample) <span class="sc">%&gt;%</span></span>
+<span id="cb21-6"><a href="loading-and-tidying-data.html#cb21-6" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">counts =</span> <span class="fu">sum</span>(counts), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb21-7"><a href="loading-and-tidying-data.html#cb21-7" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">values_from =</span> <span class="st">&quot;counts&quot;</span>)</span></code></pre></div>
+</div>
+<div id="macro-scale-mags-catalogue" class="section level4 hasAnchor" number="2.3.1.2">
+<h4><span class="header-section-number">2.3.1.2</span> Macro-scale MAGs Catalogue<a href="loading-and-tidying-data.html#macro-scale-mags-catalogue" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<div id="taxonomy" class="section level5 hasAnchor" number="2.3.1.2.1">
+<h5><span class="header-section-number">2.3.1.2.1</span> Taxonomy<a href="loading-and-tidying-data.html#taxonomy" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<p>This is the raw taxonomy table generated by GTDBtk, which is simplified for downstream analyses.</p>
+<div class="sourceCode" id="cb22"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb22-1"><a href="loading-and-tidying-data.html#cb22-1" tabindex="-1"></a>macromag_taxonomy <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/gtdbtk.summary.tsv.gz&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb22-2"><a href="loading-and-tidying-data.html#cb22-2" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> user_genome) <span class="sc">%&gt;%</span></span>
+<span id="cb22-3"><a href="loading-and-tidying-data.html#cb22-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">genome =</span> <span class="fu">str_replace_all</span>(genome, <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.fa&quot;</span>, <span class="st">&quot;&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb22-4"><a href="loading-and-tidying-data.html#cb22-4" tabindex="-1"></a>  <span class="fu">separate</span>(classification, <span class="fu">c</span>(<span class="st">&quot;domain&quot;</span>, <span class="st">&quot;phylum&quot;</span>, <span class="st">&quot;class&quot;</span>, <span class="st">&quot;order&quot;</span>, <span class="st">&quot;family&quot;</span>, <span class="st">&quot;genus&quot;</span>, <span class="st">&quot;species&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb22-5"><a href="loading-and-tidying-data.html#cb22-5" tabindex="-1"></a>  <span class="fu">select</span>(genome, domain, phylum, class, order, family, genus, species) <span class="sc">%&gt;%</span></span>
+<span id="cb22-6"><a href="loading-and-tidying-data.html#cb22-6" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb22-7"><a href="loading-and-tidying-data.html#cb22-7" tabindex="-1"></a>    <span class="at">domain =</span> <span class="fu">sub</span>(<span class="st">&quot;^d__&quot;</span>, <span class="st">&quot;&quot;</span>, domain), <span class="co"># Remove prefix</span></span>
+<span id="cb22-8"><a href="loading-and-tidying-data.html#cb22-8" tabindex="-1"></a>    <span class="at">phylum =</span> <span class="fu">sub</span>(<span class="st">&quot;^p__&quot;</span>, <span class="st">&quot;&quot;</span>, phylum),</span>
+<span id="cb22-9"><a href="loading-and-tidying-data.html#cb22-9" tabindex="-1"></a>    <span class="at">class =</span> <span class="fu">sub</span>(<span class="st">&quot;^c__&quot;</span>, <span class="st">&quot;&quot;</span>, class),</span>
+<span id="cb22-10"><a href="loading-and-tidying-data.html#cb22-10" tabindex="-1"></a>    <span class="at">order =</span> <span class="fu">sub</span>(<span class="st">&quot;^o__&quot;</span>, <span class="st">&quot;&quot;</span>, order),</span>
+<span id="cb22-11"><a href="loading-and-tidying-data.html#cb22-11" tabindex="-1"></a>    <span class="at">family =</span> <span class="fu">sub</span>(<span class="st">&quot;^f__&quot;</span>, <span class="st">&quot;&quot;</span>, family),</span>
+<span id="cb22-12"><a href="loading-and-tidying-data.html#cb22-12" tabindex="-1"></a>    <span class="at">genus =</span> <span class="fu">sub</span>(<span class="st">&quot;^g__&quot;</span>, <span class="st">&quot;&quot;</span>, genus),</span>
+<span id="cb22-13"><a href="loading-and-tidying-data.html#cb22-13" tabindex="-1"></a>    <span class="at">species =</span> <span class="fu">sub</span>(<span class="st">&quot;^s__&quot;</span>, <span class="st">&quot;&quot;</span>, species)</span>
+<span id="cb22-14"><a href="loading-and-tidying-data.html#cb22-14" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb22-15"><a href="loading-and-tidying-data.html#cb22-15" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, macroquant_read_counts<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span></span>
+<span id="cb22-16"><a href="loading-and-tidying-data.html#cb22-16" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> macroquant_read_counts<span class="sc">$</span>genome) <span class="sc">%&gt;%</span></span>
+<span id="cb22-17"><a href="loading-and-tidying-data.html#cb22-17" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb22-18"><a href="loading-and-tidying-data.html#cb22-18" tabindex="-1"></a>    <span class="at">species =</span> <span class="fu">if_else</span>(</span>
+<span id="cb22-19"><a href="loading-and-tidying-data.html#cb22-19" tabindex="-1"></a>      <span class="fu">is.na</span>(species) <span class="sc">|</span> species <span class="sc">==</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb22-20"><a href="loading-and-tidying-data.html#cb22-20" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;unclassified_&quot;</span>, genus),</span>
+<span id="cb22-21"><a href="loading-and-tidying-data.html#cb22-21" tabindex="-1"></a>      species</span>
+<span id="cb22-22"><a href="loading-and-tidying-data.html#cb22-22" tabindex="-1"></a>    )</span>
+<span id="cb22-23"><a href="loading-and-tidying-data.html#cb22-23" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb22-24"><a href="loading-and-tidying-data.html#cb22-24" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb22-25"><a href="loading-and-tidying-data.html#cb22-25" tabindex="-1"></a>    <span class="at">species =</span> <span class="fu">if_else</span>(</span>
+<span id="cb22-26"><a href="loading-and-tidying-data.html#cb22-26" tabindex="-1"></a>      <span class="fu">is.na</span>(species) <span class="sc">|</span> species <span class="sc">==</span> <span class="st">&quot;unclassified_&quot;</span>,</span>
+<span id="cb22-27"><a href="loading-and-tidying-data.html#cb22-27" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;unclassified_&quot;</span>, family),</span>
+<span id="cb22-28"><a href="loading-and-tidying-data.html#cb22-28" tabindex="-1"></a>      species</span>
+<span id="cb22-29"><a href="loading-and-tidying-data.html#cb22-29" tabindex="-1"></a>    )</span>
+<span id="cb22-30"><a href="loading-and-tidying-data.html#cb22-30" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb22-31"><a href="loading-and-tidying-data.html#cb22-31" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb22-32"><a href="loading-and-tidying-data.html#cb22-32" tabindex="-1"></a>    <span class="at">genus =</span> <span class="fu">if_else</span>(</span>
+<span id="cb22-33"><a href="loading-and-tidying-data.html#cb22-33" tabindex="-1"></a>      <span class="fu">is.na</span>(genus) <span class="sc">|</span> genus <span class="sc">==</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb22-34"><a href="loading-and-tidying-data.html#cb22-34" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;unclassified_&quot;</span>, family),</span>
+<span id="cb22-35"><a href="loading-and-tidying-data.html#cb22-35" tabindex="-1"></a>      genus</span>
+<span id="cb22-36"><a href="loading-and-tidying-data.html#cb22-36" tabindex="-1"></a>    )</span>
+<span id="cb22-37"><a href="loading-and-tidying-data.html#cb22-37" tabindex="-1"></a>  )</span></code></pre></div>
+</div>
+<div id="quality" class="section level5 hasAnchor" number="2.3.1.2.2">
+<h5><span class="header-section-number">2.3.1.2.2</span> Quality<a href="loading-and-tidying-data.html#quality" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<div class="sourceCode" id="cb23"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb23-1"><a href="loading-and-tidying-data.html#cb23-1" tabindex="-1"></a>macromag_quality <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/checkm2.quality_report.tsv.gz&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-2"><a href="loading-and-tidying-data.html#cb23-2" tabindex="-1"></a>  <span class="co"># rename first column</span></span>
+<span id="cb23-3"><a href="loading-and-tidying-data.html#cb23-3" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb23-4"><a href="loading-and-tidying-data.html#cb23-4" tabindex="-1"></a>  <span class="co"># remove .fa from the end of each genome name</span></span>
+<span id="cb23-5"><a href="loading-and-tidying-data.html#cb23-5" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">genome =</span> <span class="fu">str_replace_all</span>(genome, <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.fa&quot;</span>, <span class="st">&quot;&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb23-6"><a href="loading-and-tidying-data.html#cb23-6" tabindex="-1"></a>  <span class="co"># select relevant columns and rename</span></span>
+<span id="cb23-7"><a href="loading-and-tidying-data.html#cb23-7" tabindex="-1"></a>  <span class="fu">select</span>(genome, Completeness, Contamination, Coding_Density, Genome_Size, Contig_N50) <span class="sc">%&gt;%</span></span>
+<span id="cb23-8"><a href="loading-and-tidying-data.html#cb23-8" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb23-9"><a href="loading-and-tidying-data.html#cb23-9" tabindex="-1"></a>    <span class="at">completeness =</span> Completeness,</span>
+<span id="cb23-10"><a href="loading-and-tidying-data.html#cb23-10" tabindex="-1"></a>    <span class="at">contamination =</span> Contamination,</span>
+<span id="cb23-11"><a href="loading-and-tidying-data.html#cb23-11" tabindex="-1"></a>    <span class="at">coding_density =</span> Coding_Density,</span>
+<span id="cb23-12"><a href="loading-and-tidying-data.html#cb23-12" tabindex="-1"></a>    <span class="at">length =</span> Genome_Size,</span>
+<span id="cb23-13"><a href="loading-and-tidying-data.html#cb23-13" tabindex="-1"></a>    <span class="at">N50_length =</span> Contig_N50</span>
+<span id="cb23-14"><a href="loading-and-tidying-data.html#cb23-14" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb23-15"><a href="loading-and-tidying-data.html#cb23-15" tabindex="-1"></a>  <span class="co"># estimate genome circularity (N50 should be equal to genome length)</span></span>
+<span id="cb23-16"><a href="loading-and-tidying-data.html#cb23-16" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">circularity =</span> N50_length <span class="sc">/</span> length) <span class="sc">%&gt;%</span></span>
+<span id="cb23-17"><a href="loading-and-tidying-data.html#cb23-17" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">circularity =</span> <span class="fu">ifelse</span>(circularity <span class="sc">&gt;=</span> <span class="dv">1</span>, <span class="st">&quot;1&quot;</span>, <span class="st">&quot;0&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb23-18"><a href="loading-and-tidying-data.html#cb23-18" tabindex="-1"></a>  <span class="co"># update completeness and contamination for genomes with circularity of 1</span></span>
+<span id="cb23-19"><a href="loading-and-tidying-data.html#cb23-19" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb23-20"><a href="loading-and-tidying-data.html#cb23-20" tabindex="-1"></a>    <span class="at">completeness =</span> <span class="fu">ifelse</span>(circularity <span class="sc">==</span> <span class="st">&quot;1&quot;</span>, <span class="dv">100</span>, completeness),</span>
+<span id="cb23-21"><a href="loading-and-tidying-data.html#cb23-21" tabindex="-1"></a>    <span class="at">contamination =</span> <span class="fu">ifelse</span>(circularity <span class="sc">==</span> <span class="st">&quot;1&quot;</span>, <span class="dv">0</span>, contamination)</span>
+<span id="cb23-22"><a href="loading-and-tidying-data.html#cb23-22" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb23-23"><a href="loading-and-tidying-data.html#cb23-23" tabindex="-1"></a>  <span class="co"># estimate ratio of: genome length / median bacterial genome length</span></span>
+<span id="cb23-24"><a href="loading-and-tidying-data.html#cb23-24" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">length_ratio =</span> length <span class="sc">/</span> <span class="fu">median</span>(length, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb23-25"><a href="loading-and-tidying-data.html#cb23-25" tabindex="-1"></a></span>
+<span id="cb23-26"><a href="loading-and-tidying-data.html#cb23-26" tabindex="-1"></a>macromag_genomemetadata <span class="ot">&lt;-</span> macromag_taxonomy <span class="sc">%&gt;%</span></span>
+<span id="cb23-27"><a href="loading-and-tidying-data.html#cb23-27" tabindex="-1"></a>  <span class="fu">left_join</span>(macromag_quality, <span class="at">by =</span> <span class="fu">join_by</span>(genome <span class="sc">==</span> genome)) <span class="sc">%&gt;%</span> <span class="co"># join quality</span></span>
+<span id="cb23-28"><a href="loading-and-tidying-data.html#cb23-28" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, macroquant_read_counts<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span></span>
+<span id="cb23-29"><a href="loading-and-tidying-data.html#cb23-29" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> macroquant_read_counts<span class="sc">$</span>genome)</span></code></pre></div>
+</div>
+<div id="functional-annotation" class="section level5 hasAnchor" number="2.3.1.2.3">
+<h5><span class="header-section-number">2.3.1.2.3</span> Functional Annotation<a href="loading-and-tidying-data.html#functional-annotation" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<div class="sourceCode" id="cb24"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb24-1"><a href="loading-and-tidying-data.html#cb24-1" tabindex="-1"></a><span class="co"># macromag_annotations &lt;- read_tsv(&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/dram.annotations.tsv.gz&quot;, show_col_types = FALSE) %&gt;%</span></span>
+<span id="cb24-2"><a href="loading-and-tidying-data.html#cb24-2" tabindex="-1"></a>macromag_annotations <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;data/annotations.tsv&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb24-3"><a href="loading-and-tidying-data.html#cb24-3" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">gene =</span> <span class="dv">1</span>, <span class="at">genome =</span> <span class="dv">2</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb24-4"><a href="loading-and-tidying-data.html#cb24-4" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> macroquant_read_counts<span class="sc">$</span>genome)</span>
+<span id="cb24-5"><a href="loading-and-tidying-data.html#cb24-5" tabindex="-1"></a>macromag_gifts <span class="ot">&lt;-</span> <span class="fu">distill</span>(macromag_annotations, GIFT_db, <span class="at">genomecol =</span> <span class="dv">2</span>, <span class="at">annotcol =</span> <span class="fu">c</span>(<span class="dv">9</span>, <span class="dv">10</span>, <span class="dv">19</span>))</span></code></pre></div>
+<pre class="script-output"><code>Calculating GIFTs for 223 genomes:
+    D300418:bin_000001 (1/223)
+    D300418:bin_000013 (2/223)
+    D300428:bin_000008 (3/223)
+    D300430:bin_000010 (4/223)
+    D300432:bin_000001 (5/223)
+    D300435:bin_000001 (6/223)
+    D300442:bin_000001 (7/223)
+    D300442:bin_000015 (8/223)
+    D300443:bin_000002 (9/223)
+    D300443:bin_000003 (10/223)
+    D300444:bin_000010 (11/223)
+    D300452:bin_000016 (12/223)
+    D300458:bin_000001 (13/223)
+    D300462:bin_000001 (14/223)
+    D300472:bin_000003 (15/223)
+    D300474:bin_000012 (16/223)
+    D300475:bin_000015 (17/223)
+    D300479:bin_000001 (18/223)
+    D300479:bin_000005 (19/223)
+    D300481:bin_000002 (20/223)
+    D300482:bin_000009 (21/223)
+    D300491:bin_000003 (22/223)
+    D300492:bin_000003 (23/223)
+    D300493:bin_000002 (24/223)
+    D300499:bin_000015 (25/223)
+    D300500:bin_000011 (26/223)
+    D300506:bin_000004 (27/223)
+    D300509:bin_000001 (28/223)
+    D300511:bin_000002 (29/223)
+    D300511:bin_000016 (30/223)
+    D300514:bin_000003 (31/223)
+    D300519:bin_000006 (32/223)
+    D300521:bin_000005 (33/223)
+    D300521:bin_000006 (34/223)
+    D300526:bin_000001 (35/223)
+    D300526:bin_000014 (36/223)
+    GEXTRA:bin_000001 (37/223)
+    GEXTRA:bin_000002 (38/223)
+    GEXTRA:bin_000004 (39/223)
+    GEXTRA:bin_000006 (40/223)
+    GPB:bin_000001 (41/223)
+    GPB:bin_000002 (42/223)
+    GPB:bin_000003 (43/223)
+    GPB:bin_000004 (44/223)
+    GPB:bin_000005 (45/223)
+    GPB:bin_000009 (46/223)
+    GPB:bin_000010 (47/223)
+    GPB:bin_000012 (48/223)
+    GPB:bin_000014 (49/223)
+    GPB:bin_000015 (50/223)
+    GPB:bin_000016 (51/223)
+    GPB:bin_000017 (52/223)
+    GPB:bin_000019 (53/223)
+    GPB:bin_000020 (54/223)
+    GPB:bin_000021 (55/223)
+    GPB:bin_000022 (56/223)
+    GPB:bin_000023 (57/223)
+    GPB:bin_000024 (58/223)
+    GPB:bin_000025 (59/223)
+    GPB:bin_000026 (60/223)
+    GPB:bin_000027 (61/223)
+    GPB:bin_000028 (62/223)
+    GPB:bin_000029 (63/223)
+    GPB:bin_000031 (64/223)
+    GPB:bin_000032 (65/223)
+    GPB:bin_000033 (66/223)
+    GPB:bin_000034 (67/223)
+    GPB:bin_000035 (68/223)
+    GPB:bin_000038 (69/223)
+    GPB:bin_000039 (70/223)
+    GPB:bin_000040 (71/223)
+    GPB:bin_000041 (72/223)
+    GPB:bin_000042 (73/223)
+    GPB:bin_000043 (74/223)
+    GPB:bin_000045 (75/223)
+    GPB:bin_000049 (76/223)
+    GPB:bin_000051 (77/223)
+    GPB:bin_000053 (78/223)
+    GPB:bin_000054 (79/223)
+    GPB:bin_000055 (80/223)
+    GPB:bin_000056 (81/223)
+    GPB:bin_000057 (82/223)
+    GPB:bin_000058 (83/223)
+    GPB:bin_000059 (84/223)
+    GPB:bin_000060 (85/223)
+    GPB:bin_000061 (86/223)
+    GPB:bin_000065 (87/223)
+    GPB:bin_000067 (88/223)
+    GPB:bin_000069 (89/223)
+    GPB:bin_000070 (90/223)
+    GPB:bin_000071 (91/223)
+    GPB:bin_000073 (92/223)
+    GPB:bin_000074 (93/223)
+    GPB:bin_000075 (94/223)
+    GPB:bin_000076 (95/223)
+    GPB:bin_000078 (96/223)
+    GPB:bin_000080 (97/223)
+    GPB:bin_000082 (98/223)
+    GPB:bin_000083 (99/223)
+    GPB:bin_000084 (100/223)
+    GPB:bin_000085 (101/223)
+    GPB:bin_000086 (102/223)
+    GPB:bin_000087 (103/223)
+    GPB:bin_000088 (104/223)
+    GPB:bin_000089 (105/223)
+    GPB:bin_000092 (106/223)
+    GPB:bin_000093 (107/223)
+    GPB:bin_000094 (108/223)
+    GPB:bin_000095 (109/223)
+    GPB:bin_000097 (110/223)
+    GPB:bin_000099 (111/223)
+    GPB:bin_000100 (112/223)
+    GPB:bin_000104 (113/223)
+    GPB:bin_000111 (114/223)
+    GPB:bin_000112 (115/223)
+    GPB:bin_000113 (116/223)
+    GPB:bin_000114 (117/223)
+    GPB:bin_000115 (118/223)
+    GPB:bin_000116 (119/223)
+    GPB:bin_000119 (120/223)
+    GPB:bin_000122 (121/223)
+    GPB:bin_000123 (122/223)
+    GPB:bin_000124 (123/223)
+    GPB:bin_000125 (124/223)
+    GPB:bin_000126 (125/223)
+    GPB:bin_000127 (126/223)
+    GPB:bin_000129 (127/223)
+    GPB:bin_000130 (128/223)
+    GPB:bin_000131 (129/223)
+    GPB:bin_000132 (130/223)
+    GPB:bin_000133 (131/223)
+    GPB:bin_000135 (132/223)
+    GPB:bin_000136 (133/223)
+    GPB:bin_000137 (134/223)
+    GPB:bin_000139 (135/223)
+    GPB:bin_000140 (136/223)
+    GPB:bin_000141 (137/223)
+    GPB:bin_000142 (138/223)
+    GPB:bin_000143 (139/223)
+    GPB:bin_000145 (140/223)
+    GPB:bin_000146 (141/223)
+    GPB:bin_000147 (142/223)
+    GPB:bin_000148 (143/223)
+    GPB:bin_000149 (144/223)
+    GPB:bin_000151 (145/223)
+    GPB:bin_000152 (146/223)
+    GPB:bin_000153 (147/223)
+    GPB:bin_000154 (148/223)
+    GPB:bin_000155 (149/223)
+    GPB:bin_000156 (150/223)
+    GPB:bin_000159 (151/223)
+    GPB:bin_000161 (152/223)
+    GPB:bin_000163 (153/223)
+    GPB:bin_000166 (154/223)
+    GPB:bin_000168 (155/223)
+    GPB:bin_000170 (156/223)
+    GPB:bin_000171 (157/223)
+    GPB:bin_000172 (158/223)
+    GPB:bin_000173 (159/223)
+    GPB:bin_000175 (160/223)
+    GPB:bin_000176 (161/223)
+    GPB:bin_000177 (162/223)
+    GPB:bin_000178 (163/223)
+    GPB:bin_000181 (164/223)
+    GPB:bin_000183 (165/223)
+    GPB:bin_000184 (166/223)
+    GPB:bin_000185 (167/223)
+    GPB:bin_000186 (168/223)
+    GPB:bin_000189 (169/223)
+    GPB:bin_000190 (170/223)
+    GPB:bin_000192 (171/223)
+    GPB:bin_000193 (172/223)
+    GPB:bin_000194 (173/223)
+    GPB:bin_000195 (174/223)
+    GPB:bin_000197 (175/223)
+    GPB:bin_000198 (176/223)
+    GPB:bin_000199 (177/223)
+    GPB:bin_000200 (178/223)
+    GPB:bin_000202 (179/223)
+    GPB:bin_000204 (180/223)
+    GPB:bin_000206 (181/223)
+    GPB:bin_000208 (182/223)
+    GPB:bin_000209 (183/223)
+    GPB:bin_000210 (184/223)
+    GPB:bin_000211 (185/223)
+    GPB:bin_000212 (186/223)
+    GPB:bin_000213 (187/223)
+    GPB:bin_000215 (188/223)
+    GPB:bin_000217 (189/223)
+    TG1_21:bin_000035 (190/223)
+    TG1:bin_000010 (191/223)
+    TG1:bin_000014 (192/223)
+    TG1:bin_000020 (193/223)
+    TG1:bin_000032 (194/223)
+    TG1:bin_000047 (195/223)
+    TG2_07:bin_000029 (196/223)
+    TG2_14:bin_000017 (197/223)
+    TG2_21:bin_000001 (198/223)
+    TG2_21:bin_000011 (199/223)
+    TG2_28:bin_000031 (200/223)
+    TG2:bin_000003 (201/223)
+    TG2:bin_000055 (202/223)
+    TG2:bin_000059 (203/223)
+    TG3_07:bin_000004 (204/223)
+    TG3_14:bin_000007 (205/223)
+    TG3_28:bin_000041 (206/223)
+    TG3_28:bin_000042 (207/223)
+    TG3_35:bin_000005 (208/223)
+    TG3_35:bin_000033 (209/223)
+    TG3:bin_000002 (210/223)
+    TG3:bin_000068 (211/223)
+    TG4_14:bin_000001 (212/223)
+    TG4_21:bin_000029 (213/223)
+    TG4_21:bin_000043 (214/223)
+    TG4:bin_000055 (215/223)
+    TG5_14:bin_000008 (216/223)
+    TG5_28:bin_000003 (217/223)
+    TG5_28:bin_000004 (218/223)
+    TG5_35:bin_000001 (219/223)
+    TG5_35:bin_000022 (220/223)
+    TG5_35:bin_000024 (221/223)
+    TG5:bin_000031 (222/223)
+    TG5:bin_000047 (223/223)
+
+Identifiers in the annotation table: 1507 
+Identifiers in the database: 1547 
+Identifiers in both: 206 
+Percentage of annotation table identifiers used for distillation: 13.67%
+Percentage of database identifiers used for distillation: 13.32%</code></pre>
+<div class="sourceCode" id="cb26"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb26-1"><a href="loading-and-tidying-data.html#cb26-1" tabindex="-1"></a>GIFT_db_df <span class="ot">&lt;-</span> GIFT_db</span></code></pre></div>
+</div>
+<div id="phylogenetic-tree" class="section level5 hasAnchor" number="2.3.1.2.4">
+<h5><span class="header-section-number">2.3.1.2.4</span> Phylogenetic Tree<a href="loading-and-tidying-data.html#phylogenetic-tree" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<div class="sourceCode" id="cb27"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb27-1"><a href="loading-and-tidying-data.html#cb27-1" tabindex="-1"></a>macromag_tree <span class="ot">&lt;-</span> <span class="fu">read.tree</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/gtdbtk.backbone.bac120.classify.tree&quot;</span>)</span>
+<span id="cb27-2"><a href="loading-and-tidying-data.html#cb27-2" tabindex="-1"></a>macromag_tree<span class="sc">$</span>tip.label <span class="ot">&lt;-</span> <span class="fu">str_replace_all</span>(macromag_tree<span class="sc">$</span>tip.label, <span class="st">&quot;&#39;&quot;</span>, <span class="st">&quot;&quot;</span>) <span class="co"># remove single quotes in MAG names</span></span>
+<span id="cb27-3"><a href="loading-and-tidying-data.html#cb27-3" tabindex="-1"></a>macromag_tree <span class="ot">&lt;-</span> <span class="fu">keep.tip</span>(macromag_tree, <span class="at">tip =</span> macroquant_read_counts<span class="sc">$</span>genome) <span class="co"># keep only MAG tips</span></span></code></pre></div>
+</div>
+</div>
+<div id="coverage-filtering-genome-count-normalization" class="section level4 hasAnchor" number="2.3.1.3">
+<h4><span class="header-section-number">2.3.1.3</span> Coverage Filtering &amp; Genome Count Normalization<a href="loading-and-tidying-data.html#coverage-filtering-genome-count-normalization" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<div id="coverage-filtering" class="section level5 hasAnchor" number="2.3.1.3.1">
+<h5><span class="header-section-number">2.3.1.3.1</span> Coverage filtering<a href="loading-and-tidying-data.html#coverage-filtering" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<p><strong>Note:</strong> Genomes that have less than 30% of their length covered by reads are turned into zeros to account for the random allocation of reads across genomes due to mapping heuristics.</p>
+<div class="sourceCode" id="cb28"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb28-1"><a href="loading-and-tidying-data.html#cb28-1" tabindex="-1"></a>macroquant_coverage <span class="ot">&lt;-</span> macroquant_covered_bases <span class="sc">%&gt;%</span> <span class="co"># calculate coverage values by dividing the number of covered bases by the length of each genome</span></span>
+<span id="cb28-2"><a href="loading-and-tidying-data.html#cb28-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> macromag_genomemetadata<span class="sc">$</span>length))</span>
+<span id="cb28-3"><a href="loading-and-tidying-data.html#cb28-3" tabindex="-1"></a></span>
+<span id="cb28-4"><a href="loading-and-tidying-data.html#cb28-4" tabindex="-1"></a>macroquant_read_counts_filtered <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb28-5"><a href="loading-and-tidying-data.html#cb28-5" tabindex="-1"></a>macroquant_summary_filtered <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb28-6"><a href="loading-and-tidying-data.html#cb28-6" tabindex="-1"></a><span class="co"># Define thresholds</span></span>
+<span id="cb28-7"><a href="loading-and-tidying-data.html#cb28-7" tabindex="-1"></a>coverage_thresholds <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.4</span>, <span class="fl">0.35</span>, <span class="fl">0.3</span>, <span class="fl">0.25</span>, <span class="fl">0.2</span>, <span class="fl">0.15</span>, <span class="fl">0.1</span>, <span class="fl">0.05</span>)</span>
+<span id="cb28-8"><a href="loading-and-tidying-data.html#cb28-8" tabindex="-1"></a><span class="co"># Loop over thresholds</span></span>
+<span id="cb28-9"><a href="loading-and-tidying-data.html#cb28-9" tabindex="-1"></a><span class="cf">for</span> (threshold <span class="cf">in</span> coverage_thresholds) {</span>
+<span id="cb28-10"><a href="loading-and-tidying-data.html#cb28-10" tabindex="-1"></a>  df <span class="ot">&lt;-</span> macroquant_coverage <span class="sc">%&gt;%</span></span>
+<span id="cb28-11"><a href="loading-and-tidying-data.html#cb28-11" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> <span class="fu">ifelse</span>(. <span class="sc">&gt;</span> threshold, <span class="dv">1</span>, <span class="dv">0</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb28-12"><a href="loading-and-tidying-data.html#cb28-12" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="sc">~</span> . <span class="sc">*</span> macroquant_read_counts[[<span class="fu">cur_column</span>()]]))</span>
+<span id="cb28-13"><a href="loading-and-tidying-data.html#cb28-13" tabindex="-1"></a>  summary <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
+<span id="cb28-14"><a href="loading-and-tidying-data.html#cb28-14" tabindex="-1"></a>    <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), \(x) <span class="fu">sum</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb28-15"><a href="loading-and-tidying-data.html#cb28-15" tabindex="-1"></a>    <span class="fu">pivot_longer</span>(</span>
+<span id="cb28-16"><a href="loading-and-tidying-data.html#cb28-16" tabindex="-1"></a>      <span class="at">cols =</span> <span class="fu">where</span>(is.numeric), <span class="co"># columns to pivot (all numeric here)</span></span>
+<span id="cb28-17"><a href="loading-and-tidying-data.html#cb28-17" tabindex="-1"></a>      <span class="at">names_to =</span> <span class="st">&quot;microsample&quot;</span>, <span class="co"># new column for former column names</span></span>
+<span id="cb28-18"><a href="loading-and-tidying-data.html#cb28-18" tabindex="-1"></a>      <span class="at">values_to =</span> <span class="fu">paste0</span>(<span class="st">&quot;read_count_&quot;</span>, threshold <span class="sc">*</span> <span class="dv">100</span>) <span class="co"># new column for values</span></span>
+<span id="cb28-19"><a href="loading-and-tidying-data.html#cb28-19" tabindex="-1"></a>    )</span>
+<span id="cb28-20"><a href="loading-and-tidying-data.html#cb28-20" tabindex="-1"></a>  name <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;filt_&quot;</span>, threshold <span class="sc">*</span> <span class="dv">100</span>)</span>
+<span id="cb28-21"><a href="loading-and-tidying-data.html#cb28-21" tabindex="-1"></a>  macroquant_read_counts_filtered[[name]] <span class="ot">&lt;-</span> df</span>
+<span id="cb28-22"><a href="loading-and-tidying-data.html#cb28-22" tabindex="-1"></a>  macroquant_summary_filtered[[name]] <span class="ot">&lt;-</span> summary</span>
+<span id="cb28-23"><a href="loading-and-tidying-data.html#cb28-23" tabindex="-1"></a>}</span>
+<span id="cb28-24"><a href="loading-and-tidying-data.html#cb28-24" tabindex="-1"></a>macroquant_merged_summary <span class="ot">&lt;-</span> <span class="fu">reduce</span>(macroquant_summary_filtered, left_join, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>)</span>
+<span id="cb28-25"><a href="loading-and-tidying-data.html#cb28-25" tabindex="-1"></a></span>
+<span id="cb28-26"><a href="loading-and-tidying-data.html#cb28-26" tabindex="-1"></a>min_coverage <span class="ot">&lt;-</span> <span class="fl">0.3</span></span>
+<span id="cb28-27"><a href="loading-and-tidying-data.html#cb28-27" tabindex="-1"></a>macroquant_read_counts_filt_30 <span class="ot">&lt;-</span> macroquant_coverage <span class="sc">%&gt;%</span></span>
+<span id="cb28-28"><a href="loading-and-tidying-data.html#cb28-28" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> <span class="fu">ifelse</span>(. <span class="sc">&gt;</span> min_coverage, <span class="dv">1</span>, <span class="dv">0</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb28-29"><a href="loading-and-tidying-data.html#cb28-29" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="sc">~</span> . <span class="sc">*</span> macroquant_read_counts[[<span class="fu">cur_column</span>()]]))</span>
+<span id="cb28-30"><a href="loading-and-tidying-data.html#cb28-30" tabindex="-1"></a></span>
+<span id="cb28-31"><a href="loading-and-tidying-data.html#cb28-31" tabindex="-1"></a><span class="fu">all</span>(macroquant_read_counts_filtered<span class="sc">$</span>filt_30 <span class="sc">==</span> macroquant_read_counts_filt_30)</span></code></pre></div>
+<pre class="script-output"><code>[1] TRUE</code></pre>
+</div>
+<div id="generate-genome-count-table" class="section level5 hasAnchor" number="2.3.1.3.2">
+<h5><span class="header-section-number">2.3.1.3.2</span> Generate genome count table<a href="loading-and-tidying-data.html#generate-genome-count-table" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<p>After filtering the low-coverage reads, read counts are transformed into genome counts using genome-length and read-length information.</p>
+<div class="sourceCode" id="cb30"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb30-1"><a href="loading-and-tidying-data.html#cb30-1" tabindex="-1"></a>readlength <span class="ot">&lt;-</span> <span class="dv">150</span> <span class="co"># change if sequencing read length is different</span></span>
+<span id="cb30-2"><a href="loading-and-tidying-data.html#cb30-2" tabindex="-1"></a>macroquant_genome_counts_filt_30 <span class="ot">&lt;-</span> macroquant_read_counts_filt_30 <span class="sc">%&gt;%</span></span>
+<span id="cb30-3"><a href="loading-and-tidying-data.html#cb30-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (macromag_genomemetadata<span class="sc">$</span>length <span class="sc">/</span> readlength))) </span>
+<span id="cb30-4"><a href="loading-and-tidying-data.html#cb30-4" tabindex="-1"></a>macroquant_genome_counts  <span class="ot">&lt;-</span> macroquant_read_counts <span class="sc">%&gt;%</span></span>
+<span id="cb30-5"><a href="loading-and-tidying-data.html#cb30-5" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (macromag_genomemetadata<span class="sc">$</span>length <span class="sc">/</span> readlength))) </span></code></pre></div>
+</div>
+</div>
+<div id="alpha-diversity" class="section level4 hasAnchor" number="2.3.1.4">
+<h4><span class="header-section-number">2.3.1.4</span> Alpha Diversity<a href="loading-and-tidying-data.html#alpha-diversity" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<p><strong>Note:</strong> The calculate_alpha_diversity() function needs to be loaded.</p>
+<div class="sourceCode" id="cb31"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb31-1"><a href="loading-and-tidying-data.html#cb31-1" tabindex="-1"></a><span class="co"># Calculate alpha diversity for filtered genome counts data</span></span>
+<span id="cb31-2"><a href="loading-and-tidying-data.html#cb31-2" tabindex="-1"></a>macroquant_metrics_filt_30 <span class="ot">&lt;-</span> <span class="fu">calculate_alpha_diversity</span>(</span>
+<span id="cb31-3"><a href="loading-and-tidying-data.html#cb31-3" tabindex="-1"></a>  <span class="at">input_data =</span> macroquant_genome_counts_filt_30,</span>
+<span id="cb31-4"><a href="loading-and-tidying-data.html#cb31-4" tabindex="-1"></a>  <span class="at">metadata_name =</span> mssm_quality,</span>
+<span id="cb31-5"><a href="loading-and-tidying-data.html#cb31-5" tabindex="-1"></a>  <span class="at">dataset_name =</span> <span class="st">&quot;filt_30&quot;</span>,</span>
+<span id="cb31-6"><a href="loading-and-tidying-data.html#cb31-6" tabindex="-1"></a>  <span class="at">tree_name =</span> macromag_tree</span>
+<span id="cb31-7"><a href="loading-and-tidying-data.html#cb31-7" tabindex="-1"></a>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(<span class="sc">!</span>microsample <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;Undeter&quot;</span>))</span></code></pre></div>
+</div>
+</div>
+<div id="abundance-estimation-using-micro-scale-mags-catalogue" class="section level3 hasAnchor" number="2.3.2">
+<h3><span class="header-section-number">2.3.2</span> Abundance Estimation Using Micro-scale MAGs Catalogue<a href="loading-and-tidying-data.html#abundance-estimation-using-micro-scale-mags-catalogue" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="import-genome-counts-1" class="section level4 hasAnchor" number="2.3.2.1">
+<h4><span class="header-section-number">2.3.2.1</span> Import Genome Counts<a href="loading-and-tidying-data.html#import-genome-counts-1" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<div class="sourceCode" id="cb32"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb32-1"><a href="loading-and-tidying-data.html#cb32-1" tabindex="-1"></a>microquant_read_counts <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/dn35KSggCd/genome.count.REF0025-MSEB0011-0.95.tsv.gz&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb32-2"><a href="loading-and-tidying-data.html#cb32-2" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb32-3"><a href="loading-and-tidying-data.html#cb32-3" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">!</span>genome, <span class="at">names_to =</span> <span class="st">&quot;data&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;counts&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb32-4"><a href="loading-and-tidying-data.html#cb32-4" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sample =</span> <span class="fu">str_extract</span>(data, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span>  <span class="co"># Extract the sample name</span></span>
+<span id="cb32-5"><a href="loading-and-tidying-data.html#cb32-5" tabindex="-1"></a>  <span class="fu">group_by</span>(genome, sample) <span class="sc">%&gt;%</span></span>
+<span id="cb32-6"><a href="loading-and-tidying-data.html#cb32-6" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">counts =</span> <span class="fu">sum</span>(counts), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb32-7"><a href="loading-and-tidying-data.html#cb32-7" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">values_from =</span> <span class="st">&quot;counts&quot;</span>)</span></code></pre></div>
+<div class="sourceCode" id="cb33"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb33-1"><a href="loading-and-tidying-data.html#cb33-1" tabindex="-1"></a>microquant_covered_bases <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/dn35KSggCd/genome.covered_bases.REF0025-MSEB0011-0.95.tsv.gz&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb33-2"><a href="loading-and-tidying-data.html#cb33-2" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb33-3"><a href="loading-and-tidying-data.html#cb33-3" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">!</span>genome, <span class="at">names_to =</span> <span class="st">&quot;data&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;counts&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb33-4"><a href="loading-and-tidying-data.html#cb33-4" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sample =</span> <span class="fu">str_extract</span>(data, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb33-5"><a href="loading-and-tidying-data.html#cb33-5" tabindex="-1"></a>  <span class="fu">group_by</span>(genome, sample) <span class="sc">%&gt;%</span></span>
+<span id="cb33-6"><a href="loading-and-tidying-data.html#cb33-6" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">counts =</span> <span class="fu">sum</span>(counts), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb33-7"><a href="loading-and-tidying-data.html#cb33-7" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">values_from =</span> <span class="st">&quot;counts&quot;</span>)</span></code></pre></div>
+</div>
+<div id="micro-scale-mags-catalogue" class="section level4 hasAnchor" number="2.3.2.2">
+<h4><span class="header-section-number">2.3.2.2</span> Micro-scale MAGs Catalogue<a href="loading-and-tidying-data.html#micro-scale-mags-catalogue" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<div id="taxonomy-1" class="section level5 hasAnchor" number="2.3.2.2.1">
+<h5><span class="header-section-number">2.3.2.2.1</span> Taxonomy<a href="loading-and-tidying-data.html#taxonomy-1" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<p>This is the raw taxonomy table generated by GTDBtk, which is simplified for downstream analyses.</p>
+<div class="sourceCode" id="cb34"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb34-1"><a href="loading-and-tidying-data.html#cb34-1" tabindex="-1"></a>micromag_taxonomy <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0025-MSEB0011/gtdbtk.summary.tsv&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb34-2"><a href="loading-and-tidying-data.html#cb34-2" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> user_genome) <span class="sc">%&gt;%</span></span>
+<span id="cb34-3"><a href="loading-and-tidying-data.html#cb34-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">genome =</span> <span class="fu">str_replace_all</span>(genome, <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.fa&quot;</span>, <span class="st">&quot;&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb34-4"><a href="loading-and-tidying-data.html#cb34-4" tabindex="-1"></a>  <span class="fu">separate</span>(classification, <span class="fu">c</span>(<span class="st">&quot;domain&quot;</span>, <span class="st">&quot;phylum&quot;</span>, <span class="st">&quot;class&quot;</span>, <span class="st">&quot;order&quot;</span>, <span class="st">&quot;family&quot;</span>, <span class="st">&quot;genus&quot;</span>, <span class="st">&quot;species&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb34-5"><a href="loading-and-tidying-data.html#cb34-5" tabindex="-1"></a>  <span class="fu">select</span>(genome, domain, phylum, class, order, family, genus, species) <span class="sc">%&gt;%</span></span>
+<span id="cb34-6"><a href="loading-and-tidying-data.html#cb34-6" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb34-7"><a href="loading-and-tidying-data.html#cb34-7" tabindex="-1"></a>      <span class="at">domain =</span> <span class="fu">sub</span>(<span class="st">&quot;^d__&quot;</span>, <span class="st">&quot;&quot;</span>, domain), <span class="co"># Remove prefix</span></span>
+<span id="cb34-8"><a href="loading-and-tidying-data.html#cb34-8" tabindex="-1"></a>      <span class="at">phylum =</span> <span class="fu">sub</span>(<span class="st">&quot;^p__&quot;</span>, <span class="st">&quot;&quot;</span>, phylum), </span>
+<span id="cb34-9"><a href="loading-and-tidying-data.html#cb34-9" tabindex="-1"></a>      <span class="at">class =</span> <span class="fu">sub</span>(<span class="st">&quot;^c__&quot;</span>, <span class="st">&quot;&quot;</span>, class), </span>
+<span id="cb34-10"><a href="loading-and-tidying-data.html#cb34-10" tabindex="-1"></a>      <span class="at">order =</span> <span class="fu">sub</span>(<span class="st">&quot;^o__&quot;</span>, <span class="st">&quot;&quot;</span>, order), </span>
+<span id="cb34-11"><a href="loading-and-tidying-data.html#cb34-11" tabindex="-1"></a>      <span class="at">family =</span> <span class="fu">sub</span>(<span class="st">&quot;^f__&quot;</span>, <span class="st">&quot;&quot;</span>, family), </span>
+<span id="cb34-12"><a href="loading-and-tidying-data.html#cb34-12" tabindex="-1"></a>      <span class="at">genus =</span> <span class="fu">sub</span>(<span class="st">&quot;^g__&quot;</span>, <span class="st">&quot;&quot;</span>, genus), </span>
+<span id="cb34-13"><a href="loading-and-tidying-data.html#cb34-13" tabindex="-1"></a>      <span class="at">species =</span> <span class="fu">sub</span>(<span class="st">&quot;^s__&quot;</span>, <span class="st">&quot;&quot;</span>, species)</span>
+<span id="cb34-14"><a href="loading-and-tidying-data.html#cb34-14" tabindex="-1"></a>    )  <span class="sc">%&gt;%</span> </span>
+<span id="cb34-15"><a href="loading-and-tidying-data.html#cb34-15" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, microquant_read_counts<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span> </span>
+<span id="cb34-16"><a href="loading-and-tidying-data.html#cb34-16" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> microquant_read_counts<span class="sc">$</span>genome) <span class="sc">%&gt;%</span></span>
+<span id="cb34-17"><a href="loading-and-tidying-data.html#cb34-17" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb34-18"><a href="loading-and-tidying-data.html#cb34-18" tabindex="-1"></a>    <span class="at">species =</span> <span class="fu">if_else</span>(</span>
+<span id="cb34-19"><a href="loading-and-tidying-data.html#cb34-19" tabindex="-1"></a>      <span class="fu">is.na</span>(species) <span class="sc">|</span> species <span class="sc">==</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb34-20"><a href="loading-and-tidying-data.html#cb34-20" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;unclassified_&quot;</span>, genus),</span>
+<span id="cb34-21"><a href="loading-and-tidying-data.html#cb34-21" tabindex="-1"></a>      species</span>
+<span id="cb34-22"><a href="loading-and-tidying-data.html#cb34-22" tabindex="-1"></a>    )</span>
+<span id="cb34-23"><a href="loading-and-tidying-data.html#cb34-23" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb34-24"><a href="loading-and-tidying-data.html#cb34-24" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb34-25"><a href="loading-and-tidying-data.html#cb34-25" tabindex="-1"></a>    <span class="at">species =</span> <span class="fu">if_else</span>(</span>
+<span id="cb34-26"><a href="loading-and-tidying-data.html#cb34-26" tabindex="-1"></a>      <span class="fu">is.na</span>(species) <span class="sc">|</span> species <span class="sc">==</span> <span class="st">&quot;unclassified_&quot;</span>,</span>
+<span id="cb34-27"><a href="loading-and-tidying-data.html#cb34-27" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;unclassified_&quot;</span>, family),</span>
+<span id="cb34-28"><a href="loading-and-tidying-data.html#cb34-28" tabindex="-1"></a>      species</span>
+<span id="cb34-29"><a href="loading-and-tidying-data.html#cb34-29" tabindex="-1"></a>    )</span>
+<span id="cb34-30"><a href="loading-and-tidying-data.html#cb34-30" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb34-31"><a href="loading-and-tidying-data.html#cb34-31" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb34-32"><a href="loading-and-tidying-data.html#cb34-32" tabindex="-1"></a>    <span class="at">genus =</span> <span class="fu">if_else</span>(</span>
+<span id="cb34-33"><a href="loading-and-tidying-data.html#cb34-33" tabindex="-1"></a>      <span class="fu">is.na</span>(genus) <span class="sc">|</span> genus <span class="sc">==</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb34-34"><a href="loading-and-tidying-data.html#cb34-34" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;unclassified_&quot;</span>, family),</span>
+<span id="cb34-35"><a href="loading-and-tidying-data.html#cb34-35" tabindex="-1"></a>      genus</span>
+<span id="cb34-36"><a href="loading-and-tidying-data.html#cb34-36" tabindex="-1"></a>    )</span>
+<span id="cb34-37"><a href="loading-and-tidying-data.html#cb34-37" tabindex="-1"></a>  ) </span></code></pre></div>
+</div>
+<div id="quality-1" class="section level5 hasAnchor" number="2.3.2.2.2">
+<h5><span class="header-section-number">2.3.2.2.2</span> Quality<a href="loading-and-tidying-data.html#quality-1" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<div class="sourceCode" id="cb35"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb35-1"><a href="loading-and-tidying-data.html#cb35-1" tabindex="-1"></a>micromag_quality <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0025-MSEB0011/checkm2.quality_report.tsv&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb35-2"><a href="loading-and-tidying-data.html#cb35-2" tabindex="-1"></a>  <span class="co"># rename first column</span></span>
+<span id="cb35-3"><a href="loading-and-tidying-data.html#cb35-3" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb35-4"><a href="loading-and-tidying-data.html#cb35-4" tabindex="-1"></a>  <span class="co"># remove .fa from the end of each genome name</span></span>
+<span id="cb35-5"><a href="loading-and-tidying-data.html#cb35-5" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">genome =</span> <span class="fu">str_replace_all</span>(genome, <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.fa&quot;</span>, <span class="st">&quot;&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb35-6"><a href="loading-and-tidying-data.html#cb35-6" tabindex="-1"></a>  <span class="co"># select relevant columns and rename</span></span>
+<span id="cb35-7"><a href="loading-and-tidying-data.html#cb35-7" tabindex="-1"></a>  <span class="fu">select</span>(genome, Completeness, Contamination, Coding_Density, Genome_Size, Contig_N50) <span class="sc">%&gt;%</span> </span>
+<span id="cb35-8"><a href="loading-and-tidying-data.html#cb35-8" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">completeness =</span> Completeness, </span>
+<span id="cb35-9"><a href="loading-and-tidying-data.html#cb35-9" tabindex="-1"></a>         <span class="at">contamination =</span> Contamination, </span>
+<span id="cb35-10"><a href="loading-and-tidying-data.html#cb35-10" tabindex="-1"></a>         <span class="at">coding_density =</span> Coding_Density, </span>
+<span id="cb35-11"><a href="loading-and-tidying-data.html#cb35-11" tabindex="-1"></a>         <span class="at">length =</span> Genome_Size,</span>
+<span id="cb35-12"><a href="loading-and-tidying-data.html#cb35-12" tabindex="-1"></a>         <span class="at">N50_length =</span> Contig_N50) <span class="sc">%&gt;%</span></span>
+<span id="cb35-13"><a href="loading-and-tidying-data.html#cb35-13" tabindex="-1"></a>  <span class="co"># estimate genome circularity (N50 should be equal to genome length)</span></span>
+<span id="cb35-14"><a href="loading-and-tidying-data.html#cb35-14" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">circularity =</span> N50_length<span class="sc">/</span>length) <span class="sc">%&gt;%</span></span>
+<span id="cb35-15"><a href="loading-and-tidying-data.html#cb35-15" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">circularity =</span> <span class="fu">ifelse</span>(circularity <span class="sc">&gt;=</span> <span class="dv">1</span>, <span class="st">&quot;1&quot;</span>, <span class="st">&quot;0&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb35-16"><a href="loading-and-tidying-data.html#cb35-16" tabindex="-1"></a>  <span class="co"># update completeness and contamination for genomes with circularity of 1</span></span>
+<span id="cb35-17"><a href="loading-and-tidying-data.html#cb35-17" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">completeness =</span> <span class="fu">ifelse</span>(circularity <span class="sc">==</span> <span class="st">&quot;1&quot;</span>, <span class="dv">100</span>, completeness),</span>
+<span id="cb35-18"><a href="loading-and-tidying-data.html#cb35-18" tabindex="-1"></a>         <span class="at">contamination =</span> <span class="fu">ifelse</span>(circularity <span class="sc">==</span> <span class="st">&quot;1&quot;</span>, <span class="dv">0</span>, contamination)) <span class="sc">%&gt;%</span>   </span>
+<span id="cb35-19"><a href="loading-and-tidying-data.html#cb35-19" tabindex="-1"></a>  <span class="co"># estimate ratio of: genome length / median bacterial genome length</span></span>
+<span id="cb35-20"><a href="loading-and-tidying-data.html#cb35-20" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">length_ratio =</span> length<span class="sc">/</span><span class="fu">median</span>(length, <span class="at">na.rm =</span> <span class="cn">TRUE</span>))</span>
+<span id="cb35-21"><a href="loading-and-tidying-data.html#cb35-21" tabindex="-1"></a></span>
+<span id="cb35-22"><a href="loading-and-tidying-data.html#cb35-22" tabindex="-1"></a>micromag_genomemetadata <span class="ot">&lt;-</span> micromag_taxonomy <span class="sc">%&gt;%</span></span>
+<span id="cb35-23"><a href="loading-and-tidying-data.html#cb35-23" tabindex="-1"></a>  <span class="fu">left_join</span>(micromag_quality, <span class="at">by =</span> <span class="fu">join_by</span>(genome <span class="sc">==</span> genome)) <span class="sc">%&gt;%</span> <span class="co"># join quality</span></span>
+<span id="cb35-24"><a href="loading-and-tidying-data.html#cb35-24" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, microquant_read_counts<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span> </span>
+<span id="cb35-25"><a href="loading-and-tidying-data.html#cb35-25" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> microquant_read_counts<span class="sc">$</span>genome)</span></code></pre></div>
+</div>
+<div id="functional-annotation-1" class="section level5 hasAnchor" number="2.3.2.2.3">
+<h5><span class="header-section-number">2.3.2.2.3</span> Functional Annotation<a href="loading-and-tidying-data.html#functional-annotation-1" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<div class="sourceCode" id="cb36"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb36-1"><a href="loading-and-tidying-data.html#cb36-1" tabindex="-1"></a><span class="co">#micromag_annotations &lt;- read_tsv(&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0025-MSEB0011/dram.annotations.tsv.gz&quot;, show_col_types = FALSE) %&gt;%</span></span>
+<span id="cb36-2"><a href="loading-and-tidying-data.html#cb36-2" tabindex="-1"></a><span class="co">#micromag_annotations &lt;- read_tsv(&quot;data/micro_annotations.tsv.xz&quot;, show_col_types = FALSE) %&gt;%</span></span>
+<span id="cb36-3"><a href="loading-and-tidying-data.html#cb36-3" tabindex="-1"></a><span class="co">#  rename(gene = 1, genome = 2)  %&gt;%</span></span>
+<span id="cb36-4"><a href="loading-and-tidying-data.html#cb36-4" tabindex="-1"></a><span class="co">#  filter(genome %in% microquant_read_counts$genome)</span></span>
+<span id="cb36-5"><a href="loading-and-tidying-data.html#cb36-5" tabindex="-1"></a><span class="co">#micromag_gifts &lt;- distill(micromag_annotations, GIFT_db, genomecol = 2, annotcol = c(9, 10, 19))</span></span></code></pre></div>
+</div>
+<div id="phylogenetic-tree-1" class="section level5 hasAnchor" number="2.3.2.2.4">
+<h5><span class="header-section-number">2.3.2.2.4</span> Phylogenetic Tree<a href="loading-and-tidying-data.html#phylogenetic-tree-1" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<div class="sourceCode" id="cb37"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb37-1"><a href="loading-and-tidying-data.html#cb37-1" tabindex="-1"></a>micromag_tree <span class="ot">&lt;-</span> <span class="fu">read.tree</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0025-MSEB0011/gtdbtk.backbone.bac120.classify.tree&quot;</span>)</span>
+<span id="cb37-2"><a href="loading-and-tidying-data.html#cb37-2" tabindex="-1"></a>micromag_tree<span class="sc">$</span>tip.label <span class="ot">&lt;-</span> <span class="fu">str_replace_all</span>(micromag_tree<span class="sc">$</span>tip.label, <span class="st">&quot;&#39;&quot;</span>, <span class="st">&quot;&quot;</span>) <span class="co"># remove single quotes in MAG names</span></span>
+<span id="cb37-3"><a href="loading-and-tidying-data.html#cb37-3" tabindex="-1"></a>micromag_tree <span class="ot">&lt;-</span> <span class="fu">keep.tip</span>(micromag_tree, <span class="at">tip =</span> microquant_read_counts<span class="sc">$</span>genome) <span class="co"># keep only MAG tips</span></span></code></pre></div>
+</div>
+</div>
+<div id="coverage-filtering-genome-count-normalization-1" class="section level4 hasAnchor" number="2.3.2.3">
+<h4><span class="header-section-number">2.3.2.3</span> Coverage Filtering &amp; Genome Count Normalization<a href="loading-and-tidying-data.html#coverage-filtering-genome-count-normalization-1" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<div id="coverage-filtering-1" class="section level5 hasAnchor" number="2.3.2.3.1">
+<h5><span class="header-section-number">2.3.2.3.1</span> Coverage filtering<a href="loading-and-tidying-data.html#coverage-filtering-1" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<p><strong>Note:</strong> Genomes that have less than 30% of their length covered by reads are turned into zeros to account for the random allocation of reads across genomes due to mapping heuristics.</p>
+<div class="sourceCode" id="cb38"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb38-1"><a href="loading-and-tidying-data.html#cb38-1" tabindex="-1"></a>microquant_coverage<span class="ot">&lt;-</span> microquant_covered_bases <span class="sc">%&gt;%</span> <span class="co"># calculate coverage values by dividing the number of covered bases by the length of each genome</span></span>
+<span id="cb38-2"><a href="loading-and-tidying-data.html#cb38-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> micromag_genomemetadata<span class="sc">$</span>length))</span>
+<span id="cb38-3"><a href="loading-and-tidying-data.html#cb38-3" tabindex="-1"></a></span>
+<span id="cb38-4"><a href="loading-and-tidying-data.html#cb38-4" tabindex="-1"></a>microquant_read_counts_filtered <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb38-5"><a href="loading-and-tidying-data.html#cb38-5" tabindex="-1"></a>microquant_summary_filtered <span class="ot">&lt;-</span> <span class="fu">list</span>()</span>
+<span id="cb38-6"><a href="loading-and-tidying-data.html#cb38-6" tabindex="-1"></a><span class="co"># Define thresholds</span></span>
+<span id="cb38-7"><a href="loading-and-tidying-data.html#cb38-7" tabindex="-1"></a>coverage_thresholds <span class="ot">&lt;-</span> <span class="fu">c</span>(<span class="fl">0.4</span>, <span class="fl">0.35</span>, <span class="fl">0.3</span>, <span class="fl">0.25</span>, <span class="fl">0.2</span>, <span class="fl">0.15</span>, <span class="fl">0.1</span>, <span class="fl">0.05</span>)</span>
+<span id="cb38-8"><a href="loading-and-tidying-data.html#cb38-8" tabindex="-1"></a><span class="co"># Loop over thresholds</span></span>
+<span id="cb38-9"><a href="loading-and-tidying-data.html#cb38-9" tabindex="-1"></a><span class="cf">for</span> (threshold <span class="cf">in</span> coverage_thresholds) {</span>
+<span id="cb38-10"><a href="loading-and-tidying-data.html#cb38-10" tabindex="-1"></a>  df <span class="ot">&lt;-</span> microquant_coverage<span class="sc">%&gt;%</span></span>
+<span id="cb38-11"><a href="loading-and-tidying-data.html#cb38-11" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> <span class="fu">ifelse</span>(. <span class="sc">&gt;</span> threshold, <span class="dv">1</span>, <span class="dv">0</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb38-12"><a href="loading-and-tidying-data.html#cb38-12" tabindex="-1"></a>    <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="sc">~</span> . <span class="sc">*</span> microquant_read_counts[[<span class="fu">cur_column</span>()]]))</span>
+<span id="cb38-13"><a href="loading-and-tidying-data.html#cb38-13" tabindex="-1"></a>  summary <span class="ot">&lt;-</span> df <span class="sc">%&gt;%</span></span>
+<span id="cb38-14"><a href="loading-and-tidying-data.html#cb38-14" tabindex="-1"></a>    <span class="fu">summarise</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), \(x) <span class="fu">sum</span>(x, <span class="at">na.rm =</span> <span class="cn">TRUE</span>)))<span class="sc">%&gt;%</span></span>
+<span id="cb38-15"><a href="loading-and-tidying-data.html#cb38-15" tabindex="-1"></a>    <span class="fu">pivot_longer</span>(</span>
+<span id="cb38-16"><a href="loading-and-tidying-data.html#cb38-16" tabindex="-1"></a>      <span class="at">cols =</span> <span class="fu">where</span>(is.numeric), <span class="co"># columns to pivot (all numeric here)</span></span>
+<span id="cb38-17"><a href="loading-and-tidying-data.html#cb38-17" tabindex="-1"></a>      <span class="at">names_to =</span> <span class="st">&quot;microsample&quot;</span>, <span class="co"># new column for former column names</span></span>
+<span id="cb38-18"><a href="loading-and-tidying-data.html#cb38-18" tabindex="-1"></a>      <span class="at">values_to =</span> <span class="fu">paste0</span>(<span class="st">&quot;read_count_&quot;</span>, threshold <span class="sc">*</span> <span class="dv">100</span>) <span class="co"># new column for values</span></span>
+<span id="cb38-19"><a href="loading-and-tidying-data.html#cb38-19" tabindex="-1"></a>    )</span>
+<span id="cb38-20"><a href="loading-and-tidying-data.html#cb38-20" tabindex="-1"></a>  name <span class="ot">&lt;-</span> <span class="fu">paste0</span>(<span class="st">&quot;filt_&quot;</span>, threshold <span class="sc">*</span> <span class="dv">100</span>)</span>
+<span id="cb38-21"><a href="loading-and-tidying-data.html#cb38-21" tabindex="-1"></a>  microquant_read_counts_filtered[[name]] <span class="ot">&lt;-</span> df</span>
+<span id="cb38-22"><a href="loading-and-tidying-data.html#cb38-22" tabindex="-1"></a>  microquant_summary_filtered[[name]] <span class="ot">&lt;-</span> summary</span>
+<span id="cb38-23"><a href="loading-and-tidying-data.html#cb38-23" tabindex="-1"></a>}</span>
+<span id="cb38-24"><a href="loading-and-tidying-data.html#cb38-24" tabindex="-1"></a>microquant_merged_summary <span class="ot">&lt;-</span> <span class="fu">reduce</span>(microquant_summary_filtered, left_join, <span class="at">by =</span> <span class="st">&quot;microsample&quot;</span>)</span>
+<span id="cb38-25"><a href="loading-and-tidying-data.html#cb38-25" tabindex="-1"></a></span>
+<span id="cb38-26"><a href="loading-and-tidying-data.html#cb38-26" tabindex="-1"></a>min_coverage <span class="ot">&lt;-</span> <span class="fl">0.3</span></span>
+<span id="cb38-27"><a href="loading-and-tidying-data.html#cb38-27" tabindex="-1"></a>microquant_read_counts_filt_30 <span class="ot">&lt;-</span> microquant_coverage <span class="sc">%&gt;%</span></span>
+<span id="cb38-28"><a href="loading-and-tidying-data.html#cb38-28" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> <span class="fu">ifelse</span>(. <span class="sc">&gt;</span> min_coverage, <span class="dv">1</span>, <span class="dv">0</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb38-29"><a href="loading-and-tidying-data.html#cb38-29" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="sc">~</span> . <span class="sc">*</span> microquant_read_counts[[<span class="fu">cur_column</span>()]]))</span>
+<span id="cb38-30"><a href="loading-and-tidying-data.html#cb38-30" tabindex="-1"></a></span>
+<span id="cb38-31"><a href="loading-and-tidying-data.html#cb38-31" tabindex="-1"></a><span class="fu">all</span>(microquant_read_counts_filtered<span class="sc">$</span>filt_30 <span class="sc">==</span> microquant_read_counts_filt_30)</span></code></pre></div>
+<pre class="script-output"><code>[1] TRUE</code></pre>
+</div>
+<div id="generate-genome-count-table-1" class="section level5 hasAnchor" number="2.3.2.3.2">
+<h5><span class="header-section-number">2.3.2.3.2</span> Generate genome count table<a href="loading-and-tidying-data.html#generate-genome-count-table-1" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<p>After filtering the low-coverage reads, read counts are transformed into genome counts using genome-length and read-length information.</p>
+<div class="sourceCode" id="cb40"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb40-1"><a href="loading-and-tidying-data.html#cb40-1" tabindex="-1"></a>readlength <span class="ot">&lt;-</span> <span class="dv">150</span> <span class="co"># change if sequencing read length is different</span></span>
+<span id="cb40-2"><a href="loading-and-tidying-data.html#cb40-2" tabindex="-1"></a>microquant_genome_counts_filt_30 <span class="ot">&lt;-</span> microquant_read_counts_filt_30 <span class="sc">%&gt;%</span></span>
+<span id="cb40-3"><a href="loading-and-tidying-data.html#cb40-3" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (micromag_genomemetadata<span class="sc">$</span>length <span class="sc">/</span> readlength)))</span>
+<span id="cb40-4"><a href="loading-and-tidying-data.html#cb40-4" tabindex="-1"></a>microquant_genome_counts <span class="ot">&lt;-</span> microquant_read_counts <span class="sc">%&gt;%</span></span>
+<span id="cb40-5"><a href="loading-and-tidying-data.html#cb40-5" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (micromag_genomemetadata<span class="sc">$</span>length <span class="sc">/</span> readlength)))</span></code></pre></div>
+</div>
+</div>
+<div id="alpha-diversity-1" class="section level4 hasAnchor" number="2.3.2.4">
+<h4><span class="header-section-number">2.3.2.4</span> Alpha Diversity<a href="loading-and-tidying-data.html#alpha-diversity-1" class="anchor-section" aria-label="Anchor link to header"></a></h4>
+<p><strong>Note:</strong> The <code>calculate_alpha_diversity()</code> function needs to be loaded.</p>
+<div class="sourceCode" id="cb41"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb41-1"><a href="loading-and-tidying-data.html#cb41-1" tabindex="-1"></a><span class="co"># Calculate alpha diversity for filtered genome counts data</span></span>
+<span id="cb41-2"><a href="loading-and-tidying-data.html#cb41-2" tabindex="-1"></a>microquant_metrics_filt_30 <span class="ot">&lt;-</span> <span class="fu">calculate_alpha_diversity</span>(</span>
+<span id="cb41-3"><a href="loading-and-tidying-data.html#cb41-3" tabindex="-1"></a>  <span class="at">input_data =</span> microquant_read_counts_filt_30,</span>
+<span id="cb41-4"><a href="loading-and-tidying-data.html#cb41-4" tabindex="-1"></a>  <span class="at">metadata_name =</span> mssm_quality,</span>
+<span id="cb41-5"><a href="loading-and-tidying-data.html#cb41-5" tabindex="-1"></a>  <span class="at">dataset_name =</span> <span class="st">&quot;filt_30&quot;</span>,</span>
+<span id="cb41-6"><a href="loading-and-tidying-data.html#cb41-6" tabindex="-1"></a>  <span class="at">tree_name =</span> micromag_tree</span>
+<span id="cb41-7"><a href="loading-and-tidying-data.html#cb41-7" tabindex="-1"></a>) <span class="sc">%&gt;%</span> <span class="fu">filter</span>(<span class="sc">!</span>microsample <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;Undeter&quot;</span>))</span></code></pre></div>
+</div>
+</div>
+<div id="abundance-estimation-using-macro-scale-mags-catalogue-98-ani" class="section level3 hasAnchor" number="2.3.3">
+<h3><span class="header-section-number">2.3.3</span> Abundance Estimation Using Macro-scale MAGs Catalogue 98 ANI<a href="loading-and-tidying-data.html#abundance-estimation-using-macro-scale-mags-catalogue-98-ani" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div id="mapping-data" class="section level5 hasAnchor" number="2.3.3.0.1">
+<h5><span class="header-section-number">2.3.3.0.1</span> Mapping Data<a href="loading-and-tidying-data.html#mapping-data" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<div class="sourceCode" id="cb42"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb42-1"><a href="loading-and-tidying-data.html#cb42-1" tabindex="-1"></a><span class="co"># Read count</span></span>
+<span id="cb42-2"><a href="loading-and-tidying-data.html#cb42-2" tabindex="-1"></a>macroquant_read_counts_98 <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;data/genome.count.REF0015-g_mg_hybrid-0.98.tsv&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-3"><a href="loading-and-tidying-data.html#cb42-3" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-4"><a href="loading-and-tidying-data.html#cb42-4" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">!</span>genome, <span class="at">names_to =</span> <span class="st">&quot;data&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;counts&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-5"><a href="loading-and-tidying-data.html#cb42-5" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sample =</span> <span class="fu">str_extract</span>(data, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb42-6"><a href="loading-and-tidying-data.html#cb42-6" tabindex="-1"></a>  <span class="fu">group_by</span>(genome, sample) <span class="sc">%&gt;%</span></span>
+<span id="cb42-7"><a href="loading-and-tidying-data.html#cb42-7" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">counts =</span> <span class="fu">sum</span>(counts), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-8"><a href="loading-and-tidying-data.html#cb42-8" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">values_from =</span> <span class="st">&quot;counts&quot;</span>)</span>
+<span id="cb42-9"><a href="loading-and-tidying-data.html#cb42-9" tabindex="-1"></a><span class="co"># Covered bases</span></span>
+<span id="cb42-10"><a href="loading-and-tidying-data.html#cb42-10" tabindex="-1"></a>macroquant_covered_bases_98 <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;data/genome.covered_bases.REF0015-g_mg_hybrid-0.98.tsv&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-11"><a href="loading-and-tidying-data.html#cb42-11" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-12"><a href="loading-and-tidying-data.html#cb42-12" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(<span class="sc">!</span>genome, <span class="at">names_to =</span> <span class="st">&quot;data&quot;</span>, <span class="at">values_to =</span> <span class="st">&quot;counts&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-13"><a href="loading-and-tidying-data.html#cb42-13" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">sample =</span> <span class="fu">str_extract</span>(data, <span class="st">&quot;M</span><span class="sc">\\</span><span class="st">d+&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb42-14"><a href="loading-and-tidying-data.html#cb42-14" tabindex="-1"></a>  <span class="fu">group_by</span>(genome, sample) <span class="sc">%&gt;%</span></span>
+<span id="cb42-15"><a href="loading-and-tidying-data.html#cb42-15" tabindex="-1"></a>  <span class="fu">summarise</span>(<span class="at">counts =</span> <span class="fu">sum</span>(counts), <span class="at">.groups =</span> <span class="st">&quot;drop&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-16"><a href="loading-and-tidying-data.html#cb42-16" tabindex="-1"></a>  <span class="fu">pivot_wider</span>(<span class="at">names_from =</span> <span class="st">&quot;sample&quot;</span>, <span class="at">values_from =</span> <span class="st">&quot;counts&quot;</span>)</span>
+<span id="cb42-17"><a href="loading-and-tidying-data.html#cb42-17" tabindex="-1"></a><span class="co"># Taxonomy</span></span>
+<span id="cb42-18"><a href="loading-and-tidying-data.html#cb42-18" tabindex="-1"></a>macromag_taxonomy_98 <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/gtdbtk.summary.tsv.gz&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-19"><a href="loading-and-tidying-data.html#cb42-19" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> user_genome) <span class="sc">%&gt;%</span></span>
+<span id="cb42-20"><a href="loading-and-tidying-data.html#cb42-20" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">genome =</span> <span class="fu">str_replace_all</span>(genome, <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.fa&quot;</span>, <span class="st">&quot;&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb42-21"><a href="loading-and-tidying-data.html#cb42-21" tabindex="-1"></a>  <span class="fu">separate</span>(classification, <span class="fu">c</span>(<span class="st">&quot;domain&quot;</span>, <span class="st">&quot;phylum&quot;</span>, <span class="st">&quot;class&quot;</span>, <span class="st">&quot;order&quot;</span>, <span class="st">&quot;family&quot;</span>, <span class="st">&quot;genus&quot;</span>, <span class="st">&quot;species&quot;</span>), <span class="at">sep =</span> <span class="st">&quot;;&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-22"><a href="loading-and-tidying-data.html#cb42-22" tabindex="-1"></a>  <span class="fu">select</span>(genome, domain, phylum, class, order, family, genus, species) <span class="sc">%&gt;%</span></span>
+<span id="cb42-23"><a href="loading-and-tidying-data.html#cb42-23" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, macroquant_read_counts_98<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span></span>
+<span id="cb42-24"><a href="loading-and-tidying-data.html#cb42-24" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> macroquant_covered_bases_98<span class="sc">$</span>genome) <span class="sc">%&gt;%</span></span>
+<span id="cb42-25"><a href="loading-and-tidying-data.html#cb42-25" tabindex="-1"></a>  <span class="fu">select</span>(genome, domain, phylum, class, order, family, genus, species) <span class="sc">%&gt;%</span></span>
+<span id="cb42-26"><a href="loading-and-tidying-data.html#cb42-26" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb42-27"><a href="loading-and-tidying-data.html#cb42-27" tabindex="-1"></a>    <span class="at">domain =</span> <span class="fu">sub</span>(<span class="st">&quot;^d__&quot;</span>, <span class="st">&quot;&quot;</span>, domain), <span class="co"># Remove prefix</span></span>
+<span id="cb42-28"><a href="loading-and-tidying-data.html#cb42-28" tabindex="-1"></a>    <span class="at">phylum =</span> <span class="fu">sub</span>(<span class="st">&quot;^p__&quot;</span>, <span class="st">&quot;&quot;</span>, phylum),</span>
+<span id="cb42-29"><a href="loading-and-tidying-data.html#cb42-29" tabindex="-1"></a>    <span class="at">class =</span> <span class="fu">sub</span>(<span class="st">&quot;^c__&quot;</span>, <span class="st">&quot;&quot;</span>, class),</span>
+<span id="cb42-30"><a href="loading-and-tidying-data.html#cb42-30" tabindex="-1"></a>    <span class="at">order =</span> <span class="fu">sub</span>(<span class="st">&quot;^o__&quot;</span>, <span class="st">&quot;&quot;</span>, order),</span>
+<span id="cb42-31"><a href="loading-and-tidying-data.html#cb42-31" tabindex="-1"></a>    <span class="at">family =</span> <span class="fu">sub</span>(<span class="st">&quot;^f__&quot;</span>, <span class="st">&quot;&quot;</span>, family),</span>
+<span id="cb42-32"><a href="loading-and-tidying-data.html#cb42-32" tabindex="-1"></a>    <span class="at">genus =</span> <span class="fu">sub</span>(<span class="st">&quot;^g__&quot;</span>, <span class="st">&quot;&quot;</span>, genus),</span>
+<span id="cb42-33"><a href="loading-and-tidying-data.html#cb42-33" tabindex="-1"></a>    <span class="at">species =</span> <span class="fu">sub</span>(<span class="st">&quot;^s__&quot;</span>, <span class="st">&quot;&quot;</span>, species)</span>
+<span id="cb42-34"><a href="loading-and-tidying-data.html#cb42-34" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb42-35"><a href="loading-and-tidying-data.html#cb42-35" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb42-36"><a href="loading-and-tidying-data.html#cb42-36" tabindex="-1"></a>    <span class="at">species =</span> <span class="fu">if_else</span>(</span>
+<span id="cb42-37"><a href="loading-and-tidying-data.html#cb42-37" tabindex="-1"></a>      <span class="fu">is.na</span>(species) <span class="sc">|</span> species <span class="sc">==</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb42-38"><a href="loading-and-tidying-data.html#cb42-38" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;unclassified_&quot;</span>, genus),</span>
+<span id="cb42-39"><a href="loading-and-tidying-data.html#cb42-39" tabindex="-1"></a>      species</span>
+<span id="cb42-40"><a href="loading-and-tidying-data.html#cb42-40" tabindex="-1"></a>    )</span>
+<span id="cb42-41"><a href="loading-and-tidying-data.html#cb42-41" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb42-42"><a href="loading-and-tidying-data.html#cb42-42" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb42-43"><a href="loading-and-tidying-data.html#cb42-43" tabindex="-1"></a>    <span class="at">species =</span> <span class="fu">if_else</span>(</span>
+<span id="cb42-44"><a href="loading-and-tidying-data.html#cb42-44" tabindex="-1"></a>      <span class="fu">is.na</span>(species) <span class="sc">|</span> species <span class="sc">==</span> <span class="st">&quot;unclassified_&quot;</span>,</span>
+<span id="cb42-45"><a href="loading-and-tidying-data.html#cb42-45" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;unclassified_&quot;</span>, family),</span>
+<span id="cb42-46"><a href="loading-and-tidying-data.html#cb42-46" tabindex="-1"></a>      species</span>
+<span id="cb42-47"><a href="loading-and-tidying-data.html#cb42-47" tabindex="-1"></a>    )</span>
+<span id="cb42-48"><a href="loading-and-tidying-data.html#cb42-48" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb42-49"><a href="loading-and-tidying-data.html#cb42-49" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb42-50"><a href="loading-and-tidying-data.html#cb42-50" tabindex="-1"></a>    <span class="at">genus =</span> <span class="fu">if_else</span>(</span>
+<span id="cb42-51"><a href="loading-and-tidying-data.html#cb42-51" tabindex="-1"></a>      <span class="fu">is.na</span>(genus) <span class="sc">|</span> genus <span class="sc">==</span> <span class="st">&quot;&quot;</span>,</span>
+<span id="cb42-52"><a href="loading-and-tidying-data.html#cb42-52" tabindex="-1"></a>      <span class="fu">paste0</span>(<span class="st">&quot;unclassified_&quot;</span>, family),</span>
+<span id="cb42-53"><a href="loading-and-tidying-data.html#cb42-53" tabindex="-1"></a>      genus</span>
+<span id="cb42-54"><a href="loading-and-tidying-data.html#cb42-54" tabindex="-1"></a>    )</span>
+<span id="cb42-55"><a href="loading-and-tidying-data.html#cb42-55" tabindex="-1"></a>  )</span>
+<span id="cb42-56"><a href="loading-and-tidying-data.html#cb42-56" tabindex="-1"></a></span>
+<span id="cb42-57"><a href="loading-and-tidying-data.html#cb42-57" tabindex="-1"></a><span class="co"># Genome quality</span></span>
+<span id="cb42-58"><a href="loading-and-tidying-data.html#cb42-58" tabindex="-1"></a>macromag_quality_98 <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/checkm2.quality_report.tsv.gz&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-59"><a href="loading-and-tidying-data.html#cb42-59" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">genome =</span> <span class="dv">1</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb42-60"><a href="loading-and-tidying-data.html#cb42-60" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">genome =</span> <span class="fu">str_replace_all</span>(genome, <span class="st">&quot;</span><span class="sc">\\</span><span class="st">.fa&quot;</span>, <span class="st">&quot;&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb42-61"><a href="loading-and-tidying-data.html#cb42-61" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, macroquant_read_counts_98<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span></span>
+<span id="cb42-62"><a href="loading-and-tidying-data.html#cb42-62" tabindex="-1"></a>  <span class="fu">select</span>(genome, Completeness, Contamination, Coding_Density, Genome_Size, Contig_N50) <span class="sc">%&gt;%</span></span>
+<span id="cb42-63"><a href="loading-and-tidying-data.html#cb42-63" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">circul =</span> <span class="fu">ifelse</span>(Genome_Size <span class="sc">==</span> Contig_N50, <span class="st">&quot;Y&quot;</span>, <span class="st">&quot;N&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb42-64"><a href="loading-and-tidying-data.html#cb42-64" tabindex="-1"></a>  <span class="fu">rename</span>(<span class="at">completeness =</span> Completeness, <span class="at">contamination =</span> Contamination, <span class="at">coding_density =</span> Coding_Density, <span class="at">length =</span> Genome_Size) <span class="sc">%&gt;%</span></span>
+<span id="cb42-65"><a href="loading-and-tidying-data.html#cb42-65" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> macroquant_covered_bases_98<span class="sc">$</span>genome)</span>
+<span id="cb42-66"><a href="loading-and-tidying-data.html#cb42-66" tabindex="-1"></a></span>
+<span id="cb42-67"><a href="loading-and-tidying-data.html#cb42-67" tabindex="-1"></a><span class="co"># Genome Metadata</span></span>
+<span id="cb42-68"><a href="loading-and-tidying-data.html#cb42-68" tabindex="-1"></a>macromag_genomemetadata_98 <span class="ot">&lt;-</span> macromag_taxonomy_98 <span class="sc">%&gt;%</span></span>
+<span id="cb42-69"><a href="loading-and-tidying-data.html#cb42-69" tabindex="-1"></a>  <span class="fu">left_join</span>(macromag_quality_98, <span class="at">by =</span> <span class="fu">join_by</span>(genome <span class="sc">==</span> genome)) <span class="co"># join quality</span></span></code></pre></div>
+</div>
+<div id="filter-and-normalise" class="section level5 hasAnchor" number="2.3.3.0.2">
+<h5><span class="header-section-number">2.3.3.0.2</span> Filter and Normalise<a href="loading-and-tidying-data.html#filter-and-normalise" class="anchor-section" aria-label="Anchor link to header"></a></h5>
+<div class="sourceCode" id="cb43"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb43-1"><a href="loading-and-tidying-data.html#cb43-1" tabindex="-1"></a>macroquant_coverage_98 <span class="ot">&lt;-</span> macroquant_covered_bases_98 <span class="sc">%&gt;%</span></span>
+<span id="cb43-2"><a href="loading-and-tidying-data.html#cb43-2" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> macromag_genomemetadata_98<span class="sc">$</span>length))</span>
+<span id="cb43-3"><a href="loading-and-tidying-data.html#cb43-3" tabindex="-1"></a>min_coverage_98 <span class="ot">&lt;-</span> <span class="fl">0.3</span></span>
+<span id="cb43-4"><a href="loading-and-tidying-data.html#cb43-4" tabindex="-1"></a>macroquant_read_counts_filt_30_98 <span class="ot">&lt;-</span> macroquant_coverage_98 <span class="sc">%&gt;%</span></span>
+<span id="cb43-5"><a href="loading-and-tidying-data.html#cb43-5" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> <span class="fu">ifelse</span>(. <span class="sc">&gt;</span> min_coverage, <span class="dv">1</span>, <span class="dv">0</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb43-6"><a href="loading-and-tidying-data.html#cb43-6" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="sc">-</span><span class="dv">1</span>, <span class="sc">~</span> . <span class="sc">*</span> macroquant_read_counts_98[[<span class="fu">cur_column</span>()]]))</span>
+<span id="cb43-7"><a href="loading-and-tidying-data.html#cb43-7" tabindex="-1"></a>readlength_98 <span class="ot">&lt;-</span> <span class="dv">150</span> <span class="co"># change if sequencing read length is different</span></span>
+<span id="cb43-8"><a href="loading-and-tidying-data.html#cb43-8" tabindex="-1"></a>macroquant_counts_filt_30_98 <span class="ot">&lt;-</span> macroquant_read_counts_filt_30_98 <span class="sc">%&gt;%</span></span>
+<span id="cb43-9"><a href="loading-and-tidying-data.html#cb43-9" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (macromag_genomemetadata_98<span class="sc">$</span>length <span class="sc">/</span> readlength)))</span>
+<span id="cb43-10"><a href="loading-and-tidying-data.html#cb43-10" tabindex="-1"></a>macroquant_genome_counts_98 <span class="ot">&lt;-</span> macroquant_read_counts_98 <span class="sc">%&gt;%</span></span>
+<span id="cb43-11"><a href="loading-and-tidying-data.html#cb43-11" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (macromag_genomemetadata_98<span class="sc">$</span>length <span class="sc">/</span> readlength)))</span></code></pre></div>
+</div>
+</div>
+</div>
+<div id="macro-scale-metagenomics-macro" class="section level2 hasAnchor" number="2.4">
+<h2><span class="header-section-number">2.4</span> Macro-scale Metagenomics (MACRO)<a href="loading-and-tidying-data.html#macro-scale-metagenomics-macro" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div id="merge-genome-count-to-mssm" class="section level3 hasAnchor" number="2.4.1">
+<h3><span class="header-section-number">2.4.1</span> Merge Genome Count to MSSM<a href="loading-and-tidying-data.html#merge-genome-count-to-mssm" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb44"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb44-1"><a href="loading-and-tidying-data.html#cb44-1" tabindex="-1"></a>macro_genome_count_macro_filt_30 <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;data/conventional_REF0015-g_mg_hybrid.0.95_genome_count_filt.tsv&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb44-2"><a href="loading-and-tidying-data.html#cb44-2" tabindex="-1"></a>  <span class="fu">filter</span>(<span class="fu">rowSums</span>(<span class="fu">select</span>(., <span class="sc">-</span>genome)) <span class="sc">!=</span> <span class="dv">0</span>)</span>
+<span id="cb44-3"><a href="loading-and-tidying-data.html#cb44-3" tabindex="-1"></a></span>
+<span id="cb44-4"><a href="loading-and-tidying-data.html#cb44-4" tabindex="-1"></a><span class="cf">if</span> (<span class="fu">all</span>(macro_genome_count_macro_filt_30<span class="sc">$</span>genome <span class="sc">%in%</span> macromag_genomemetadata<span class="sc">$</span>genome)) {</span>
+<span id="cb44-5"><a href="loading-and-tidying-data.html#cb44-5" tabindex="-1"></a>  mssmmacroquant_vs_macro_genome_count_30 <span class="ot">&lt;-</span> <span class="fu">full_join</span>(macroquant_genome_counts_filt_30 <span class="sc">%&gt;%</span> <span class="fu">select</span>(genome, mssm_sample_metadata<span class="sc">$</span>microsample), macro_genome_count_macro_filt_30, <span class="at">by =</span> <span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb44-6"><a href="loading-and-tidying-data.html#cb44-6" tabindex="-1"></a>    <span class="fu">select</span>(<span class="fu">where</span>(<span class="sc">~</span> <span class="sc">!</span><span class="fu">all</span>(. <span class="sc">==</span> <span class="dv">0</span>))) <span class="sc">%&gt;%</span></span>
+<span id="cb44-7"><a href="loading-and-tidying-data.html#cb44-7" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="fu">if_any</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">!=</span> <span class="dv">0</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb44-8"><a href="loading-and-tidying-data.html#cb44-8" tabindex="-1"></a>    <span class="fu">column_to_rownames</span>(<span class="st">&quot;genome&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb44-9"><a href="loading-and-tidying-data.html#cb44-9" tabindex="-1"></a>    <span class="fu">replace</span>(<span class="fu">is.na</span>(.), <span class="dv">0</span>)</span>
+<span id="cb44-10"><a href="loading-and-tidying-data.html#cb44-10" tabindex="-1"></a>} <span class="cf">else</span> {</span>
+<span id="cb44-11"><a href="loading-and-tidying-data.html#cb44-11" tabindex="-1"></a>  <span class="fu">message</span>(<span class="st">&quot;Not all genomes in MACRO are present in MSSM&quot;</span>)</span>
+<span id="cb44-12"><a href="loading-and-tidying-data.html#cb44-12" tabindex="-1"></a>}</span></code></pre></div>
+</div>
+<div id="merge-metadata-to-mssm" class="section level3 hasAnchor" number="2.4.2">
+<h3><span class="header-section-number">2.4.2</span> Merge Metadata to MSSM<a href="loading-and-tidying-data.html#merge-metadata-to-mssm" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb45"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb45-1"><a href="loading-and-tidying-data.html#cb45-1" tabindex="-1"></a>mssmmacroquant_vs_macro_sample_metadata <span class="ot">&lt;-</span> macroquant_metrics_filt_30 <span class="sc">%&gt;%</span></span>
+<span id="cb45-2"><a href="loading-and-tidying-data.html#cb45-2" tabindex="-1"></a>  <span class="fu">select</span>(microsample, section, batch, cryosection, buffer, animal, cycles, type_binomial, </span>
+<span id="cb45-3"><a href="loading-and-tidying-data.html#cb45-3" tabindex="-1"></a>         total_before_filtering.total_reads, total_after_filtering.total_reads, richness) <span class="sc">%&gt;%</span></span>
+<span id="cb45-4"><a href="loading-and-tidying-data.html#cb45-4" tabindex="-1"></a>  <span class="fu">filter</span>(microsample <span class="sc">%in%</span> <span class="fu">names</span>(mssmmacroquant_vs_macro_genome_count_30)) <span class="sc">%&gt;%</span></span>
+<span id="cb45-5"><a href="loading-and-tidying-data.html#cb45-5" tabindex="-1"></a>  <span class="fu">bind_rows</span>(</span>
+<span id="cb45-6"><a href="loading-and-tidying-data.html#cb45-6" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
+<span id="cb45-7"><a href="loading-and-tidying-data.html#cb45-7" tabindex="-1"></a>      <span class="at">microsample =</span> <span class="st">&quot;D300487&quot;</span>,</span>
+<span id="cb45-8"><a href="loading-and-tidying-data.html#cb45-8" tabindex="-1"></a>      <span class="at">animal =</span> <span class="st">&quot;G103b&quot;</span>,</span>
+<span id="cb45-9"><a href="loading-and-tidying-data.html#cb45-9" tabindex="-1"></a>      <span class="at">total_before_filtering.total_reads =</span> <span class="dv">21962564</span><span class="sc">*</span><span class="dv">2</span>,</span>
+<span id="cb45-10"><a href="loading-and-tidying-data.html#cb45-10" tabindex="-1"></a>      <span class="at">total_after_filtering.total_reads =</span> <span class="dv">21962564</span><span class="sc">*</span><span class="dv">2</span>,</span>
+<span id="cb45-11"><a href="loading-and-tidying-data.html#cb45-11" tabindex="-1"></a>      <span class="at">section =</span> <span class="st">&quot;right caecum digesta&quot;</span>,</span>
+<span id="cb45-12"><a href="loading-and-tidying-data.html#cb45-12" tabindex="-1"></a>      <span class="at">type_binomial =</span> <span class="st">&quot;positive&quot;</span>,</span>
+<span id="cb45-13"><a href="loading-and-tidying-data.html#cb45-13" tabindex="-1"></a>      <span class="at">batch =</span> <span class="cn">NA</span>, <span class="at">cryosection =</span> <span class="cn">NA</span>, <span class="at">buffer =</span> <span class="cn">NA</span>  <span class="co"># Fill these with appropriate values or NA</span></span>
+<span id="cb45-14"><a href="loading-and-tidying-data.html#cb45-14" tabindex="-1"></a>    ),</span>
+<span id="cb45-15"><a href="loading-and-tidying-data.html#cb45-15" tabindex="-1"></a>    <span class="fu">tibble</span>(</span>
+<span id="cb45-16"><a href="loading-and-tidying-data.html#cb45-16" tabindex="-1"></a>      <span class="at">microsample =</span> <span class="st">&quot;D300499&quot;</span>,</span>
+<span id="cb45-17"><a href="loading-and-tidying-data.html#cb45-17" tabindex="-1"></a>      <span class="at">animal =</span> <span class="st">&quot;G121e&quot;</span>,</span>
+<span id="cb45-18"><a href="loading-and-tidying-data.html#cb45-18" tabindex="-1"></a>      <span class="at">total_before_filtering.total_reads =</span> <span class="dv">24855916</span><span class="sc">*</span><span class="dv">2</span>,</span>
+<span id="cb45-19"><a href="loading-and-tidying-data.html#cb45-19" tabindex="-1"></a>      <span class="at">total_after_filtering.total_reads =</span> <span class="dv">24855916</span><span class="sc">*</span><span class="dv">2</span>,</span>
+<span id="cb45-20"><a href="loading-and-tidying-data.html#cb45-20" tabindex="-1"></a>      <span class="at">section =</span> <span class="st">&quot;right caecum digesta&quot;</span>,</span>
+<span id="cb45-21"><a href="loading-and-tidying-data.html#cb45-21" tabindex="-1"></a>      <span class="at">type_binomial =</span> <span class="st">&quot;positive&quot;</span>,</span>
+<span id="cb45-22"><a href="loading-and-tidying-data.html#cb45-22" tabindex="-1"></a>      <span class="at">batch =</span> <span class="cn">NA</span>, <span class="at">cryosection =</span> <span class="cn">NA</span>, <span class="at">buffer =</span> <span class="cn">NA</span>  <span class="co"># Same here</span></span>
+<span id="cb45-23"><a href="loading-and-tidying-data.html#cb45-23" tabindex="-1"></a>    )</span>
+<span id="cb45-24"><a href="loading-and-tidying-data.html#cb45-24" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb45-25"><a href="loading-and-tidying-data.html#cb45-25" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">group =</span> <span class="fu">ifelse</span>(section <span class="sc">==</span> <span class="st">&quot;right caecum digesta&quot;</span>, <span class="st">&quot;Macro-scale Metagenomics&quot;</span>, <span class="st">&quot;Micro-scale Spatial Metagenomics&quot;</span>)) <span class="sc">%&gt;%</span> </span>
+<span id="cb45-26"><a href="loading-and-tidying-data.html#cb45-26" tabindex="-1"></a>  <span class="fu">column_to_rownames</span>(<span class="st">&quot;microsample&quot;</span>)</span></code></pre></div>
+</div>
+<div id="combined-phyloseq-object" class="section level3 hasAnchor" number="2.4.3">
+<h3><span class="header-section-number">2.4.3</span> Combined Phyloseq Object<a href="loading-and-tidying-data.html#combined-phyloseq-object" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb46"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb46-1"><a href="loading-and-tidying-data.html#cb46-1" tabindex="-1"></a>mssmmacroquant_vs_macro_taxonomy <span class="ot">&lt;-</span> macromag_taxonomy <span class="sc">%&gt;%</span> <span class="fu">filter</span>(genome <span class="sc">%in%</span> <span class="fu">c</span>(<span class="fu">rownames</span>(mssmmacroquant_vs_macro_genome_count_30))) <span class="sc">%&gt;%</span> <span class="fu">column_to_rownames</span>(<span class="st">&quot;genome&quot;</span>)</span>
+<span id="cb46-2"><a href="loading-and-tidying-data.html#cb46-2" tabindex="-1"></a></span>
+<span id="cb46-3"><a href="loading-and-tidying-data.html#cb46-3" tabindex="-1"></a>physeq_all <span class="ot">&lt;-</span> <span class="fu">phyloseq</span>(</span>
+<span id="cb46-4"><a href="loading-and-tidying-data.html#cb46-4" tabindex="-1"></a>  mssmmacroquant_vs_macro_genome_count_30 <span class="sc">%&gt;%</span> <span class="fu">otu_table</span>(., <span class="at">taxa_are_rows =</span> <span class="cn">TRUE</span>),</span>
+<span id="cb46-5"><a href="loading-and-tidying-data.html#cb46-5" tabindex="-1"></a>  mssmmacroquant_vs_macro_sample_metadata <span class="sc">%&gt;%</span> <span class="fu">sample_data</span>(),</span>
+<span id="cb46-6"><a href="loading-and-tidying-data.html#cb46-6" tabindex="-1"></a>  mssmmacroquant_vs_macro_taxonomy <span class="sc">%&gt;%</span> <span class="fu">as.matrix</span>() <span class="sc">%&gt;%</span> <span class="fu">tax_table</span>()</span>
+<span id="cb46-7"><a href="loading-and-tidying-data.html#cb46-7" tabindex="-1"></a>)</span>
+<span id="cb46-8"><a href="loading-and-tidying-data.html#cb46-8" tabindex="-1"></a>physeq_all  <span class="ot">&lt;-</span> <span class="fu">prune_taxa</span>(<span class="fu">taxa_sums</span>(physeq_all) <span class="sc">&gt;</span> <span class="dv">0</span>, physeq_all)</span>
+<span id="cb46-9"><a href="loading-and-tidying-data.html#cb46-9" tabindex="-1"></a></span>
+<span id="cb46-10"><a href="loading-and-tidying-data.html#cb46-10" tabindex="-1"></a>physeq_G121e <span class="ot">&lt;-</span> <span class="fu">subset_samples</span>(physeq_all, animal <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;G121e&quot;</span>))</span>
+<span id="cb46-11"><a href="loading-and-tidying-data.html#cb46-11" tabindex="-1"></a>physeq_G121e  <span class="ot">&lt;-</span> <span class="fu">prune_taxa</span>(<span class="fu">taxa_sums</span>(physeq_G121e) <span class="sc">&gt;</span> <span class="dv">0</span>, physeq_G121e)</span>
+<span id="cb46-12"><a href="loading-and-tidying-data.html#cb46-12" tabindex="-1"></a>physeq_G103b <span class="ot">&lt;-</span> <span class="fu">subset_samples</span>(physeq_all, animal <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">&quot;G103b&quot;</span>))</span>
+<span id="cb46-13"><a href="loading-and-tidying-data.html#cb46-13" tabindex="-1"></a>physeq_G103b  <span class="ot">&lt;-</span> <span class="fu">prune_taxa</span>(<span class="fu">taxa_sums</span>(physeq_G103b) <span class="sc">&gt;</span> <span class="dv">0</span>, physeq_G103b)</span>
+<span id="cb46-14"><a href="loading-and-tidying-data.html#cb46-14" tabindex="-1"></a>physeq_genus <span class="ot">&lt;-</span> <span class="fu">tax_glom</span>(physeq_all, <span class="st">&quot;genus&quot;</span>)</span>
+<span id="cb46-15"><a href="loading-and-tidying-data.html#cb46-15" tabindex="-1"></a>physeq_genus_relabund <span class="ot">&lt;-</span> <span class="fu">transform_sample_counts</span>(physeq_genus, <span class="cf">function</span>(x) x <span class="sc">/</span> <span class="fu">sum</span>(x))</span></code></pre></div>
+</div>
+<div id="amalia-mock-community-bac" class="section level3 hasAnchor" number="2.4.4">
+<h3><span class="header-section-number">2.4.4</span> Amalia: Mock Community (BAC)<a href="loading-and-tidying-data.html#amalia-mock-community-bac" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+</div>
+<div id="amalia-fluorescence-in-situ-hybridization-fish" class="section level3 hasAnchor" number="2.4.5">
+<h3><span class="header-section-number">2.4.5</span> Amalia: Fluorescence In Situ hybridization (FISH)<a href="loading-and-tidying-data.html#amalia-fluorescence-in-situ-hybridization-fish" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+</div>
+<div id="confocal-microscopy-of-dapi-stained-microsections" class="section level3 hasAnchor" number="2.4.6">
+<h3><span class="header-section-number">2.4.6</span> Confocal microscopy of DAPI-stained microsections<a href="loading-and-tidying-data.html#confocal-microscopy-of-dapi-stained-microsections" class="anchor-section" aria-label="Anchor link to header"></a></h3>
+<div class="sourceCode" id="cb47"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb47-1"><a href="loading-and-tidying-data.html#cb47-1" tabindex="-1"></a>dapi_df <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">&quot;data/data_DAPI_bact_quant_selected.csv&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb47-2"><a href="loading-and-tidying-data.html#cb47-2" tabindex="-1"></a>  <span class="fu">separate</span>(Organ_source, <span class="at">into =</span> <span class="fu">c</span>(<span class="st">&quot;Age_1&quot;</span>, <span class="st">&quot;Section&quot;</span>), <span class="at">sep =</span> <span class="st">&quot; &quot;</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb47-3"><a href="loading-and-tidying-data.html#cb47-3" tabindex="-1"></a>  <span class="fu">group_by</span>(Cryosection) <span class="sc">%&gt;%</span> <span class="co"># Group by the column(s) containing duplicates</span></span>
+<span id="cb47-4"><a href="loading-and-tidying-data.html#cb47-4" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Sequence =</span> <span class="fu">row_number</span>()) <span class="sc">%&gt;%</span></span>
+<span id="cb47-5"><a href="loading-and-tidying-data.html#cb47-5" tabindex="-1"></a>  <span class="fu">ungroup</span>()  <span class="sc">%&gt;%</span></span>
+<span id="cb47-6"><a href="loading-and-tidying-data.html#cb47-6" tabindex="-1"></a>  <span class="fu">mutate</span>(</span>
+<span id="cb47-7"><a href="loading-and-tidying-data.html#cb47-7" tabindex="-1"></a>    <span class="at">Age =</span> <span class="fu">ifelse</span>(Age_1 <span class="sc">==</span> <span class="st">&quot;old&quot;</span>, <span class="st">&quot;35-day-old Animal&quot;</span>, <span class="st">&quot;14-day-old Animal&quot;</span>),</span>
+<span id="cb47-8"><a href="loading-and-tidying-data.html#cb47-8" tabindex="-1"></a>    <span class="at">Animal =</span> <span class="fu">str_sub</span>(Cryosection, <span class="dv">1</span>, <span class="dv">6</span>),</span>
+<span id="cb47-9"><a href="loading-and-tidying-data.html#cb47-9" tabindex="-1"></a>    <span class="at">merge_variable=</span><span class="fu">paste</span>(Animal, Sequence, <span class="at">sep =</span> <span class="st">&quot;_&quot;</span>),</span>
+<span id="cb47-10"><a href="loading-and-tidying-data.html#cb47-10" tabindex="-1"></a>    <span class="co">#Distance_from_one_side=ifelse(Distance_from_one_side == 0, 1, Distance_from_one_side)</span></span>
+<span id="cb47-11"><a href="loading-and-tidying-data.html#cb47-11" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb47-12"><a href="loading-and-tidying-data.html#cb47-12" tabindex="-1"></a>  <span class="fu">filter</span>(</span>
+<span id="cb47-13"><a href="loading-and-tidying-data.html#cb47-13" tabindex="-1"></a>    <span class="fu">case_when</span>(</span>
+<span id="cb47-14"><a href="loading-and-tidying-data.html#cb47-14" tabindex="-1"></a>      Age <span class="sc">==</span> <span class="st">&quot;14-day-old Animal&quot;</span> <span class="sc">~</span> Distance_from_one_side <span class="sc">&lt;</span> <span class="dv">2500</span>,  </span>
+<span id="cb47-15"><a href="loading-and-tidying-data.html#cb47-15" tabindex="-1"></a>      Age <span class="sc">==</span> <span class="st">&quot;35-day-old Animal&quot;</span> <span class="sc">~</span> Distance_from_one_side <span class="sc">&lt;</span> <span class="dv">4000</span>,  </span>
+<span id="cb47-16"><a href="loading-and-tidying-data.html#cb47-16" tabindex="-1"></a>      <span class="cn">TRUE</span> <span class="sc">~</span> <span class="cn">TRUE</span>))  <span class="sc">%&gt;%</span> </span>
+<span id="cb47-17"><a href="loading-and-tidying-data.html#cb47-17" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Section =</span> <span class="fu">recode</span>(Section,</span>
+<span id="cb47-18"><a href="loading-and-tidying-data.html#cb47-18" tabindex="-1"></a>      <span class="st">&quot;caecum&quot;</span> <span class="ot">=</span> <span class="st">&quot;Caecum&quot;</span>,</span>
+<span id="cb47-19"><a href="loading-and-tidying-data.html#cb47-19" tabindex="-1"></a>      <span class="st">&quot;colon&quot;</span> <span class="ot">=</span> <span class="st">&quot;Colon&quot;</span>,</span>
+<span id="cb47-20"><a href="loading-and-tidying-data.html#cb47-20" tabindex="-1"></a>      <span class="st">&quot;ileum&quot;</span> <span class="ot">=</span> <span class="st">&quot;Ileum&quot;</span></span>
+<span id="cb47-21"><a href="loading-and-tidying-data.html#cb47-21" tabindex="-1"></a>    ))</span></code></pre></div>
+</div>
+</div>
+<div id="fragment-analyzer" class="section level2 hasAnchor" number="2.5">
+<h2><span class="header-section-number">2.5</span> Fragment Analyzer<a href="loading-and-tidying-data.html#fragment-analyzer" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div class="sourceCode" id="cb48"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb48-1"><a href="loading-and-tidying-data.html#cb48-1" tabindex="-1"></a>sn3_5_dreamprep_df <span class="ot">&lt;-</span> <span class="fu">read_csv</span>(<span class="st">&quot;data/CSV_2vs1plate_2FAplates.csv&quot;</span>,</span>
+<span id="cb48-2"><a href="loading-and-tidying-data.html#cb48-2" tabindex="-1"></a>  <span class="at">col_types =</span> <span class="fu">cols_only</span>(</span>
+<span id="cb48-3"><a href="loading-and-tidying-data.html#cb48-3" tabindex="-1"></a>    <span class="st">&quot;Sample ID&quot;</span> <span class="ot">=</span> <span class="fu">col_character</span>(),</span>
+<span id="cb48-4"><a href="loading-and-tidying-data.html#cb48-4" tabindex="-1"></a>    <span class="st">&quot;Range&quot;</span> <span class="ot">=</span> <span class="fu">col_character</span>(),</span>
+<span id="cb48-5"><a href="loading-and-tidying-data.html#cb48-5" tabindex="-1"></a>    <span class="st">&quot;ng/uL&quot;</span> <span class="ot">=</span> <span class="fu">col_double</span>(),</span>
+<span id="cb48-6"><a href="loading-and-tidying-data.html#cb48-6" tabindex="-1"></a>    <span class="st">&quot;% Total&quot;</span> <span class="ot">=</span> <span class="fu">col_double</span>(),</span>
+<span id="cb48-7"><a href="loading-and-tidying-data.html#cb48-7" tabindex="-1"></a>    <span class="st">&quot;nmole/L&quot;</span> <span class="ot">=</span> <span class="fu">col_double</span>(),</span>
+<span id="cb48-8"><a href="loading-and-tidying-data.html#cb48-8" tabindex="-1"></a>    <span class="st">&quot;Avg. Size&quot;</span> <span class="ot">=</span> <span class="fu">col_double</span>(),</span>
+<span id="cb48-9"><a href="loading-and-tidying-data.html#cb48-9" tabindex="-1"></a>    <span class="st">&quot;Plate&quot;</span> <span class="ot">=</span> <span class="fu">col_character</span>(),</span>
+<span id="cb48-10"><a href="loading-and-tidying-data.html#cb48-10" tabindex="-1"></a>    <span class="st">&quot;Type&quot;</span> <span class="ot">=</span> <span class="fu">col_character</span>(),</span>
+<span id="cb48-11"><a href="loading-and-tidying-data.html#cb48-11" tabindex="-1"></a>    <span class="st">&quot;Concentration&quot;</span> <span class="ot">=</span> <span class="fu">col_character</span>()</span>
+<span id="cb48-12"><a href="loading-and-tidying-data.html#cb48-12" tabindex="-1"></a>  )</span>
+<span id="cb48-13"><a href="loading-and-tidying-data.html#cb48-13" tabindex="-1"></a>) <span class="sc">%&gt;%</span></span>
+<span id="cb48-14"><a href="loading-and-tidying-data.html#cb48-14" tabindex="-1"></a>  <span class="fu">rename</span>(</span>
+<span id="cb48-15"><a href="loading-and-tidying-data.html#cb48-15" tabindex="-1"></a>    <span class="at">sample =</span> <span class="st">&quot;Sample ID&quot;</span>,</span>
+<span id="cb48-16"><a href="loading-and-tidying-data.html#cb48-16" tabindex="-1"></a>    <span class="at">plate =</span> <span class="st">&quot;Plate&quot;</span>, <span class="at">type =</span> <span class="st">&quot;Type&quot;</span>, <span class="at">concentration =</span> <span class="st">&quot;Concentration&quot;</span>,</span>
+<span id="cb48-17"><a href="loading-and-tidying-data.html#cb48-17" tabindex="-1"></a>    <span class="at">ng_uL =</span> <span class="st">&quot;ng/uL&quot;</span>, <span class="at">nmole_L =</span> <span class="st">&quot;nmole/L&quot;</span>,</span>
+<span id="cb48-18"><a href="loading-and-tidying-data.html#cb48-18" tabindex="-1"></a>    <span class="at">percentage_total =</span> <span class="st">&quot;% Total&quot;</span>,</span>
+<span id="cb48-19"><a href="loading-and-tidying-data.html#cb48-19" tabindex="-1"></a>    <span class="at">size =</span> <span class="st">&quot;Avg. Size&quot;</span></span>
+<span id="cb48-20"><a href="loading-and-tidying-data.html#cb48-20" tabindex="-1"></a>  ) <span class="sc">%&gt;%</span></span>
+<span id="cb48-21"><a href="loading-and-tidying-data.html#cb48-21" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Range =</span> <span class="fu">factor</span>(Range, <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">&quot;35 bp to 100 bp&quot;</span>, <span class="st">&quot;100 bp to 200 bp&quot;</span>, <span class="st">&quot;200 bp to 1000 bp&quot;</span>)))</span></code></pre></div>
+</div>
+<div id="snp-level-microdiversity-lorikeet" class="section level2 hasAnchor" number="2.6">
+<h2><span class="header-section-number">2.6</span> SNP level microdiversity (Lorikeet)<a href="loading-and-tidying-data.html#snp-level-microdiversity-lorikeet" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<div class="sourceCode" id="cb49"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb49-1"><a href="loading-and-tidying-data.html#cb49-1" tabindex="-1"></a>ani_files <span class="ot">&lt;-</span> <span class="fu">list.files</span>(<span class="st">&quot;data/&quot;</span>, <span class="at">pattern =</span> <span class="st">&quot;_population_ani.tsv$&quot;</span>, <span class="at">full.names =</span> <span class="cn">TRUE</span>)</span>
+<span id="cb49-2"><a href="loading-and-tidying-data.html#cb49-2" tabindex="-1"></a><span class="co"># Return a named list of cleaned ANI matrices</span></span>
+<span id="cb49-3"><a href="loading-and-tidying-data.html#cb49-3" tabindex="-1"></a>ani_list <span class="ot">&lt;-</span> purrr<span class="sc">::</span><span class="fu">map</span>(ani_files, <span class="cf">function</span>(file_path) {</span>
+<span id="cb49-4"><a href="loading-and-tidying-data.html#cb49-4" tabindex="-1"></a>  <span class="co"># Extract bin ID</span></span>
+<span id="cb49-5"><a href="loading-and-tidying-data.html#cb49-5" tabindex="-1"></a>  bin_id <span class="ot">&lt;-</span> stringr<span class="sc">::</span><span class="fu">str_extract</span>(<span class="fu">basename</span>(file_path), <span class="st">&quot;GPB_bin_</span><span class="sc">\\</span><span class="st">d+&quot;</span>)</span>
+<span id="cb49-6"><a href="loading-and-tidying-data.html#cb49-6" tabindex="-1"></a></span>
+<span id="cb49-7"><a href="loading-and-tidying-data.html#cb49-7" tabindex="-1"></a>  <span class="co"># Extract sample labels</span></span>
+<span id="cb49-8"><a href="loading-and-tidying-data.html#cb49-8" tabindex="-1"></a>  labels <span class="ot">&lt;-</span> <span class="fu">tibble</span>(<span class="at">raw =</span> <span class="fu">readLines</span>(file_path)) <span class="sc">%&gt;%</span></span>
+<span id="cb49-9"><a href="loading-and-tidying-data.html#cb49-9" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="fu">str_starts</span>(raw, <span class="st">&quot;##sample&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb49-10"><a href="loading-and-tidying-data.html#cb49-10" tabindex="-1"></a>    <span class="fu">mutate</span>(</span>
+<span id="cb49-11"><a href="loading-and-tidying-data.html#cb49-11" tabindex="-1"></a>      <span class="at">ID =</span> <span class="fu">str_extract</span>(raw, <span class="st">&quot;(?&lt;=ID=)</span><span class="sc">\\</span><span class="st">d+&quot;</span>) <span class="sc">%&gt;%</span> <span class="fu">as.integer</span>(),</span>
+<span id="cb49-12"><a href="loading-and-tidying-data.html#cb49-12" tabindex="-1"></a>      <span class="at">SAMPLE =</span> <span class="fu">str_extract</span>(raw, <span class="st">&quot;M30[0-9]{4}&quot;</span>)</span>
+<span id="cb49-13"><a href="loading-and-tidying-data.html#cb49-13" tabindex="-1"></a>    ) <span class="sc">%&gt;%</span></span>
+<span id="cb49-14"><a href="loading-and-tidying-data.html#cb49-14" tabindex="-1"></a>    <span class="fu">select</span>(ID, SAMPLE)</span>
+<span id="cb49-15"><a href="loading-and-tidying-data.html#cb49-15" tabindex="-1"></a></span>
+<span id="cb49-16"><a href="loading-and-tidying-data.html#cb49-16" tabindex="-1"></a>  <span class="co"># Read and clean ANI matrix</span></span>
+<span id="cb49-17"><a href="loading-and-tidying-data.html#cb49-17" tabindex="-1"></a>  ani <span class="ot">&lt;-</span> readr<span class="sc">::</span><span class="fu">read_tsv</span>(file_path, <span class="at">comment =</span> <span class="st">&quot;#&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb49-18"><a href="loading-and-tidying-data.html#cb49-18" tabindex="-1"></a>    <span class="fu">left_join</span>(labels, <span class="at">by =</span> <span class="fu">c</span>(<span class="st">&quot;SampleID&quot;</span> <span class="ot">=</span> <span class="st">&quot;ID&quot;</span>)) <span class="sc">%&gt;%</span></span>
+<span id="cb49-19"><a href="loading-and-tidying-data.html#cb49-19" tabindex="-1"></a>    <span class="fu">select</span>(<span class="sc">-</span>SampleID) <span class="sc">%&gt;%</span></span>
+<span id="cb49-20"><a href="loading-and-tidying-data.html#cb49-20" tabindex="-1"></a>    <span class="fu">column_to_rownames</span>(<span class="at">var =</span> <span class="st">&quot;SAMPLE&quot;</span>) <span class="sc">%&gt;%</span></span>
+<span id="cb49-21"><a href="loading-and-tidying-data.html#cb49-21" tabindex="-1"></a>    <span class="fu">set_names</span>(labels<span class="sc">$</span>SAMPLE) <span class="sc">%&gt;%</span></span>
+<span id="cb49-22"><a href="loading-and-tidying-data.html#cb49-22" tabindex="-1"></a>    <span class="fu">select</span>(<span class="fu">where</span>(<span class="sc">~</span> <span class="sc">!</span><span class="fu">all</span>(<span class="fu">is.na</span>(.)))) <span class="sc">%&gt;%</span></span>
+<span id="cb49-23"><a href="loading-and-tidying-data.html#cb49-23" tabindex="-1"></a>    <span class="fu">select</span>(<span class="fu">where</span>(<span class="sc">~</span> <span class="sc">!</span><span class="fu">all</span>(<span class="fu">is.nan</span>(.)))) <span class="sc">%&gt;%</span> </span>
+<span id="cb49-24"><a href="loading-and-tidying-data.html#cb49-24" tabindex="-1"></a>    <span class="fu">filter</span>(<span class="sc">!</span><span class="fu">if_all</span>(<span class="fu">everything</span>(), is.nan))</span>
+<span id="cb49-25"><a href="loading-and-tidying-data.html#cb49-25" tabindex="-1"></a></span>
+<span id="cb49-26"><a href="loading-and-tidying-data.html#cb49-26" tabindex="-1"></a>  <span class="fu">return</span>(ani)</span>
+<span id="cb49-27"><a href="loading-and-tidying-data.html#cb49-27" tabindex="-1"></a>})</span>
+<span id="cb49-28"><a href="loading-and-tidying-data.html#cb49-28" tabindex="-1"></a><span class="co"># Set bin IDs as list names</span></span>
+<span id="cb49-29"><a href="loading-and-tidying-data.html#cb49-29" tabindex="-1"></a><span class="fu">names</span>(ani_list) <span class="ot">&lt;-</span> stringr<span class="sc">::</span><span class="fu">str_extract</span>(<span class="fu">basename</span>(ani_files), <span class="st">&quot;GPB_bin_</span><span class="sc">\\</span><span class="st">d+&quot;</span>)</span></code></pre></div>
+</div>
+<div id="wrap-working-objects" class="section level2 hasAnchor" number="2.7">
+<h2><span class="header-section-number">2.7</span> Wrap working objects<a href="loading-and-tidying-data.html#wrap-working-objects" class="anchor-section" aria-label="Anchor link to header"></a></h2>
+<p>In the last step, the objects that are needed for downstream analyses are stored in an R object.</p>
+<div class="sourceCode" id="cb50"><pre class="sourceCode r script-source"><code class="sourceCode r"><span id="cb50-1"><a href="loading-and-tidying-data.html#cb50-1" tabindex="-1"></a><span class="co">#save.image(file = &quot;data/25_06_27data.Rdata&quot;)</span></span>
+<span id="cb50-2"><a href="loading-and-tidying-data.html#cb50-2" tabindex="-1"></a><span class="co">#save.image(file = &quot;data/25_07_01data.Rdata&quot;)</span></span>
+<span id="cb50-3"><a href="loading-and-tidying-data.html#cb50-3" tabindex="-1"></a><span class="fu">save.image</span>(<span class="at">file =</span> <span class="st">&quot;data/25_07_11_data.Rdata&quot;</span>)</span>
+<span id="cb50-4"><a href="loading-and-tidying-data.html#cb50-4" tabindex="-1"></a><span class="fu">save</span>(</span>
+<span id="cb50-5"><a href="loading-and-tidying-data.html#cb50-5" tabindex="-1"></a>  mssm_sample_metadata,</span>
+<span id="cb50-6"><a href="loading-and-tidying-data.html#cb50-6" tabindex="-1"></a>  macromag_genomemetadata,</span>
+<span id="cb50-7"><a href="loading-and-tidying-data.html#cb50-7" tabindex="-1"></a>  micromag_genomemetadata,</span>
+<span id="cb50-8"><a href="loading-and-tidying-data.html#cb50-8" tabindex="-1"></a>  macromag_taxonomy,</span>
+<span id="cb50-9"><a href="loading-and-tidying-data.html#cb50-9" tabindex="-1"></a>  micromag_taxonomy,</span>
+<span id="cb50-10"><a href="loading-and-tidying-data.html#cb50-10" tabindex="-1"></a>  macromag_gifts,</span>
+<span id="cb50-11"><a href="loading-and-tidying-data.html#cb50-11" tabindex="-1"></a>  macromag_tree,</span>
+<span id="cb50-12"><a href="loading-and-tidying-data.html#cb50-12" tabindex="-1"></a>  micromag_tree,</span>
+<span id="cb50-13"><a href="loading-and-tidying-data.html#cb50-13" tabindex="-1"></a>  macroquant_metrics_filt_30,</span>
+<span id="cb50-14"><a href="loading-and-tidying-data.html#cb50-14" tabindex="-1"></a>  microquant_metrics_filt_30,</span>
+<span id="cb50-15"><a href="loading-and-tidying-data.html#cb50-15" tabindex="-1"></a>  macroquant_genome_counts_filt_30,</span>
+<span id="cb50-16"><a href="loading-and-tidying-data.html#cb50-16" tabindex="-1"></a>  microquant_genome_counts_filt_30,</span>
+<span id="cb50-17"><a href="loading-and-tidying-data.html#cb50-17" tabindex="-1"></a>  macroquant_read_counts_filt_30,</span>
+<span id="cb50-18"><a href="loading-and-tidying-data.html#cb50-18" tabindex="-1"></a>  microquant_read_counts_filt_30,</span>
+<span id="cb50-19"><a href="loading-and-tidying-data.html#cb50-19" tabindex="-1"></a>  physeq_all,</span>
+<span id="cb50-20"><a href="loading-and-tidying-data.html#cb50-20" tabindex="-1"></a>  physeq_genus,</span>
+<span id="cb50-21"><a href="loading-and-tidying-data.html#cb50-21" tabindex="-1"></a>  physeq_genus_relabund,</span>
+<span id="cb50-22"><a href="loading-and-tidying-data.html#cb50-22" tabindex="-1"></a>  dapi_df, </span>
+<span id="cb50-23"><a href="loading-and-tidying-data.html#cb50-23" tabindex="-1"></a>  sn3_5_dreamprep_df,</span>
+<span id="cb50-24"><a href="loading-and-tidying-data.html#cb50-24" tabindex="-1"></a>  macroquant_counts_filt_30_98,</span>
+<span id="cb50-25"><a href="loading-and-tidying-data.html#cb50-25" tabindex="-1"></a>  macromag_genomemetadata_98,</span>
+<span id="cb50-26"><a href="loading-and-tidying-data.html#cb50-26" tabindex="-1"></a>  ani_list,</span>
+<span id="cb50-27"><a href="loading-and-tidying-data.html#cb50-27" tabindex="-1"></a>  GIFT_db_df,</span>
+<span id="cb50-28"><a href="loading-and-tidying-data.html#cb50-28" tabindex="-1"></a>  <span class="at">file =</span> <span class="st">&quot;data/25_07_11_selected_data.Rdata&quot;</span></span>
+<span id="cb50-29"><a href="loading-and-tidying-data.html#cb50-29" tabindex="-1"></a>)</span></code></pre></div>
+
+</div>
+</div>
+            </section>
+
+          </div>
+        </div>
+      </div>
+<a href="index.html" class="navigation navigation-prev " aria-label="Previous page"><i class="fa fa-angle-left"></i></a>
+<a href="micro-scale-spatial-metagenomics-mssm-main-manuscript.html" class="navigation navigation-next " aria-label="Next page"><i class="fa fa-angle-right"></i></a>
+    </div>
+  </div>
+<script src="libs/gitbook-2.6.7/js/app.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/clipboard.min.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-search.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-sharing.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-fontsettings.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-bookdown.js"></script>
+<script src="libs/gitbook-2.6.7/js/jquery.highlight.js"></script>
+<script src="libs/gitbook-2.6.7/js/plugin-clipboard.js"></script>
+<script>
+gitbook.require(["gitbook"], function(gitbook) {
+gitbook.start({
+  "sharing": {
+    "github": false,
+    "facebook": true,
+    "twitter": true,
+    "linkedin": false,
+    "weibo": false,
+    "instapaper": false,
+    "vk": false,
+    "whatsapp": false,
+    "all": ["facebook", "twitter", "linkedin", "weibo", "instapaper"]
+  },
+  "fontsettings": {
+    "theme": "white",
+    "family": "sans",
+    "size": 2
+  },
+  "edit": {
+    "link": "https://github.com/USERNAME/REPO/edit/BRANCH/01-data_preparation.Rmd",
+    "text": "Edit"
+  },
+  "history": {
+    "link": null,
+    "text": null
+  },
+  "view": {
+    "link": null,
+    "text": null
+  },
+  "download": ["_main.pdf", "_main.epub"],
+  "search": {
+    "engine": "fuse",
+    "options": null
+  },
+  "toc": {
+    "collapse": "subsection"
+  }
+});
+});
+</script>
+
+</body>
+
+</html>

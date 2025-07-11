@@ -2,8 +2,10 @@
 title: "3D'omics | Micro-scale spatial metagenomics (MSSM)"
 author:
 - Carlotta Pietroni^[University of Copenhagen, carlotta.pietroni@sund.ku.dk]
-- Antton Alberdi^[University of Copenhagen, antton.alberdi@sund.ku.dk]
+- Jorge Langa^[University of xxxx, jorge.langa@sund.ku.dk]
+- Iñaki Odriozola Larrañaga^[University of Copenhagen, inaki.larranaga@sund.ku.dk]
 - Amalia Bogri^[University of Copenhagen, amalia.bogri@sund.ku.dk]
+- Antton Alberdi^[University of Copenhagen, antton.alberdi@sund.ku.dk]
 date: "`r Sys.Date()`"
 subtitle: Work in progress
 site: bookdown::bookdown_site
@@ -20,9 +22,10 @@ github-repo: "3d-omics/XXX"
 
 ```{r knitr_opts, echo=FALSE}
 knitr::opts_chunk$set(
-    class.source = "script-source",
-    class.output = "script-output",
-    comment = NA)
+  class.source = "script-source",
+  class.output = "script-output",
+  comment = NA
+)
 ```
 
 # Introduction
@@ -49,21 +52,23 @@ Once the R project has been created, follow the instructions and code chunks sho
 
 The following R packages are required for the data analysis.
 
-```{r load_libraries, warning=FALSE, comments="", message=FALSE}
+```{r load_libraries, warning = FALSE, comments = "", message = FALSE}
 # install.packages('BiocManager', dependencies = TRUE)
 # BiocManager::install(c("phyloseq", "ggtreeExtra","ggtree","ANCOMBC", "ALDEx2"))'
-# install.packages('remotes', dependencies = TRUE)
-# remotes::install_github('anttonalberdi/hilldiv2')
-# remotes::install_github('anttonalberdi/distillR')'
-# remotes::install_github('wilkelab/cowplot')
-
-if(!require("pacman")) install.packages("pacman")
-pacman::p_load(tidyverse, rairtable, jsonlite, distillR, ape,
-               hilldiv2, ggpubr, broom, reshape2, zCompositions, ANCOMBC,
-               cowplot, ALDEx2, car, DHARMa, sjPlot, ggeffects, microViz,
-               ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork,
-               grid, pheatmap, janitor, spdep, adespatial, adegraphics, # lmPerm
-               ade4, magick, permuco, airtabler2, rmarkdown, purrr)
+if (!require("pacman")) install.packages("pacman")
+pacman::p_load(
+  tidyverse, rairtable, jsonlite, ape, # If the package is not installed, installs from CRAN
+  ggpubr, broom, reshape2, zCompositions, ANCOMBC,
+  ALDEx2, car, DHARMa, sjPlot, ggeffects, microViz,
+  ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork,
+  grid, pheatmap, janitor, spdep, adespatial, adegraphics, # lmPerm,
+  ade4, magick, permuco, airtabler2, rmarkdown, purrr, PerformanceAnalytics
+)
+pacman::p_load_gh(
+  "anttonalberdi/hilldiv2", # If the package is not installed, installs from GitHub
+  "anttonalberdi/distillR",
+  "wilkelab/cowplot"
+)
 select <- dplyr::select
 recode <- dplyr::recode
 ```
@@ -84,51 +89,56 @@ Currently the metadata is loaded from the 3D'omics airtable. In order to access 
 
 ## Define Plotting Settings
 ### Color Schemes
-```{r get_colors, warning=FALSE, comments="", message=FALSE, eval=FALSE}
-phylum_colors <- c(Actinomycetota = "#346254",
-                   Bacillota = "#4a6ab7",
-                   Bacillota_A = "#8c1c47",
-                   Bacteroidota = "#9c8464",
-                   Pseudomonadota = "#c49d4b",
-                   Verrucomicrobiota = "#462410")
+```{r get_colors, warning = FALSE, comments = "", message = FALSE}
+phylum_colors <- c(
+  Actinomycetota = "#346254",
+  Bacillota = "#4a6ab7",
+  Bacillota_A = "#8c1c47",
+  Bacteroidota = "#9c8464",
+  Pseudomonadota = "#c49d4b",
+  Verrucomicrobiota = "#462410"
+)
 
-order_colors <- c(Actinomycetales	= "#79b1a3",
-                  Coriobacteriales =	"#498a77",
-                  CAJFEE01 =	"#a0c5e8",
-                  Erysipelotrichales =	"#7acef4",
-                  Lactobacillales =	"#6390fb",
-                  ML615J_28 =	"#70c9de",
-                  Paenibacillales =	"#70a8dc",
-                  RF39 =	"#5c7fba",
-                  Christensenellales =	"#f58262",
-                  Clostridiales =	"#cf4a82",
-                  Lachnospirales =	"#e15f7d",
-                  Monoglobales = "#e18299",
-                  Oscillospirales =	"#ba2760",
-                  Peptostreptococcales =	"#e35d51",
-                  TANB77 =	"#ef3d26",
-                  UBA1381 =	"#be5643",
-                  Bacteroidales =	"#e3c7a0",
-                  Enterobacterales =	"#ffcc62",
-                  Verrucomicrobiales = "#823f1d")
+order_colors <- c(
+  Actinomycetales = "#79b1a3",
+  Coriobacteriales = "#498a77",
+  CAJFEE01 = "#a0c5e8",
+  Erysipelotrichales = "#7acef4",
+  Lactobacillales = "#6390fb",
+  ML615J_28 = "#70c9de",
+  Paenibacillales = "#70a8dc",
+  RF39 = "#5c7fba",
+  Christensenellales = "#f58262",
+  Clostridiales = "#cf4a82",
+  Lachnospirales = "#e15f7d",
+  Monoglobales = "#e18299",
+  Oscillospirales = "#ba2760",
+  Peptostreptococcales = "#e35d51",
+  TANB77 = "#ef3d26",
+  UBA1381 = "#be5643",
+  Bacteroidales = "#e3c7a0",
+  Enterobacterales = "#ffcc62",
+  Verrucomicrobiales = "#823f1d"
+)
 
-lawsonibacter_colors <- c(`GPB:bin_000217`	= "#79b1a3",
-                  `GPB:bin_000137` =	"darkgrey",
-                  `GPB:bin_000118` =	"#7acef4", 
-                  `GPB:bin_000080` =	"#6390fb", 
-                  `GPB:bin_000077` =	"#5c7fba",
-                  `GPB:bin_000072` =	"lightgreen", 
-                  `GPB:bin_000015` =	"#cf4a82", 
-                  `GPB:bin_000047` =	"#e35d51", 
-                  `GPB:bin_000044` =	"black",
-                  `GPB:bin_000034` =	"#e3c7a0", 
-                  `GPB:bin_000063` =	"#ffcc62", 
-                  `D300470:bin_000020` = "darkseagreen3") 
-
+lawsonibacter_colors <- c(
+  `GPB:bin_000217` = "#79b1a3",
+  `GPB:bin_000137` = "darkgrey",
+  `GPB:bin_000118` = "#7acef4",
+  `GPB:bin_000080` = "#6390fb",
+  `GPB:bin_000077` = "#5c7fba",
+  `GPB:bin_000072` = "lightgreen",
+  `GPB:bin_000015` = "#cf4a82",
+  `GPB:bin_000047` = "#e35d51",
+  `GPB:bin_000044` = "black",
+  `GPB:bin_000034` = "#e3c7a0",
+  `GPB:bin_000063` = "#ffcc62",
+  `D300470:bin_000020` = "darkseagreen3"
+)
 ```
 
 ### Plotting Theme
-```{r custom_ggplot_theme, warning=FALSE, comments="", message=FALSE}
+```{r custom_ggplot_theme, warning = FALSE, comments = "", message = FALSE}
 custom_ggplot_theme <- theme(
   strip.text.y.left = element_text(angle = 0),
   strip.text.y.right = element_text(angle = 0),
@@ -147,7 +157,7 @@ custom_ggplot_theme <- theme(
 
 ## Load Functions
 ### parse_fastp_function
-```{r parse_fastp_function, warning=FALSE, message=FALSE, comments=""}
+```{r parse_fastp_function, warning = FALSE, comments = "", message = FALSE}
 parse_fastp <- function(multiqc_json) {
   fastp_raw <- multiqc_json$report_saved_raw_data$multiqc_fastp
 
@@ -180,13 +190,13 @@ parse_fastp <- function(multiqc_json) {
 ```
 
 ### calculate_alpha_diversity
-```{r alpha_diversity_function, warning=FALSE, comments="", message=FALSE}
+```{r alpha_diversity_function, warning = FALSE, comments = "", message = FALSE}
 calculate_alpha_diversity <- function(input_data, metadata_name, dataset_name, tree_name) {
-  input_data_matrix <- input_data %>% column_to_rownames(var = "genome") 
-  colsum <- input_data_matrix  %>%
+  input_data_matrix <- input_data %>% column_to_rownames(var = "genome")
+  colsum <- input_data_matrix %>%
     summarise(across(where(is.numeric), sum)) %>%
-    pivot_longer(cols = everything(), names_to = "microsample", values_to = "cov_filtering") %>% 
-    mutate(cov_filtering=ifelse(cov_filtering > 0 , "Retained By Filtering", "Excluded By Filtering"))
+    pivot_longer(cols = everything(), names_to = "microsample", values_to = "cov_filtering") %>%
+    mutate(cov_filtering = ifelse(cov_filtering > 0, "Retained By Filtering", "Excluded By Filtering"))
   # Define diversity metrics and calculate
   diversity_metrics <- list(
     richness = hilldiv(input_data_matrix, q = 0),
@@ -201,28 +211,29 @@ calculate_alpha_diversity <- function(input_data, metadata_name, dataset_name, t
       rownames_to_column(var = "microsample") %>%
       rename(!!sym(metric) := 2) # rename metric column
   }) %>%
-    reduce(full_join, by = "microsample") %>% 
+    reduce(full_join, by = "microsample") %>%
     right_join(metadata_name, by = "microsample") %>% # Merge with final stats
     left_join(colsum, by = "microsample")
-  #output_filename <- paste0("results/alpha_div_", dataset_name, ".tsv")
-  #write_tsv(alpha_diversity, output_filename)
+  # output_filename <- paste0("results/alpha_div_", dataset_name, ".tsv")
+  # write_tsv(alpha_diversity, output_filename)
   return(alpha_diversity)
 }
 ```
 
 ### Amalia: perform_pca
-```{r pca_function, warning=FALSE, comments="", message=FALSE, eval=FALSE}
+```{r pca_function, warning = FALSE, comments = "", message = FALSE}
 perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
-  
   # Store original dimensions
   original_rows <- nrow(df)
   original_cols <- ncol(df)
-  
+
   # 1. Zero replacement
   if (any(df == 0)) { # I think cmultRepl already does that
     print("Zeros found")
-    df <- cmultRepl(df, method = zero_method, output = "prop",
-                        z.warning = 0.8, z.delete = z_delete)
+    df <- cmultRepl(df,
+      method = zero_method, output = "prop",
+      z.warning = 0.8, z.delete = z_delete
+    )
     df <- df * 100
   }
 
@@ -231,33 +242,33 @@ perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
   removed_cols <- original_cols - ncol(df)
   cat("Rows (samples) removed:", removed_rows, "\n")
   cat("Columns (taxa) removed:", removed_cols, "\n")
-  
-  #plot_abundance_heatmap(df)
+
+  # plot_abundance_heatmap(df)
 
   # Geometric mean function
   geometric_mean <- function(x) {
     # Use log to avoid underflow
-    exp(mean(log(x), na.rm = TRUE))  
-    }
-    
+    exp(mean(log(x), na.rm = TRUE))
+  }
+
   # 2. Calculate geometric mean of the parts (taxa) of the data set.
   taxa_geometric_means <- apply(df, 2, geometric_mean)
-  
+
   # 3. Center data
   df_centered <- sweep(df, 2, taxa_geometric_means, FUN = "/")
-  
-  df_centered <- as.matrix(df_centered)  
-  
+
+  df_centered <- as.matrix(df_centered)
+
   # Compute the Variation Matrix
   variation_matrix <- outer(
-    1:ncol(df_centered), 1:ncol(df_centered), 
+    1:ncol(df_centered), 1:ncol(df_centered),
     Vectorize(function(i, j) var(log(df_centered[, i] / df_centered[, j]), na.rm = TRUE))
   )
- 
-   # Calculate Total Variance
-  D <- ncol(df_centered)  # Number of taxa (columns)
+
+  # Calculate Total Variance
+  D <- ncol(df_centered) # Number of taxa (columns)
   totvar <- (1 / (2 * D)) * sum(variation_matrix, na.rm = TRUE)
-  
+
   # 4. Scale data
   power_exponent <- 1 / sqrt(totvar)
   df_scaled <- df_centered^power_exponent
@@ -267,26 +278,27 @@ perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
   clr_transform <- function(x) {
     log(x) - mean(log(x), na.rm = TRUE)
   }
-  df_clr <- t(apply(df_scaled, 1, clr_transform)) 
+  df_clr <- t(apply(df_scaled, 1, clr_transform))
   df_clr <- as.data.frame(df_clr)
-  
-  df_clr_dist <- t(apply(df, 1, clr_transform)) 
+
+  df_clr_dist <- t(apply(df, 1, clr_transform))
   df_clr_dist <- as.data.frame(df_clr_dist)
-  
+
   # Perform PCA on zero replaced, centered, scaled, and CLR transformed df
   pca_result <- prcomp(df_clr, center = FALSE, scale. = FALSE)
   pca_result_dist <- prcomp(df_clr_dist, center = TRUE, scale. = TRUE)
-  
+
   return(list(
     df_clr = df_clr,
     df_clr_dist = df_clr_dist,
-    pca_result=pca_result,
-    pca_result_dist=pca_result_dist))
+    pca_result = pca_result,
+    pca_result_dist = pca_result_dist
+  ))
 }
 ```
 
 ### fit_and_analyze_model
-```{r fit_and_analyze_model(), message=FALSE, eval=FALSE}
+```{r fit_and_analyze_model(), warning = FALSE, comments = "", message = FALSE}
 fit_and_analyze_model <- function(model = c("lm", "glm"),
                                   distribution = NULL,
                                   response_var,
@@ -336,7 +348,7 @@ fit_and_analyze_model <- function(model = c("lm", "glm"),
 ```
 
 ### pivot_phylo
-```{r pivot_phylo, message=FALSE, eval=FALSE}
+```{r pivot_phylo, warning = FALSE, comments = "", message = FALSE}
 pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_level, tr_method) {
   if (glom == TRUE && !is.null(taxon_level)) {
     phyloseq_obj <- prune_taxa(taxa_sums(phyloseq_obj) > 0, phyloseq_obj)
@@ -384,7 +396,7 @@ pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_l
 ```
 
 ### spatial_cryosections
-```{r spatial_cryosections_fun, message=FALSE, eval=FALSE}
+```{r spatial_cryosections_fun, warning = FALSE, comments = "", message = FALSE}
 spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
   cryosection_dfs <- list()
   mantel_results <- list()
@@ -470,9 +482,8 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
 ```
 
 ### lawsonibacter_mantel_analysis 
-```{r lawsonibacter_mantel_analysis, eval=FALSE}
+```{r lawsonibacter_mantel_analysis, warning = FALSE, comments = "", message = FALSE}
 lawsonibacter_mantel_analysis <- function(data, animal_id, circul_selection) {
-
   # 1. Filter and prepare presence-absence matrix
   if (circul_selection == "Y") {
     filtered_data <- data %>%
@@ -516,7 +527,7 @@ lawsonibacter_mantel_analysis <- function(data, animal_id, circul_selection) {
     D.geo = spatial_dist_pa,
     nperm = 999
   )
-  
+
   # CLR
   # 1. Build count matrix and CLR transformation
   lawsonibacter_clr <- filtered_data %>%
@@ -526,14 +537,14 @@ lawsonibacter_mantel_analysis <- function(data, animal_id, circul_selection) {
   lawsonibacter_clr <- cmultRepl(lawsonibacter_clr, method = "GBM", output = "prop", z.warning = 0.95)
   clr_transform <- function(x) {
     log(x) - mean(log(x), na.rm = TRUE)
-    }
+  }
   lawsonibacter_clr <- data.frame(t(apply(lawsonibacter_clr, 1, clr_transform)))
   # 2. Community distance
   comm_dist_clr <- vegan::vegdist(lawsonibacter_clr, method = "euclidean")
   # 2. Spatial coordinates
   coords_clr <- filtered_data %>%
     distinct(microsample, Xcoord, Ycoord) %>%
-    arrange(microsample) %>% 
+    arrange(microsample) %>%
     filter(microsample %in% c(rownames(lawsonibacter_clr)))
   coords_clr <- coords_clr[match(rownames(lawsonibacter_clr), coords_clr$microsample), ]
   # 4. Spatial distance
@@ -545,16 +556,16 @@ lawsonibacter_mantel_analysis <- function(data, animal_id, circul_selection) {
     D.eco = comm_dist_clr,
     D.geo = spatial_dist_clr,
     nperm = 999
-    )
-  
+  )
+
   distance_clr_df <- data.frame(
-      spat_dist = as.numeric(spatial_dist_clr),
-      comm_dist = as.numeric(comm_dist_clr)
-    )
-  
-  clr_lm <- aovperm(lmperm(comm_dist ~ spat_dist, data = distance_clr_df, np=10000))
-  
-                    return(list(
+    spat_dist = as.numeric(spatial_dist_clr),
+    comm_dist = as.numeric(comm_dist_clr)
+  )
+
+  clr_lm <- aovperm(lmperm(comm_dist ~ spat_dist, data = distance_clr_df, np = 10000))
+
+  return(list(
     animal = animal_id,
     mantel_pa = mantel_result_pa,
     correlogram_pa = mantelcor_result_pa,
