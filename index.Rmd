@@ -1,0 +1,565 @@
+---
+title: "3D'omics | Micro-scale spatial metagenomics (MSSM)"
+author:
+- Carlotta Pietroni^[University of Copenhagen, carlotta.pietroni@sund.ku.dk]
+- Antton Alberdi^[University of Copenhagen, antton.alberdi@sund.ku.dk]
+- Amalia Bogri^[University of Copenhagen, amalia.bogri@sund.ku.dk]
+date: "`r Sys.Date()`"
+subtitle: Work in progress
+site: bookdown::bookdown_site
+documentclass: book
+bibliography:
+- book.bib
+- packages.bib
+url: "https://3d-omics.github.io/MSSM"
+description: |
+  Data analysis code for 3D'omics microdissection methods manuscript (MSSM)
+link-citations: true
+github-repo: "3d-omics/MSSM"
+---
+
+```{r knitr_opts, echo=FALSE}
+knitr::opts_chunk$set(
+    class.source = "script-source",
+    class.output = "script-output",
+    comment = NA)
+```
+
+# Introduction
+
+This webbook contains all the code used for the analyses of in "Micro-scale spatial metagenomics: revealing high-resolution spatial biogeography of gut microbiomes".
+
+## Prepare the R environment
+
+### Environment
+
+To reproduce all the analyses locally, clone this repository in your computer using:
+
+```
+RStudio > New Project > Version Control > Git
+```
+
+And indicating the following git repository:
+
+> https://github.com/3d-omics/MSSM
+
+Once the R project has been created, follow the instructions and code chunks shown in this webbook.
+
+### Libraries
+
+The following R packages are required for the data analysis.
+
+```{r load_libraries, warning=FALSE, comments="", message=FALSE}
+# install.packages('BiocManager', dependencies = TRUE)
+# BiocManager::install(c("phyloseq", "ggtreeExtra","ggtree","ANCOMBC", "ALDEx2"))'
+if(!require("pacman")) install.packages("pacman") # If the package is not installed, installs from CRAN
+pacman::p_load(tidyverse, rairtable, jsonlite, ape,
+               ggpubr, broom, reshape2, zCompositions, ANCOMBC,
+               ALDEx2, car, DHARMa, sjPlot, ggeffects, microViz,
+               ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork,
+               grid, pheatmap, janitor, spdep, adespatial, adegraphics, # lmPerm
+               ade4, magick, permuco, airtabler2, rmarkdown, purrr, PerformanceAnalytics, microViz)
+
+pacman::p_load_gh('anttonalberdi/hilldiv2', # If the package is not installed, installs from GitHub
+                  'anttonalberdi/distillR',
+                  'wilkelab/cowplot') 
+select <- dplyr::select
+recode <- dplyr::recode
+```
+### Notes:
+#### Installation of modules
+Most of the modules can be downloaded from CRAN with 'install.packages('XXX', dependencies = TRUE)'.
+Four modules are from Bioconductor. 
+Install with: 'install.packages('BiocManager', dependencies = TRUE)
+BiocManager::install(c("phyloseq", "ggtreeExtra","ggtree","ANCOMBC", "ALDEx2"))'
+Three modules are github. 
+Install with: 'install.packages('remotes', dependencies = TRUE)
+remotes::install_github('anttonalberdi/hilldiv2')
+remotes::install_github('anttonalberdi/distillR')'
+remotes::install_github('wilkelab/cowplot')'
+
+#### Airtable access:
+Currently the metadata is loaded from the 3D'omics airtable. In order to access it you need your own API key (from Antton). set_airtable_api_key('XXXXX', install = TRUE)
+
+## Define Plotting Settings
+### Color Schemes
+```{r get_colors, warning=FALSE, comments="", message=FALSE}
+phylum_colors <- c(Actinomycetota = "#346254",
+                   Bacillota = "#4a6ab7",
+                   Bacillota_A = "#8c1c47",
+                   Bacteroidota = "#9c8464",
+                   Pseudomonadota = "#c49d4b",
+                   Verrucomicrobiota = "#462410")
+
+order_colors <- c(Actinomycetales	= "#79b1a3",
+                  Coriobacteriales =	"#498a77",
+                  CAJFEE01 =	"#a0c5e8",
+                  Erysipelotrichales =	"#7acef4",
+                  Lactobacillales =	"#6390fb",
+                  ML615J_28 =	"#70c9de",
+                  Paenibacillales =	"#70a8dc",
+                  RF39 =	"#5c7fba",
+                  Christensenellales =	"#f58262",
+                  Clostridiales =	"#cf4a82",
+                  Lachnospirales =	"#e15f7d",
+                  Monoglobales = "#e18299",
+                  Oscillospirales =	"#ba2760",
+                  Peptostreptococcales =	"#e35d51",
+                  TANB77 =	"#ef3d26",
+                  UBA1381 =	"#be5643",
+                  Bacteroidales =	"#e3c7a0",
+                  Enterobacterales =	"#ffcc62",
+                  Verrucomicrobiales = "#823f1d")
+
+lawsonibacter_colors <- c(`GPB:bin_000217`	= "#79b1a3",
+                  `GPB:bin_000137` =	"darkgrey",
+                  `GPB:bin_000118` =	"#7acef4", 
+                  `GPB:bin_000080` =	"#6390fb", 
+                  `GPB:bin_000077` =	"#5c7fba",
+                  `GPB:bin_000072` =	"lightgreen", 
+                  `GPB:bin_000015` =	"#cf4a82", 
+                  `GPB:bin_000047` =	"#e35d51", 
+                  `GPB:bin_000044` =	"black",
+                  `GPB:bin_000034` =	"#e3c7a0", 
+                  `GPB:bin_000063` =	"#ffcc62", 
+                  `D300470:bin_000020` = "darkseagreen3") 
+
+```
+
+### Plotting Theme
+```{r custom_ggplot_theme, warning=FALSE, comments="", message=FALSE}
+custom_ggplot_theme <- theme(
+  strip.text.y.left = element_text(angle = 0),
+  strip.text.y.right = element_text(angle = 0),
+  axis.text = element_text(size = 10),
+  axis.title = element_text(size = 12, face = "bold"),
+  strip.background = element_rect(fill = "#dde3e9", color = "white", size = 0.8), # Custom facet strip background
+  strip.text = element_text(size = 11, face = "bold", color = "black"), # Custom facet text 8
+  strip.placement = "outside", # Place strip outside the panel grid
+  panel.spacing = unit(0.1, "lines"), # Adjust space between panels
+  panel.grid.major = element_line(color = "#dde3e9"), # Customize major grid lines
+  panel.grid.minor = element_blank(), # Remove minor grid lines
+  panel.background = element_rect(fill = "white"), # Change panel background color
+  plot.margin = unit(c(1, 1, 1, 1), "cm") # Adjust plot margins to ensure content fits
+)
+```
+
+## Load Functions
+### parse_fastp_function
+```{r parse_fastp_function, warning=FALSE, message=FALSE, comments=""}
+parse_fastp <- function(multiqc_json) {
+  fastp_raw <- multiqc_json$report_saved_raw_data$multiqc_fastp
+
+  fastp_tibble <-
+    tibble::tibble(
+      sample_id = names(fastp_raw),
+      values = fastp_raw
+    ) |>
+    dplyr::mutate(
+      sample_id = sample_id |>
+        stringr::str_remove_all("fastp \\| ") |>
+        stringr::str_remove("_[12].fq.gz") |>
+        stringr::str_split("_") |>
+        purrr::map(1) |>
+        unlist()
+    ) |>
+    tidyr::unnest_wider(values) |>
+    tidyr::unnest_wider(-sample_id, names_sep = ".") |>
+    tidyr::unnest_wider(
+      c(
+        summary.before_filtering,
+        summary.after_filtering,
+        polyx_trimming.polyx_trimmed_reads,
+        polyx_trimming.polyx_trimmed_bases
+      ),
+      names_sep = "."
+    )
+  fastp_tibble
+}
+```
+
+### calculate_alpha_diversity
+```{r alpha_diversity_function, warning=FALSE, comments="", message=FALSE}
+calculate_alpha_diversity <- function(input_data, metadata_name, dataset_name, tree_name) {
+  input_data_matrix <- input_data %>% column_to_rownames(var = "genome") 
+  colsum <- input_data_matrix  %>%
+    summarise(across(where(is.numeric), sum)) %>%
+    pivot_longer(cols = everything(), names_to = "microsample", values_to = "cov_filtering") %>% 
+    mutate(cov_filtering=ifelse(cov_filtering > 0 , "Retained By Filtering", "Excluded By Filtering"))
+  # Define diversity metrics and calculate
+  diversity_metrics <- list(
+    richness = hilldiv(input_data_matrix, q = 0),
+    neutral = hilldiv(input_data_matrix, q = 1),
+    phylogenetic = hilldiv(input_data_matrix, q = 1, tree = tree_name)
+  )
+  # Process metrics into a single data frame
+  alpha_diversity <- lapply(names(diversity_metrics), function(metric) {
+    diversity_metrics[[metric]] %>%
+      t() %>%
+      as.data.frame() %>%
+      rownames_to_column(var = "microsample") %>%
+      rename(!!sym(metric) := 2) # rename metric column
+  }) %>%
+    reduce(full_join, by = "microsample") %>% 
+    right_join(metadata_name, by = "microsample") %>% # Merge with final stats
+    left_join(colsum, by = "microsample")
+  #output_filename <- paste0("results/alpha_div_", dataset_name, ".tsv")
+  #write_tsv(alpha_diversity, output_filename)
+  return(alpha_diversity)
+}
+```
+
+### Amalia: perform_pca
+```{r pca_function, warning=FALSE, comments="", message=FALSE}
+perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
+  
+  # Store original dimensions
+  original_rows <- nrow(df)
+  original_cols <- ncol(df)
+  
+  # 1. Zero replacement
+  if (any(df == 0)) { # I think cmultRepl already does that
+    print("Zeros found")
+    df <- cmultRepl(df, method = zero_method, output = "prop",
+                        z.warning = 0.8, z.delete = z_delete)
+    df <- df * 100
+  }
+
+  # Print removed rows and columns
+  removed_rows <- original_rows - nrow(df)
+  removed_cols <- original_cols - ncol(df)
+  cat("Rows (samples) removed:", removed_rows, "\n")
+  cat("Columns (taxa) removed:", removed_cols, "\n")
+  
+  #plot_abundance_heatmap(df)
+
+  # Geometric mean function
+  geometric_mean <- function(x) {
+    # Use log to avoid underflow
+    exp(mean(log(x), na.rm = TRUE))  
+    }
+    
+  # 2. Calculate geometric mean of the parts (taxa) of the data set.
+  taxa_geometric_means <- apply(df, 2, geometric_mean)
+  
+  # 3. Center data
+  df_centered <- sweep(df, 2, taxa_geometric_means, FUN = "/")
+  
+  df_centered <- as.matrix(df_centered)  
+  
+  # Compute the Variation Matrix
+  variation_matrix <- outer(
+    1:ncol(df_centered), 1:ncol(df_centered), 
+    Vectorize(function(i, j) var(log(df_centered[, i] / df_centered[, j]), na.rm = TRUE))
+  )
+ 
+   # Calculate Total Variance
+  D <- ncol(df_centered)  # Number of taxa (columns)
+  totvar <- (1 / (2 * D)) * sum(variation_matrix, na.rm = TRUE)
+  
+  # 4. Scale data
+  power_exponent <- 1 / sqrt(totvar)
+  df_scaled <- df_centered^power_exponent
+  # print(df_scaled)
+
+  # CLR transform data
+  clr_transform <- function(x) {
+    log(x) - mean(log(x), na.rm = TRUE)
+  }
+  df_clr <- t(apply(df_scaled, 1, clr_transform)) 
+  df_clr <- as.data.frame(df_clr)
+  
+  df_clr_dist <- t(apply(df, 1, clr_transform)) 
+  df_clr_dist <- as.data.frame(df_clr_dist)
+  
+  # Perform PCA on zero replaced, centered, scaled, and CLR transformed df
+  pca_result <- prcomp(df_clr, center = FALSE, scale. = FALSE)
+  pca_result_dist <- prcomp(df_clr_dist, center = TRUE, scale. = TRUE)
+  
+  return(list(
+    df_clr = df_clr,
+    df_clr_dist = df_clr_dist,
+    pca_result=pca_result,
+    pca_result_dist=pca_result_dist))
+}
+```
+
+### fit_and_analyze_model
+```{r fit_and_analyze_model(), message=FALSE}
+fit_and_analyze_model <- function(model = c("lm", "glm"),
+                                  distribution = NULL,
+                                  response_var,
+                                  explanatory_var,
+                                  data) {
+  model <- match.arg(model) # Restrict to "lm" or "glm"
+  # Construct the model formula
+  model_formula <- as.formula(paste(response_var, "~", explanatory_var))
+
+  # Initialize all possible return objects
+  anova_result <- NULL
+  md <- NULL
+  simResids <- NULL
+
+  if (model == "lm") {
+    # Continuous floats (any real number)
+    md <- lm(model_formula, data = data)
+    anova_result <- broom::tidy(Anova(md, test.statistic = "F"))
+  } else if (model == "glm") {
+    # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+    # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion) but beta regression (not GLM)	Preferred over quasibinomial GLM
+    # Continuous floats (any real number): gaussian, Gamma (continuous positive data, skewed to the right)
+    if (is.null(distribution)) {
+      stop("You must specify a distribution family for glm.")
+    }
+
+    md <- glm(model_formula, family = distribution, data = data)
+
+    if (!grepl("^quasi", distribution)) { # Use DHARMa only on supported distributions
+      simResids <- simulateResiduals(md)
+      anova_result <- broom::tidy(Anova(md, test.statistic = "F")) # ANOVA with F test
+    } else {
+      anova_result <- broom::tidy(Anova(md, test.statistic = "Wald")) # ANOVA with Chi-squared test
+    }
+  }
+  result <- list(
+    model_fit = md,
+    anova = anova_result
+  )
+
+  if (!is.null(simResids)) {
+    result$simResidual <- simResids
+  }
+
+  return(result)
+}
+```
+
+### pivot_phylo
+```{r pivot_phylo, message=FALSE}
+pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_level, tr_method) {
+  if (glom == TRUE && !is.null(taxon_level)) {
+    phyloseq_obj <- prune_taxa(taxa_sums(phyloseq_obj) > 0, phyloseq_obj)
+    phyloseq_obj <- tax_glom(phyloseq_obj, taxon_level)
+  } else {
+    .
+  }
+  if (tax_transform == TRUE && !is.null(tr_method)) {
+    phyloseq_obj <- tax_transform(phyloseq_obj, tr_method)
+  } else {
+    .
+  }
+
+  pivot_dataframe <- data.frame(otu_table(phyloseq_obj)) %>%
+    rownames_to_column(var = "genome") %>%
+    pivot_longer(-genome, names_to = "microsample", values_to = "abundance") %>%
+    filter(abundance > 0) %>%
+    left_join(data.frame(tax_table(phyloseq_obj)) %>%
+      rownames_to_column(var = "genome"), by = "genome") %>%
+    left_join(data.frame(sample_data(phyloseq_obj)) %>%
+      rownames_to_column(var = "microsample"), by = "microsample")
+
+  # Re-order levels
+  taxa_levels <- c("domain", "phylum", "class", "order", "family", "genus", "species")
+  # Iterate over taxonomic levels
+  for (taxa in taxa_levels) {
+    # Check if the column has more than one unique value
+    if (taxa %in% colnames(pivot_dataframe) && length(unique(pivot_dataframe[[taxa]])) > 1) {
+      # Convert each taxonomic level to a factor with levels ordered by abundance
+      pivot_dataframe <- pivot_dataframe %>%
+        mutate(
+          !!taxa := factor(
+            !!sym(taxa),
+            levels = pivot_dataframe %>%
+              group_by(!!sym(taxa)) %>%
+              summarise(total_abundance = sum(abundance, na.rm = TRUE), .groups = "drop") %>%
+              arrange(desc(total_abundance)) %>%
+              pull(!!sym(taxa))
+          ) # Extract ordered levels
+        )
+    }
+  }
+  return(pivot_dataframe)
+}
+```
+
+### spatial_cryosections
+```{r spatial_cryosections_fun, message=FALSE}
+spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
+  cryosection_dfs <- list()
+  mantel_results <- list()
+  mantelcor_results <- list()
+  decay_dfs <- list()
+  distance_decay_plots <- list()
+  structure_results <- list()
+
+  for (cryosection in cryosection_list) {
+    # Filter metadata for this section
+    metadata_data <- metadata_df %>%
+      filter(cryosection == !!cryosection, !is.na(.data$Xcoord), !is.na(.data$Ycoord))
+
+    # Filter community data
+    comm_data <- comm_clr %>%
+      data.frame() %>%
+      rownames_to_column(var = "microsample") %>%
+      filter(microsample %in% metadata_data$microsample) %>%
+      column_to_rownames(var = "microsample")
+
+    cryosection_dfs[[cryosection]] <- list(
+      comm_clr = comm_data,
+      metadata = metadata_data
+    )
+
+    # Mantel correlogram
+    mantel <- vegan::mantel(
+      dist(comm_data),
+      dist(metadata_data[, c("Xcoord", "Ycoord")]),
+      permutations = 999
+    )
+    mantel_results[[cryosection]] <- mantel
+
+    # Mantel correlogram
+    correlog <- vegan::mantel.correlog(
+      D.eco = dist(comm_data),
+      D.geo = dist(metadata_data[, c("Xcoord", "Ycoord")]),
+      nperm = 999
+    )
+    mantelcor_results[[cryosection]] <- correlog
+
+    # Distance decay
+    toplot <- data.frame(
+      spat_dist = as.numeric(dist(metadata_data[, c("Xcoord", "Ycoord")])),
+      comm_dist = as.numeric(dist(comm_data))
+    )
+    decay_dfs[[cryosection]] <- toplot
+
+    # Plot
+    p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
+      # geom_point() +
+      geom_smooth() +
+      xlab("Spatial distance (μm)") +
+      ylab("Aitchison \ndistance") +
+      custom_ggplot_theme +
+      # ggtitle(paste("Distance Decay -", cryosection))
+      ggtitle(paste(cryosection))
+    distance_decay_plots[[cryosection]] <- p
+
+    # Print summary
+    # print(paste("Summary for", cryosection))
+    # print(summary(lm(comm_dist ~ spat_dist, data = toplot)))
+
+    #### Complex spatial structures
+    # set.seed(111)
+    # spat_SWNs<-listw.candidates(data.frame(metadata_data[,c("Xcoord","Ycoord")]),
+    # nb = c("gab"),
+    # weights = c("fdown", "fup"),
+    # y_fdown = c(2,5), y_fup = c(0.1,0.5))
+    # W_sel <- listw.select(comm_data, spat_SWNs, MEM.autocor = "positive",
+    # p.adjust = T, method="FWD")
+    # structure_results[[cryosection]] <- W_sel
+  }
+  return(list(
+    cryosection_dfs = cryosection_dfs,
+    mantel_results = mantel_results,
+    mantelcor_results = mantelcor_results,
+    decay_dfs = decay_dfs,
+    distance_decay_plots = distance_decay_plots,
+    structure_results = structure_results
+  ))
+}
+```
+
+### lawsonibacter_mantel_analysis 
+```{r lawsonibacter_mantel_analysis}
+lawsonibacter_mantel_analysis <- function(data, animal_id, circul_selection) {
+
+  # 1. Filter and prepare presence-absence matrix
+  if (circul_selection == "Y") {
+    filtered_data <- data %>%
+      filter(
+        cryosection %in% c("G121eI103A", "G103bI301A"),
+        !microsample %in% c("M300840", "M301068", "M301085", "M301084"),
+        circul == circul_selection,
+        animal == animal_id
+      )
+  } else {
+    message("circul_selection is not 'Y'; skipping circul filter.")
+    filtered_data <- data %>%
+      filter(
+        cryosection %in% c("G121eI103A", "G103bI301A"),
+        !microsample %in% c("M300840", "M301068", "M301085", "M301084"),
+        animal == animal_id
+      )
+  }
+
+  # Presence Absence
+  # 1. Build presence-absence matrix
+  lawsonibacter_pa <- filtered_data %>%
+    mutate(presence = ifelse(abundance > 0, 1, 0)) %>%
+    select(microsample, genome, presence) %>%
+    pivot_wider(names_from = genome, values_from = presence, values_fill = 0) %>%
+    column_to_rownames("microsample")
+  # 2. Community distance
+  comm_dist_pa <- vegan::vegdist(lawsonibacter_pa, method = "jaccard")
+  # 3. Spatial coordinates
+  coords_pa <- filtered_data %>%
+    distinct(microsample, Xcoord, Ycoord) %>%
+    arrange(microsample)
+  coords_pa <- coords_pa[match(rownames(lawsonibacter_pa), coords_pa$microsample), ]
+  # 4. Spatial distance
+  spatial_dist_pa <- dist(coords_pa[, c("Xcoord", "Ycoord")])
+  # 5. Mantel test
+  mantel_result_pa <- vegan::mantel(comm_dist_pa, spatial_dist_pa, permutations = 999)
+  # 6. Mantel correlogram
+  mantelcor_result_pa <- vegan::mantel.correlog(
+    D.eco = comm_dist_pa,
+    D.geo = spatial_dist_pa,
+    nperm = 999
+  )
+  
+  # CLR
+  # 1. Build count matrix and CLR transformation
+  lawsonibacter_clr <- filtered_data %>%
+    select(microsample, genome, abundance) %>%
+    pivot_wider(names_from = genome, values_from = abundance, values_fill = 0) %>%
+    column_to_rownames("microsample")
+  lawsonibacter_clr <- cmultRepl(lawsonibacter_clr, method = "GBM", output = "prop", z.warning = 0.95)
+  clr_transform <- function(x) {
+    log(x) - mean(log(x), na.rm = TRUE)
+    }
+  lawsonibacter_clr <- data.frame(t(apply(lawsonibacter_clr, 1, clr_transform)))
+  # 2. Community distance
+  comm_dist_clr <- vegan::vegdist(lawsonibacter_clr, method = "euclidean")
+  # 2. Spatial coordinates
+  coords_clr <- filtered_data %>%
+    distinct(microsample, Xcoord, Ycoord) %>%
+    arrange(microsample) %>% 
+    filter(microsample %in% c(rownames(lawsonibacter_clr)))
+  coords_clr <- coords_clr[match(rownames(lawsonibacter_clr), coords_clr$microsample), ]
+  # 4. Spatial distance
+  spatial_dist_clr <- dist(coords_clr[, c("Xcoord", "Ycoord")])
+  # 5. Mantel test
+  mantel_result_clr <- vegan::mantel(comm_dist_clr, spatial_dist_clr, permutations = 999)
+  # 6. Mantel correlogram
+  mantelcor_result_clr <- vegan::mantel.correlog(
+    D.eco = comm_dist_clr,
+    D.geo = spatial_dist_clr,
+    nperm = 999
+    )
+  
+  distance_clr_df <- data.frame(
+      spat_dist = as.numeric(spatial_dist_clr),
+      comm_dist = as.numeric(comm_dist_clr)
+    )
+  
+  clr_lm <- aovperm(lmperm(comm_dist ~ spat_dist, data = distance_clr_df, np=10000))
+  
+                    return(list(
+    animal = animal_id,
+    mantel_pa = mantel_result_pa,
+    correlogram_pa = mantelcor_result_pa,
+    mantel_clr = mantel_result_clr,
+    correlogram_clr = mantelcor_result_clr,
+    clr_lm = clr_lm
+  ))
+}
+```

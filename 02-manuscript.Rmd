@@ -1,0 +1,2787 @@
+# Micro-scale Spatial Metagenomics (MSSM): Main Manuscript
+
+## Load data
+```{r load_data_main_manuscript, message=FALSE}
+load("data/25_07_10_selected_data.Rdata") # load the data from 1-data_preparation
+```
+
+## Microbial Genomic Reference Data
+
+### Macro-scale MAGs Catalogue Summary Statistics 
+```{r stat_macromag, message=FALSE}
+cat("Completeness median = ", round(median(macromag_genomemetadata$completeness), 2), "\n")
+cat(
+  "Completeness IQR = ", round(quantile(macromag_genomemetadata$completeness, probs = c(0.25)), 2),
+  "-", round(quantile(macromag_genomemetadata$completeness, probs = c(0.75)), 2), "\n"
+)
+cat("Contamination median = ", round(median(macromag_genomemetadata$contamination), 2), "\n")
+cat(
+  "Contamination IQR = ", round(quantile(macromag_genomemetadata$contamination, probs = c(0.25)), 2),
+  "-", round(quantile(macromag_genomemetadata$contamination, probs = c(0.75)), 2)
+)
+```
+
+### Micro-scale MAGs Catalogue Summary Statistics 
+```{r stat_micromag, message=FALSE}
+cat("Completeness median = ", round(median(micromag_genomemetadata$completeness), 2), "\n")
+cat(
+  "Completeness IQR = ", round(quantile(micromag_genomemetadata$completeness, probs = c(0.25)), 2),
+  "-", round(quantile(micromag_genomemetadata$completeness, probs = c(0.75)), 2), "\n"
+)
+cat("Contamination median = ", round(median(micromag_genomemetadata$contamination), 2), "\n")
+cat(
+  "Contamination IQR = ", round(quantile(micromag_genomemetadata$contamination, probs = c(0.25)), 2),
+  "-", round(quantile(micromag_genomemetadata$contamination, probs = c(0.75)), 2)
+)
+```
+### Amalia: Macro vs Micro MAGs: Completeness and Abundance (Fig. 2a)
+
+```{r fig_2a, message=FALSE}
+```
+
+### Amalia: Macro MAGs Overview (Fig. 2b)
+
+```{r fig_2b, message=FALSE}
+```
+
+### Amalia: Micro MAGs Overview (Suppl. Fig. 1)
+
+```{r suppl_fig_1, message=FALSE}
+```
+
+### Comparative Analysis of Genome Catalogues (Suppl. Note 1)
+
+```{r suppl_note_1, message=FALSE}
+cat("Number Genomes in Macro-scale MAGs Catalogue =", length(macromag_taxonomy$genome), "\n")
+cat("Number Genomes in Micro-scale MAGs Catalogue =", length(micromag_taxonomy$genome), "\n")
+```
+
+#### Data selection
+
+```{r suppl_note_1_samples, message=FALSE}
+sn1_sample_id <- microquant_metrics_filt_30 %>% # select microquant dataset
+  filter(
+    batch %in% c("MSEB0011"),
+    type_binomial %in% c("positive")
+  ) %>% pull(microsample)
+
+sn1_phylo_count <- full_join(
+  microquant_genome_counts_filt_30 %>%
+    select(genome, all_of(sn1_sample_id)) %>%
+    rename_with(~ paste0(.x, "_micro"), .cols = -genome),
+  macroquant_genome_counts_filt_30 %>%
+    select(genome, all_of(sn1_sample_id)) %>%
+    rename_with(~ paste0(.x, "_macro"), .cols = -genome),
+  by = "genome"
+) %>%
+  mutate(across(
+    where(is.numeric),
+    ~ replace_na(.x, 0)
+  )) %>%
+  filter(if_any(where(is.numeric), ~ . != 0)) %>%
+  select(
+    genome,
+    where(~ !is.numeric(.x) || sum(.x, na.rm = TRUE) != 0)
+  ) %>%
+  column_to_rownames("genome")
+
+
+sn1_phylo_metadata <- bind_rows(
+  microquant_metrics_filt_30 %>%
+    mutate(
+      sample_id = microsample,
+      microsample = paste0(microsample, "_micro"),
+      dataset = "Micro-scale"
+    ),
+  macroquant_metrics_filt_30 %>%
+    mutate(
+      sample_id = microsample,
+      microsample = paste0(microsample, "_macro"),
+      dataset = "Macro-scale"
+    )
+) %>%
+  filter(microsample %in% c(names(sn1_phylo_count))) %>%
+  column_to_rownames("microsample")
+
+sn1_phylo_taxonomy <- bind_rows(micromag_taxonomy, macromag_taxonomy) %>%
+  filter(genome %in% c(rownames(sn1_phylo_count))) %>%
+  column_to_rownames("genome")
+
+sn1_physeq <- phyloseq(
+  sn1_phylo_count %>% otu_table(., taxa_are_rows = TRUE),
+  sn1_phylo_metadata %>% sample_data(),
+  sn1_phylo_taxonomy %>% as.matrix() %>% tax_table()
+)
+
+sn1_physeq_species <- tax_glom(sn1_physeq, taxrank = "species")
+if (nrow(data.frame(sn1_physeq_species@tax_table) %>%
+  rownames_to_column("genome") %>%
+  count(species) %>%
+  filter(n > 1)) > 0) {
+  cat("warning: Some species appear more than once in the taxonomy table")
+} else {
+  cat("All species are unique")
+}
+
+sn1_physeq_G121e <- subset_samples(sn1_physeq_species, animal == "G121e")
+sn1_physeq_G121e <- prune_taxa(taxa_sums(sn1_physeq_G121e) > 0, sn1_physeq_G121e)
+```
+
+#### Read Counts 
+```{r SN1_read_count, message=FALSE}
+sn1_read_df <- bind_rows(
+  lapply(list(
+    micro = microquant_read_counts_filt_30 %>%
+      select(genome, all_of(sn1_sample_id)),
+    macro = macroquant_read_counts_filt_30 %>%
+      select(genome, all_of(sn1_sample_id))
+  ), function(df) {
+    df %>%
+      summarise(across(-1, sum)) %>%
+      pivot_longer(cols = everything(), names_to = "microsample", values_to = "number_reads")
+  }),
+  .id = "source"
+) %>% pivot_wider(names_from = source, values_from = number_reads)
+
+# Run Spearman's correlation test
+sn1_cor_result <- cor.test(sn1_read_df$micro, sn1_read_df$macro, method = "spearman")
+# Extract values
+rho <- sn1_cor_result$estimate
+pval <- sn1_cor_result$p.value
+n <- length(sn1_read_df$micro)
+# Report
+cat(sprintf("Spearman's ρ = %.2f, p = %.3f, n = %d", rho, pval, n), "\n")
+cat("Macro-scale genome catalogue mean read counts =", mean(sn1_read_df$macro) / 1000000, "\n")
+cat("Micro-scale genome catalogue mean read counts =", mean(sn1_read_df$micro) / 1000000, "\n")
+
+
+sn1_read_count <- sn1_read_df %>%
+  ggplot(aes(x = macro, y = micro)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  stat_cor(
+    method = "spearman", label.x = Inf, label.y = -Inf,
+    hjust = 1.1, vjust = -1.1, size = 4
+  ) + # adds the correlation
+  custom_ggplot_theme +
+  labs(
+    x = "Mapped Reads \nMacro-scale Catalogue",
+    y = "Mapped Reads \nMicro-scale Catalogue"
+  )
+# sn1_read_count
+```
+
+#### Alpha diversity (Fig. S1.1a)
+
+```{r sn1_alpha_df, message=FALSE}
+sn1_alpha_df <- sample_data(sn1_physeq_species) %>%
+  data.frame() %>%
+  filter(richness > 0) %>%
+  select(dataset, sample_id, richness, neutral, phylogenetic) %>%
+  rename(`MAGs Catalogue` = dataset, microsample = sample_id)
+
+sn1_alpha_df_wd <- sn1_alpha_df %>%
+  pivot_wider(
+    names_from = `MAGs Catalogue`,
+    names_glue = "{`MAGs Catalogue`}_{.value}",
+    values_from = c(richness, neutral, phylogenetic)
+  )
+
+sn1_alpha_df_lg <- sn1_alpha_df %>%
+  pivot_longer(
+    cols = c(richness, neutral, phylogenetic),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  mutate(metric = factor(metric,
+    levels = c("richness", "neutral", "phylogenetic")
+  ))
+```
+
+
+```{r FigS1_1a, message=FALSE}
+figs1_1a <- sn1_alpha_df_lg %>%
+  filter(
+    !metric %in% c("phylogenetic"),
+    (metric == "neutral" & value > 1) |
+      (metric == "richness" & value > 0)
+  ) %>%
+  mutate(metric = fct_recode(metric,
+    "Richness" = "richness",
+    "Neutral" = "neutral"
+  )) %>%
+  ggplot(aes(x = metric, y = value, fill = `MAGs Catalogue`)) +
+  geom_boxplot() +
+  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("#79b1a3", "#f58262")) +
+  custom_ggplot_theme +
+  labs(
+    # title = "a",
+    x = "Alpha Diversity Metric",
+    y = ""
+  ) +
+  theme(legend.position = "bottom")
+
+figs1_1a
+ggsave(filename = "figures/FigS1_1a.pdf", figs1_1a, width = 12, height = 5)
+ggsave(filename = "figures/FigS1_1a.png", figs1_1a, width = 12, height = 5)
+```
+
+```{r paired_Wilcoxon_richness, message=FALSE}
+wilcox.test(sn1_alpha_df_wd$`Micro-scale_richness`, sn1_alpha_df_wd$`Macro-scale_richness`, paired = TRUE, na.action = na.omit) %>%
+  tidy() # 5 nas?
+```
+
+```{r paired_Wilcoxon_neutral, message=FALSE}
+wilcox.test(sn1_alpha_df_wd$`Micro-scale_neutral`, sn1_alpha_df_wd$`Macro-scale_neutral`, paired = TRUE, na.action = na.omit) %>%
+  tidy() # 5 nas?
+```
+
+#### Detected Taxa
+```{r sn1_alpha_taxa, message=FALSE}
+microscale_taxa <- left_join(
+  microquant_genome_counts_filt_30 %>%
+    select(genome, all_of(sn1_sample_id)) %>%
+    filter(rowSums(across(where(is.numeric))) > 0) %>% select(genome) %>% as.data.frame(),
+  micromag_taxonomy,
+  by = "genome"
+)
+macroscale_taxa <- left_join(
+  macroquant_genome_counts_filt_30 %>%
+    select(genome, all_of(sn1_sample_id)) %>%
+    filter(rowSums(across(where(is.numeric))) > 0) %>% select(genome) %>% as.data.frame(),
+  macromag_taxonomy,
+  by = "genome"
+)
+```
+
+
+```{r sn1_alpha_unique_species, message=FALSE}
+micro_unique_species <- setdiff(microscale_taxa$species, macroscale_taxa$species)
+macro_unique_species <- setdiff(macroscale_taxa$species, microscale_taxa$species)
+sn1_unique_species_df <- tibble(
+  species = c(micro_unique_species, macro_unique_species),
+  source = c(
+    rep("Micro-scale", length(micro_unique_species)),
+    rep("Macro-scale", length(macro_unique_species))
+  )
+)
+cat("Number Unique Species in Micro-scale MAGs Catalogue =", length(micro_unique_species), "\n")
+cat("Number Unique Species in Macro-scale MAGs Catalogue =", length(macro_unique_species), "\n")
+```
+
+
+```{r sn1_alpha_unique_genera, message=FALSE}
+micro_unique_genera <- setdiff(microscale_taxa$genus, macroscale_taxa$genus)
+macro_unique_genera <- setdiff(macroscale_taxa$genus, microscale_taxa$genus)
+sn1_unique_genera_df <- tibble(
+  genera = c(micro_unique_genera, macro_unique_genera),
+  source = c(
+    rep("Micro-scale", length(micro_unique_genera)),
+    rep("Macro-scale", length(macro_unique_genera))
+  )
+)
+cat("Number Unique Genera in Micro-scale MAGs Catalogue =", length(micro_unique_genera), "\n")
+cat("Number Unique Genera in Macro-scale MAGs Catalogue =", length(macro_unique_genera), "\n")
+```
+
+#### Beta diversity (Fig. S1.1b, Fig. S1.1c)
+```{r sn1_beta_dfs, message=FALSE}
+sn1_betacount_df <- data.frame(otu_table(sn1_physeq_species)) %>%
+  rownames_to_column("genome") %>%
+  melt(id = "genome") %>%
+  setNames(c("genome", "microsample", "count")) %>%
+  left_join(data.frame(tax_table(sn1_physeq_species)) %>%
+    rownames_to_column("genome"), by = "genome") %>%
+  select(species, microsample, count) %>%
+  filter(count > 0) %>%
+  pivot_wider(names_from = species, values_from = count, values_fill = 0) %>% # change here
+  select(where(~ any(. != 0))) %>%
+  mutate(across(-microsample, ~ . / rowSums(across(where(is.numeric))) * 100)) %>%
+  column_to_rownames(var = "microsample")
+```
+
+
+```{r FigS1_1b, message=FALSE}
+sn1_beta_obj <- perform_pca(sn1_betacount_df)
+sn1_beta_metadata <- data.frame(sample_data(sn1_physeq_species)) %>%
+  rownames_to_column("microsample") %>%
+  filter(microsample %in% c(rownames(sn1_beta_obj$df_clr))) %>%
+  rename(
+    `MAGs Catalogue` = dataset,
+    Animal = animal
+  )
+sn1_scores <- rownames_to_column(as.data.frame(sn1_beta_obj$pca_result$x), var = "microsample")
+sn1_scores <- left_join(sn1_scores, sn1_beta_metadata, by = join_by(microsample == microsample))
+# Calculate variance explained for each principal component
+variance_explained <- (sn1_beta_obj$pca_result$sdev^2) / sum(sn1_beta_obj$pca_result$sdev^2) * 100
+# Plot the first two principal components
+figs1_1b <- ggplot() +
+  geom_point(
+    data = sn1_scores,
+    aes(x = PC1, y = PC2, group = microsample, color = `MAGs Catalogue`, shape = Animal),
+    size = 3, alpha = 0.5
+  ) +
+  scale_color_manual(values = c("#79b1a3", "#f58262")) +
+  # Connect the points by group (sample_id)
+  geom_path(
+    data = sn1_scores,
+    aes(x = PC1, y = PC2, group = sample_id),
+    linewidth = 0.7, alpha = 0.8, color = "lightgrey"
+  ) +
+  labs(
+    # title = "b",
+    x = paste0("PC1: ", round(variance_explained[1], 2), "% variance explained"),
+    y = paste0("PC2: ", round(variance_explained[2], 2), "% variance explained")
+  ) +
+  scale_x_continuous(limits = c(-max(abs(sn1_scores$PC1)), max(abs(sn1_scores$PC1)))) + # Calculate symmetric limits based on data
+  scale_y_continuous(limits = c(-max(abs(sn1_scores$PC2)), max(abs(sn1_scores$PC2)))) + # Calculate symmetric limits based on data
+  geom_hline(yintercept = 0, color = "darkgrey") + # Horizontal line at y = 0
+  geom_vline(xintercept = 0, color = "darkgrey") + # Vertical line at x = 0
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+
+figs1_1b
+ggsave(filename = "figures/FigS1_1b.pdf", figs1_1b, width = 12, height = 9)
+ggsave(filename = "figures/FigS1_1b.png", figs1_1b, width = 12, height = 9)
+```
+
+
+
+```{r FigS1_1c, message=FALSE}
+sn1_aldex_G121e_counts <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, "genus")))
+sn1_aldex_G121e_pseudo_counts <- round(sn1_aldex_G121e_counts * 1e6)
+sn1_aldex_G121e_conditions <- data.frame(sample_data(tax_glom(sn1_physeq_G121e, "genus"))) %>% pull(dataset)
+# Perform the ALDEx2 differential abundance test
+# Use 't' test for two groups; 'glm' for multi-class or covariates
+sn1_aldex_G121e_results <- aldex(sn1_aldex_G121e_pseudo_counts,
+  sn1_aldex_G121e_conditions,
+  test = "t", # or "wilcox"
+  effect = TRUE, # include effect sizes
+  denom = "all", # normalization denominator
+  mc.samples = 256, # number of Monte Carlo instances
+  verbose = TRUE
+)
+head(sn1_aldex_G121e_results)
+# - we.ep: expected p-value from Welch's t-test
+# - wi.ep: expected p-value from Wilcoxon test
+# - we.eBH: BH-adjusted p-value (q-value)
+# - effect: effect size (difference in clr means / variability)
+# Filter
+sn1_aldex_G121e_sig <- sn1_aldex_G121e_results[sn1_aldex_G121e_results$we.eBH < 0.05, ]
+sn1_aldex_G121e_effect <- sn1_aldex_G121e_sig[abs(sn1_aldex_G121e_sig$effect) > 0.5, ]
+
+sn1_aldex <-
+  sn1_aldex_G121e_effect %>%
+  rownames_to_column("genome") %>%
+  left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, "genus"))) %>% rownames_to_column("genome"), by = "genome")
+
+# Create horizontal barplot
+figs1_1c <- sn1_aldex %>%
+  ggplot(., aes(x = reorder(genus, effect), y = diff.btw, fill = abs(effect) > 1)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    x = "Genus",
+    y = "Median difference in CLR values between groups"
+  ) +
+  scale_fill_manual(values = c("TRUE" = "#e35d51", "FALSE" = "darkgrey")) +
+  theme_minimal(base_size = 14)
+figs1_1c
+```
+
+#### Fig. S1
+```{r FigS1, message=FALSE}
+figs1 <- cowplot::plot_grid(figs1_1a, figs1_1b, figs1_1c,
+  ncol = 1, labels = c("a", "b", "c"),
+  rel_heights = c(1, 1.3, 1), label_size = 16
+)
+figs1
+ggsave("figures/FigS1.png", figs1, width = 10, height = 13, dpi = 300)
+```
+
+
+## FISH probes design?
+
+```{r x1, message=FALSE}
+```
+
+## MSSM Method Development
+
+### Tissue lysis and sequencing library preparation (Suppl. Note 3)
+
+#### Impact of Lysis Conditions on Microbial Taxonomic Profiling (Suppl. Note 3.2)
+
+##### Amalia: Mock Community (Fig. S3.2.1)
+
+```{r x2, message=FALSE}
+```
+
+##### Microsamples (Fig. S3.2.2)
+
+###### Data selection
+
+```{r sn3_2_df, message=FALSE}
+sn3_2_df <- macroquant_metrics_filt_30 %>%
+  filter(
+    batch %in% c("MSEB0006", "MSEB0010"), # Caeucum (MSEB0006) and Colon (MSEB0010)
+    section %in% c("Caecum right", "Colon"),
+    cycles %in% c(13, 14, 15),
+    type_binomial %in% c("positive"),
+    richness > 0
+  ) %>%
+  mutate(
+    collection_attempts = as.factor(collection_attempts),
+    buffer = as.factor(buffer)
+  )
+
+sn3_2_df %>%
+  group_by(section, buffer) %>%
+  summarise(n_samples = n())
+sn3_2_df %>%
+  group_by(section, buffer, collection_attempts) %>%
+  summarise(n_samples = n(), .groups = "keep") %>%
+  pivot_wider(names_from = collection_attempts, values_from = n_samples)
+```
+
+###### Visual Comparison of Sequencing Performance (Fig. S3.2.2)
+
+```{r FigS3_2_2, message=FALSE}
+ordered_metrics <- c(
+  "total_after_filtering.total_reads",
+  "mapmag_prokreads_pct",
+  "percent_duplication.rate",
+  "richness",
+  "neutral",
+  "phylogenetic" # ,
+  # "read_fraction_singlem"
+)
+
+figs3_2_2 <- sn3_2_df %>%
+  pivot_longer(
+    cols = -c(names(mssm_sample_metadata), "cov_filtering"),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  filter(metric %in% ordered_metrics) %>%
+  mutate(
+    metric = factor(metric, levels = ordered_metrics),
+    metric = fct_recode(metric,
+      "a. Sequencing Yield \nPost-Quality Filtering" = "total_after_filtering.total_reads",
+      "b. Reads Mapping \nMAG Catalogue (%)" = "mapmag_prokreads_pct",
+      "c. Reads \nDuplication Rate (%)" = "percent_duplication.rate",
+      "d. Richness" = "richness",
+      "e. Neutral" = "neutral",
+      "f. Phylogenetic" = "phylogenetic"
+    ),
+    section = recode(section,
+      "Caecum right" = "Caecum",
+      "Colon" = "Colon"
+    )
+  ) %>%
+  ggplot(aes(x = section, y = value, fill = buffer)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free_y", ncol = 3) +
+  labs(
+    fill = "Lysis",
+    y = "",
+    x = "Intestinal section"
+  ) +
+  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#79b1a3", "#f58262", "black")) +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+
+figs3_2_2
+ggsave(filename = "figures/FigS3_2_2.pdf", figs3_2_2, width = 8, height = 7)
+ggsave(filename = "figures/FigS3_2_2.png", figs3_2_2, width = 8, height = 7)
+```
+
+###### Statistical Comparison of Sequencing Performance
+**Note:** The fit_and_analyze_model() function needs to be loaded.
+
+###### a. Reads Retained Post Quality Filtering
+```{r sn3_2_a_caecum, message=FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+sn3_2_a_ca <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasipoisson", # DHARMa significant deviation
+  response_var = "total_after_filtering.total_reads",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+)
+sn3_2_a_ca$anova
+# md <- glm(total_after_filtering.total_reads~collection_attempts + buffer, family = "quasipoisson", data = sn3_2_df #%>%  filter(section %in% c("Caecum right")))
+# broom::tidy(Anova(md, test.statistic = "Wald")) # ANOVA with F test
+```
+
+```{r sn3_2_a_colon, message=FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+sn3_2_a_co <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasipoisson", # DHARMa significant deviation
+  response_var = "total_after_filtering.total_reads",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Colon"))
+)
+sn3_2_a_co$anova
+```
+
+###### b. Reads Mapping MAG Catalogue (%)
+
+```{r sn3_2_b_caecum, message=FALSE}
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+sn3_2_b_ca <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial", # DHARMa significant deviation
+  response_var = "mapmag_prokreads_pct",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+)
+sn3_2_b_ca$anova
+```
+
+
+```{r sn3_2_b_colon, message=FALSE}
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+sn3_2_b_co <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial", # DHARMa significant deviation
+  response_var = "mapmag_prokreads_pct",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Colon"))
+)
+sn3_2_b_co$anova
+```
+
+###### c. Reads Duplication Rate (%)
+
+```{r sn3_2_c_caecum, message=FALSE}
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+sn3_2_c_ca <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial", # DHARMa significant deviation
+  response_var = "percent_duplication.rate",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+)
+sn3_2_c_ca$anova
+```
+
+```{r sn3_2_c_colon, message=FALSE}
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+sn3_2_c_co <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial", # DHARMa significant deviation
+  response_var = "percent_duplication.rate",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Colon"))
+)
+sn3_2_c_co$anova
+```
+
+###### d. Richness
+```{r sn3_2_d_caecum, message=FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+sn3_2_d_ca <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasipoisson", # DHARMa significant deviation
+  response_var = "richness",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+)
+sn3_2_d_ca$anova
+# md <- glm(total_after_filtering.total_reads~collection_attempts + buffer, family = "quasipoisson", data = sn3_2_df #%>%  filter(section %in% c("Caecum right")))
+# broom::tidy(Anova(md, test.statistic = "Wald")) # ANOVA with F test
+```
+
+
+```{r sn3_2_d_colon, message=FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+sn3_2_d_co <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasipoisson", # DHARMa significant deviation
+  response_var = "richness",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Colon"))
+)
+sn3_2_d_co$anova
+```
+
+
+###### e. Neutral" = "neutral",
+```{r sn3_2_e_caecum, message=FALSE}
+# # Continuous floats (any real number): lm or gaussian, Gamma (continuous positive data, skewed to the right)
+sn3_2_e_ca <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "gaussian", # DHARMa significant deviation KS
+  response_var = "neutral",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+)
+# plot(sn3_2_e_ca$simResidual)
+sn3_2_e_ca$anova
+```
+
+```{r sn3_2_e_colon, message=FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+sn3_2_e_co <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "gaussian",
+  response_var = "neutral",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Colon"))
+)
+# plot(sn3_2_e_co$simResidual)
+sn3_2_e_co$anova
+```
+
+###### f. Phylogenetic" = "phylogenetic"
+```{r sn3_2_f_caecum, message=FALSE}
+# # Continuous floats (any real number): lm or gaussian, Gamma (continuous positive data, skewed to the right)
+sn3_2_f_ca <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "gaussian", # DHARMa significant deviation KS
+  response_var = "phylogenetic",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+)
+plot(sn3_2_f_ca$simResidual)
+sn3_2_f_ca$anova
+```
+
+```{r sn3_2_f_colon, message=FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+sn3_2_f_co <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "gaussian",
+  response_var = "phylogenetic",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Colon"))
+)
+plot(sn3_2_f_co$simResidual)
+sn3_2_f_co$anova
+```      
+
+###### Detected Taxa
+
+```{r sn3_2_taxa, message=FALSE}
+sn3_2_taxa <- left_join(
+  macroquant_genome_counts_filt_30 %>%
+    select(genome, all_of(sn3_2_df$microsample)) %>%
+    filter(rowSums(across(where(is.numeric))) > 0) %>%
+    melt(id = "genome", variable.name = "microsample"),
+  macromag_taxonomy,
+  by = "genome"
+) %>%
+  left_join(macroquant_metrics_filt_30, by = "microsample") %>%
+  filter(
+    value > 0,
+    section %in% c("Colon")
+  )
+
+
+sn3_2_unique_L06 <- setdiff(
+  sn3_2_taxa %>% filter(buffer %in% c("L06")) %>% distinct(genus),
+  sn3_2_taxa %>% filter(buffer %in% c("L07")) %>% distinct(genus)
+)
+sn3_2_unique_L07 <- setdiff(
+  sn3_2_taxa %>% filter(buffer %in% c("L07")) %>% distinct(genus),
+  sn3_2_taxa %>% filter(buffer %in% c("L06")) %>% distinct(genus)
+)
+
+sn3_2_unique_genus_df <- tibble(
+  genus = c(sn3_2_unique_L06$genus, sn3_2_unique_L07$genus),
+  source = c(
+    rep("L06", length(sn3_2_unique_L06$genus)),
+    rep("L07", length(sn3_2_unique_L07$genus))
+  )
+)
+
+cat("Number Unique Genus in L06 =", length(sn3_2_unique_L06$genus), "\n")
+cat("Number Unique Genus in L07 =", length(sn3_2_unique_L07$genus), "\n")
+(length(sn3_2_unique_L07$genus) / sn3_2_taxa %>%
+  distinct(genus) %>%
+  count()) * 100
+```      
+
+#### Performance Evaluation Across Intestinal Sections (Suppl. Note 3.3)
+
+###### Data selection 
+
+```{r sn3_3_df, message=FALSE}
+sn3_3_df <- macroquant_metrics_filt_30 %>%
+  filter(
+    batch %in% c("MSEB0006", "MSEB0010"),
+    section %in% c("Caecum right", "Ileum", "Colon"),
+    # cycles %in% c(13, 14, 15),
+    type_binomial %in% c("positive"),
+    richness > 0
+  ) %>%
+  mutate(
+    collection_attempts = as.factor(collection_attempts),
+    buffer = as.factor(buffer),
+    cycles = as.factor(cycles)
+  )
+
+sn3_3_df %>%
+  filter(!cycles %in% c("19")) %>%
+  group_by(section, buffer) %>%
+  summarise(n_samples = n())
+
+sn3_3_df %>%
+  filter(!cycles %in% c("19")) %>%
+  group_by(section, buffer, collection_attempts) %>%
+  summarise(n_samples = n(), .groups = "keep") %>%
+  pivot_wider(names_from = collection_attempts, values_from = n_samples)
+```
+###### Visual Comparison of Sequencing Performance (Fig. S3.3.1)
+
+```{r FigS3_3_1, message=FALSE}
+ordered_metrics <- c(
+  "total_after_filtering.total_reads",
+  "lowquality_reads_pct",
+  # "adapter_contamination_pct",
+  "host_pct",
+  "mapmag_prokreads_pct",
+  "read_fraction_singlem",
+  "richness"
+)
+
+figs3_3_1 <- sn3_3_df %>%
+  filter(!cycles %in% c("19")) %>%
+  pivot_longer(
+    cols = -c(names(mssm_sample_metadata), "cov_filtering"),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  filter(metric %in% ordered_metrics) %>%
+  mutate(
+    metric = factor(metric, levels = ordered_metrics),
+    metric = fct_recode(metric,
+      "a. Sequencing Yield \nPost-Quality Filtering" = "total_after_filtering.total_reads",
+      "b. Low Quality \nReads (%)" = "lowquality_reads_pct",
+      "c. Reads Mapping \nEukaryotic Host (%)" = "host_pct",
+      "d. Reads Mapping \nMAG Catalogue (%)" = "mapmag_prokreads_pct",
+      "e. Microbial Fraction  \nBased On SCG (%)" = "read_fraction_singlem",
+      "f. Richness" = "richness"
+    ),
+    section = recode(section,
+      "Caecum right" = "Caecum",
+      "Colon" = "Colon"
+    )
+  ) %>%
+  ggplot(aes(x = section, y = value, fill = section)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free_y", ncol = 3) +
+  labs(
+    fill = "",
+    y = "",
+    x = "Intestinal section"
+  ) +
+  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#79b1a3", "#f58262", "#e3c7a0")) +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
+
+figs3_3_1
+ggsave(filename = "figures/FigS3_3_1.pdf", figs3_3_1, width = 8, height = 7)
+ggsave(filename = "figures/FigS3_3_1.png", figs3_3_1, width = 8, height = 7)
+```
+
+###### Statistical Comparison of Sequencing Performance
+
+###### a. Reads Retained Post Quality Filtering
+```{r sn3_3_a, message=FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+sn3_3_a <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasipoisson", # DHARMa significant deviation
+  response_var = "total_after_filtering.total_reads",
+  explanatory_var = "collection_attempts + section",
+  data = sn3_3_df %>% filter(!cycles %in% c("19"))
+)
+# plot(a_sectioncomp$simResidual)
+sn3_3_a$anova
+```
+
+###### b. Low Quality Reads (%)
+
+```{r sn3_3_b, message=FALSE}
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+sn3_3_b <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial",
+  response_var = "lowquality_reads_pct",
+  explanatory_var = "collection_attempts + section",
+  data = sn3_3_df %>% filter(!cycles %in% c("19"))
+)
+sn3_3_b$anova
+
+sn3_3_b$model_fit %>% plot_model(., type = "pred", terms = c("collection_attempts", "section"))
+sn3_3_b$model_fit %>% plot_model(., type = "pred", terms = c("section"))
+sn3_3_b$model_fit %>% ggpredict(., terms = c("section"))
+```
+
+###### c. Reads Mapping Eukaryotic Host (%)
+
+```{r sn3_3_c, message=FALSE}
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+sn3_3_c <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial",
+  response_var = "host_pct",
+  explanatory_var = "collection_attempts + section",
+  data = sn3_3_df %>% filter(!cycles %in% c("19"))
+)
+sn3_3_c$anova
+sn3_3_c$model_fit %>% plot_model(., type = "pred", terms = c("collection_attempts", "section"))
+sn3_3_c$model_fit %>% plot_model(., type = "pred", terms = c("section"))
+sn3_3_c$model_fit %>% ggpredict(., terms = c("section"))
+```
+
+
+###### d. Reads Mapping MAG Catalogue (%)
+
+```{r d_sectioncomp, message=FALSE}
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+sn3_3_d <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial",
+  response_var = "mapmag_prokreads_pct",
+  explanatory_var = "collection_attempts + section",
+  data = sn3_3_df %>% filter(!cycles %in% c("19"))
+)
+sn3_3_d$anova
+sn3_3_d$model_fit %>% plot_model(., type = "pred", terms = c("collection_attempts", "section"))
+sn3_3_d$model_fit %>% plot_model(., type = "pred", terms = c("section"))
+sn3_3_d$model_fit %>% ggpredict(., terms = c("section"))
+```
+
+###### e. Microbial Fraction Based On Single-Copy Gene Abundance (%)
+
+```{r e_sectioncomp, message=FALSE}
+chart.Correlation(sn3_3_df %>%
+  filter(section %in% c("Ileum")) %>%
+  select(
+    "read_fraction_singlem",
+    "mapmag_prokreads_pct"
+  ), method = "spearman")
+# correlation
+
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+sn3_3_e <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial",
+  response_var = "read_fraction_singlem",
+  explanatory_var = "collection_attempts + section",
+  data = sn3_3_df %>% filter(!cycles %in% c("19"))
+)
+sn3_3_e$anova
+sn3_3_e$model_fit %>% plot_model(., type = "pred", terms = c("collection_attempts", "section"))
+sn3_3_e$model_fit %>% plot_model(., type = "pred", terms = c("section"))
+sn3_3_e$model_fit %>% ggpredict(., terms = c("section"))
+```
+
+###### Colon: 19 Versus 15 Cycles
+```{r Boxplot_19versus15Cycles, message=FALSE}
+ordered_metrics <- c(
+  "total_before_filtering.total_reads",
+  "total_after_filtering.total_reads",
+  "lowquality_reads_pct",
+  "percent_duplication.rate"
+)
+
+sn_3_3_15vs19 <- sn3_3_df %>%
+  filter(section %in% c("Colon")) %>%
+  pivot_longer(
+    cols = -c(names(mssm_sample_metadata), "cov_filtering"),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  filter(metric %in% ordered_metrics) %>%
+  mutate(
+    metric = factor(metric, levels = ordered_metrics),
+    metric = fct_recode(metric,
+      "a. Sequencing yield \n(Number Reads)" = "total_before_filtering.total_reads",
+      "b. Reads Retained \nPost Quality Filtering" = "total_after_filtering.total_reads",
+      "c. Low Quality Reads (%)" = "lowquality_reads_pct",
+      "d. Reads \nDuplication Rate (%)" = "percent_duplication.rate"
+    )
+  ) %>%
+  ggplot(aes(x = cycles, y = value, fill = buffer)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free_y", ncol = 2) +
+  labs(
+    fill = "Lysis Treatment",
+    y = "",
+    x = "Intestinal section"
+  ) +
+  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#79b1a3", "#f58262")) +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+
+sn_3_3_15vs19
+```
+
+```{r reads_cyclecomp , message=FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+readsbf_cyclecomp <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasipoisson", # DHARMa significant deviation
+  response_var = "total_before_filtering.total_reads",
+  explanatory_var = "collection_attempts + cycles",
+  data = sn3_3_df %>% filter(section %in% c("Colon"))
+)
+# plot(reads_cyclecomp$simResidual)
+readsbf_cyclecomp$anova
+readsbf_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles"))
+```
+
+
+```{r readsfilt_cyclecomp , message=FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+readshq_cyclecomp <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasipoisson", # DHARMa significant deviation
+  response_var = "total_after_filtering.total_reads",
+  explanatory_var = "collection_attempts + cycles",
+  data = sn3_3_df %>% filter(section %in% c("Colon"))
+)
+# plot(reads_cyclecomp$simResidual)
+readshq_cyclecomp$anova
+readshq_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles"))
+```
+
+```{r quality_cyclecomp, message=FALSE}
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+quality_cyclecomp <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial",
+  response_var = "lowquality_reads_pct",
+  explanatory_var = "collection_attempts + cycles",
+  data = sn3_3_df %>% filter(section %in% c("Colon"))
+)
+quality_cyclecomp$anova
+quality_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles"))
+```
+
+```{r duplication_cyclecomp, message=FALSE}
+# Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
+duplication_cyclecomp <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "quasibinomial", # DHARMa significant deviation
+  response_var = "percent_duplication.rate",
+  explanatory_var = "collection_attempts + cycles",
+  data = sn3_3_df %>% filter(section %in% c("Colon"))
+)
+duplication_cyclecomp$anova
+```
+
+###### Community Composition of Caecum & Colon (Fig. S3.3.2)
+
+```{r physeq_section, message=FALSE}
+sn3_3_physeq <- subset_samples(
+  physeq_all,
+  section %in% c("Caecum right", "Colon") &
+    !cycles %in% c(19) &
+    animal %in% c("G121e") &
+    type_binomial == "positive"
+)
+
+sn3_3_physeq <- prune_taxa(taxa_sums(sn3_3_physeq) > 0, sn3_3_physeq)
+#sn3_3_physeq <- filter_taxa(sn3_3_physeq, function(x) sum(x > 0) > (0.05 * length(x)), TRUE)
+sn3_3_aldex_G121e_counts <- data.frame(otu_table(sn3_3_physeq))
+sn3_3_aldex_G121e_pseudo_counts <- round(sn3_3_aldex_G121e_counts * 1e6)
+sn3_3_aldex_G121e_conditions <- data.frame(sample_data(sn3_3_physeq)) %>% pull(section)
+# Perform the ALDEx2 differential abundance test
+# Use 't' test for two groups; 'glm' for multi-class or covariates
+sn3_3_aldex_G121e_results <- aldex(sn3_3_aldex_G121e_pseudo_counts,
+  sn3_3_aldex_G121e_conditions,
+  test = "t", # or "wilcox"
+  effect = TRUE, # include effect sizes
+  denom = "all", # normalization denominator
+  mc.samples = 256, # number of Monte Carlo instances
+  verbose = TRUE
+)
+head(sn3_3_aldex_G121e_results)
+# - we.ep: expected p-value from Welch's t-test
+# - wi.ep: expected p-value from Wilcoxon test
+# - we.eBH: BH-adjusted p-value (q-value)
+# - effect: effect size (difference in clr means / variability)
+# Filter
+sn3_3_aldex_G121e_sig <- sn3_3_aldex_G121e_results[sn3_3_aldex_G121e_results$we.eBH < 0.05, ]
+sn3_3_aldex_G121e_effect <- sn3_3_aldex_G121e_sig[abs(sn3_3_aldex_G121e_sig$effect) > 0.5, ]
+
+sn3_3_aldex <-
+  sn3_3_aldex_G121e_effect %>%
+  rownames_to_column("genome") %>%
+  left_join(data.frame(tax_table(sn3_3_physeq)) %>% rownames_to_column("genome"), by = "genome")
+
+# Create horizontal barplot
+sn3_3_aldex %>%
+  ggplot(., aes(x = reorder(genome, effect), y = diff.btw, fill = abs(effect) > 1)) +
+  geom_bar(stat = "identity", show.legend = FALSE) +
+  coord_flip() +
+  labs(
+    x = "Genus",
+    y = "Median difference in CLR values between groups"
+  ) +
+  scale_fill_manual(values = c("TRUE" = "#e35d51", "FALSE" = "darkgrey")) +
+  theme_minimal(base_size = 14)
+```
+
+
+**Note:** The pivot_phylo() function needs to be loaded.
+```{r physeq_section_lg, message=FALSE}
+sn3_3_physeq_lg <- pivot_phylo(
+  phyloseq_obj = subset_samples(
+    physeq_all,
+    batch %in% c("MSEB0006", "MSEB0010") &
+      section %in% c("Caecum right", "Colon") &
+      !cycles %in% c(19) &
+      type_binomial == "positive"
+  ),
+  glom = TRUE,
+  tax_transform = TRUE,
+  taxon_level = "order",
+  tr_method = "compositional"
+)
+```
+
+```{r figs3_3_2, message=FALSE}
+figs3_3_2 <- sn3_3_physeq_lg %>%
+  mutate(section = ifelse(section == "Caecum right", "Caecum", section)) %>%
+  ggplot(
+    aes(x = microsample, y = abundance, fill = order)
+  ) +
+  geom_bar(stat = "identity", colour = "white", linewidth = 0.1) +
+  scale_fill_manual(values = order_colors, drop = FALSE) +
+  labs(
+    x = "Microsamples",
+    y = "Relative abundance",
+    fill = "Order"
+  ) +
+  facet_wrap(~section, scales = "free", ncol = 1) +
+  guides(fill = guide_legend(ncol = 4)) +
+  custom_ggplot_theme +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(legend.position = "bottom")
+
+figs3_3_2
+ggsave(filename = "figures/FigS3_3_2.pdf", figs3_3_2, width = 8, height = 7)
+ggsave(filename = "figures/FigS3_3_2.png", figs3_3_2, width = 8, height = 7)
+```
+
+
+###### Confocal microscopy of DAPI-stained microsections 
+```{r sn3_3_dapi_df, message=FALSE}
+sn3_3_dapi_df <- dapi_df %>%
+  group_by(Animal, Sequence, Age, Section) %>%
+  summarise(
+    n = n(),
+    Distance_from_one_side_mn = mean(Distance_from_one_side, na.rm = TRUE),
+    Distance_from_one_side_sd = ifelse(n > 1, sd(Distance_from_one_side), NA_real_),
+    mean = mean(Bacterial_count),
+    median = median(Bacterial_count),
+    sd_na = ifelse(n > 1, sd(Bacterial_count), NA_real_), # If only 1 obs, return NA
+    sd = ifelse(n() > 1, sd(Bacterial_count, na.rm = TRUE), 0), # Avoid NA SD
+    sem = ifelse(n > 1, sd / sqrt(n), 0), # Set SEM to 0 if only 1 observation
+    q1 = quantile(Bacterial_count, 0.25), # First quartile
+    q3 = quantile(Bacterial_count, 0.75), # Third quartile
+    .groups = "drop"
+  )
+
+dapi_df %>%
+  group_by(Age, Section) %>%
+  summarise(
+    n = n(),
+    mean = mean(Bacterial_count),
+    median = median(Bacterial_count),
+    sd_na = ifelse(n > 1, sd(Bacterial_count), NA_real_), # If only 1 obs, return NA
+    sd = ifelse(n() > 1, sd(Bacterial_count, na.rm = TRUE), 0), # Avoid NA SD
+    q1 = quantile(Bacterial_count, 0.25), # First quartile
+    q3 = quantile(Bacterial_count, 0.75), # Third quartile
+    .groups = "drop"
+  )
+```
+
+####### Visual Comparison (Fig. S3.3.3a)
+
+```{r figs3_3_3a, message=FALSE}
+figs3_3_3a <- ggplot(sn3_3_dapi_df, aes(x = Distance_from_one_side_mn, y = median, color = Section)) +
+  geom_line(linewidth = 1) + # Mean line
+  geom_ribbon(aes(ymin = q1, ymax = q3, fill = Section),
+    alpha = 0.2
+  ) + # SEM shading
+  labs(
+    title = "a",
+    x = "Distance from Villi (μm)",
+    y = "Bacterial Counts (Median)"
+  ) +
+  facet_wrap(~Age, nrow = 2, scale = "free_x") +
+  scale_fill_manual(values = c("#79b1a3", "#f58262", "#e3c7a0"), drop = FALSE) +
+  scale_color_manual(values = c("#79b1a3", "#f58262", "#e3c7a0"), drop = FALSE) +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+
+figs3_3_3a
+ggsave(filename = "figures/FigS3_3_3a.pdf", figs3_3_3a, width = 8, height = 7)
+ggsave(filename = "figures/FigS3_3_3a.png", figs3_3_3a, width = 8, height = 7)
+```
+
+
+### Design considerations: Controls (Suppl. Note 3.4)
+
+###### Visual Comparison of Sequencing Performance (Fig. S3.4.1)
+```{r FigS3_4_1, message=FALSE}
+ordered_metrics <- c(
+  "total_before_filtering.total_reads",
+  "lowquality_reads_pct",
+  "adapter_contamination_pct",
+  "human_pct",
+  "raw_total_sequences_mag",
+  "mapmag_prokreads_pct"
+)
+
+figs3_4_1 <- macroquant_metrics_filt_30 %>%
+  filter(!section %in% c("Ileum")) %>%
+  mutate(batch = gsub("MSEB00", "B", batch)) %>%
+  pivot_longer(
+    cols = -c(names(mssm_sample_metadata), "cov_filtering"),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  filter(metric %in% ordered_metrics) %>%
+  mutate(
+    metric = factor(metric, levels = ordered_metrics),
+    metric = fct_recode(metric,
+      "a. Sequencing Yield Pre-quality Filtering" = "total_before_filtering.total_reads",
+      "b. Low Quality Reads (%)" = "lowquality_reads_pct",
+      "c. Adapter Contamination (% bases)" = "adapter_contamination_pct",
+      "d. Reads Mapping Human (%)" = "human_pct",
+      "e. Read Counts for Bacterial Quantification " = "raw_total_sequences_mag",
+      "f. Reads Mapping MAG Catalogue (%)" = "mapmag_prokreads_pct"
+    ),
+    type_binomial = recode(type_binomial,
+      "positive" = "Microsample",
+      "negative" = "Negative"
+    )
+  ) %>%
+  ggplot(aes(x = batch, y = value, fill = type_binomial)) +
+  geom_boxplot() +
+  facet_wrap(~metric, scales = "free_y", ncol = 1) +
+  labs(
+    fill = "",
+    y = "",
+    x = "Batch"
+  ) +
+  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#f58262", "#79b1a3")) +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+
+figs3_4_1
+ggsave(filename = "figures/FigS3_4_1.pdf", figs3_4_1, width = 8, height = 11)
+ggsave(filename = "figures/FigS3_4_1.png", figs3_4_1, width = 8, height = 11)
+```
+
+
+#### Amalia: Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA)
+
+###### FigS3_4_2
+
+```{r FigS3_4_2, message=FALSE}
+```
+
+###### FigS3_4_3
+
+```{r FigS3_4_3, message=FALSE}
+```
+
+
+###### Visual Comparison of Coverage Cutoff Filtering (Fig. S3.4.4)
+
+```{r FigS3_4_4, message=FALSE}
+figs3_4_4 <- macroquant_metrics_filt_30 %>%
+  mutate(
+    batch = gsub("MSEB00", "B", batch),
+    type_binomial = recode(type_binomial,
+      "positive" = "Positive",
+      "negative" = "Negative"
+    )
+  ) %>%
+  # group_by(type_binomial, cov_filtering) %>%
+  group_by(batch, type_binomial, cov_filtering) %>%
+  summarise(n_samples = n()) %>%
+  ggplot(aes(fill = cov_filtering, x = batch, y = n_samples)) +
+  geom_bar(position = "fill", stat = "identity") + # Stacked 100% bar
+  geom_text(aes(label = n_samples),
+    position = position_fill(vjust = 0.5),
+    color = "black", size = 6
+  ) +
+  facet_wrap(~type_binomial) +
+  scale_fill_manual(values = c("#f58262", "#79b1a3")) +
+  labs(
+    fill = "",
+    y = "",
+    x = "Batch"
+  ) +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+
+figs3_4_4
+ggsave(filename = "figures/FigS3_4_4.pdf", figs3_4_4, width = 8, height = 6)
+ggsave(filename = "figures/FigS3_4_4.png", figs3_4_4, width = 8, height = 6)
+```
+
+
+```{r sn3_4_physeq_lg, message=FALSE}
+sn3_4_physeq_lg <- pivot_phylo(
+  phyloseq_obj = physeq_all,
+  glom = TRUE,
+  tax_transform = TRUE,
+  taxon_level = "genus",
+  tr_method = "compositional"
+)
+sn3_4_physeq_lg %>%
+  group_by(type_binomial) %>%
+  summarise(n_unique_microsamples = n_distinct(microsample))
+# negative	19
+# positive	501
+sn3_4_physeq_lg %>%
+  group_by(genus, type_binomial) %>%
+  summarise(
+    n_samples = n(),
+    mean_ra = mean(abundance)
+  ) %>%
+  filter(genus %in% c(sn3_4_physeq_lg %>%
+    filter(type_binomial %in% c("negative")) %>% pull(genus)))
+```
+
+
+```{r figs3_4_5, message=FALSE}
+figs3_4_5 <- sn3_4_physeq_lg %>%
+  filter(type_binomial %in% c("negative")) %>%
+  ggplot(
+    aes(x = microsample, y = abundance, fill = genus)
+  ) +
+  geom_bar(stat = "identity", colour = "white", linewidth = 0.1) +
+  # scale_fill_manual(values = order_colors, drop = FALSE) +
+  labs(
+    x = "Negative reactions",
+    y = "Relative abundance",
+    fill = "Genus"
+  ) +
+  #facet_wrap(~batch, scale = "free") +
+  guides(fill = guide_legend(ncol = 4)) +
+  custom_ggplot_theme +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(legend.position = "bottom")
+
+figs3_4_5 
+ggsave(filename = "figures/FigS3_4_5.pdf", figs3_4_5, width = 8, height = 7)
+ggsave(filename = "figures/FigS3_4_5.png", figs3_4_5, width = 8, height = 7)
+```
+
+### Amalia: Design considerations: Microsample Sizes
+
+```{r x2, message=FALSE}
+```
+
+#### Amalia: MSSM spatial resolution evaluation (Fig. 3)
+```{r x3, message=FALSE}
+```
+
+### Resource optimisation and throughput (Suppl. Note 3.5)
+```{r sn3_5_df, message=FALSE}
+sn3_5_df <- macroquant_metrics_filt_30 %>%
+  filter(
+    batch %in% c("MSEB0009", "MSEB0014", "MSEB0015"),
+    type_binomial %in% c("positive"),
+    size %in% c("5000"),
+    !between(as.numeric(sub("M", "", microsample)), 300651, 300665)
+  ) %>%
+  mutate(
+    protocol = ifelse(protocol %in% c("ULV2_Full"), "100%", "50%"),
+    comparison = ifelse(batch %in% c("MSEB0009"), "Cost", "Throughput"),
+    lib_method = ifelse(batch %in% c("MSEB0015"), "Fluent (1 plate set-up)", "Manual"),
+    comparison_grid = ifelse(comparison == "Cost", protocol, lib_method)
+  ) %>%
+  mutate(
+    comparison = as.factor(comparison),
+    comparison_grid = as.factor(comparison_grid)
+  ) # %>% count(comparison, batch)
+```
+
+```{r sn3_5_total_pct, message=FALSE}
+sn3_5_df_t  <- sn3_5_df %>%
+  group_by(comparison_grid) %>%
+  # summarise(mean=mean(total_after_filtering.total_reads))
+  summarise(
+    total_reads = sum(total_before_filtering.total_reads),
+    low_quality = sum(total_before_filtering.total_reads - total_after_filtering.total_reads),
+    mapping_host = sum(reads_mapped_chicken),
+    mapping_human = sum(reads_mapped_human),
+    mapping_pig = sum(reads_mapped_pig),
+    mapping_bacteria = sum(reads_mapped_mag),
+    unmapped_bacteria = sum(reads_unmapped_mag)
+  ) %>%
+  mutate(other = total_reads - (low_quality + mapping_host + mapping_human + mapping_pig + mapping_bacteria + unmapped_bacteria)) %>%
+  mutate(across(-c(comparison_grid, total_reads),
+    ~ round((. / total_reads) * 100, 1),
+    .names = "{.col}_pct"
+  )) %>%
+  select(comparison_grid, ends_with("_pct")) %>%
+  t() %>%
+  as.data.frame()
+colnames(sn3_5_df_t) <- sn3_5_df_t[1, ]
+sn3_5_df_t <- sn3_5_df_t[-1, ] # remove the first row
+sn3_5_df_t
+```
+
+```{r sn3_5_median_pct, message=FALSE}
+sn3_5_df_t <- sn3_5_df %>%
+  mutate(other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
+  + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag)) %>%
+  select(microsample, comparison_grid, total_before_filtering.total_reads, total_low_quality_reads, reads_mapped_chicken, reads_mapped_human, reads_mapped_pig, reads_mapped_mag, reads_unmapped_mag, other) %>%
+  mutate(across(-c(microsample, comparison_grid, total_before_filtering.total_reads),
+    ~ round((. / total_before_filtering.total_reads) * 100, 1),
+    .names = "{.col}_pct"
+  )) %>%
+  select(microsample, comparison_grid, ends_with("_pct")) %>%
+  group_by(comparison_grid) %>%
+  summarise(
+    low_quality_md = median(total_low_quality_reads_pct),
+    mapping_host_md = median(reads_mapped_chicken_pct),
+    mapping_human_md = median(reads_mapped_human_pct),
+    mapping_pig_md = median(reads_mapped_pig_pct),
+    mapping_bacteria_md = median(reads_mapped_mag_pct),
+    unmapped_bacteria_md = median(reads_unmapped_mag_pct),
+    other_md = median(other_pct)
+  ) %>%
+  select(comparison_grid, ends_with("_md")) %>%
+  t() %>%
+  as.data.frame()
+colnames(sn3_5_df_t) <- sn3_5_df_t[1, ]
+sn3_5_df_t <- sn3_5_df_t[-1, ] # remove the first row
+sn3_5_df_t
+```
+
+
+```{r FigS3_5_1a, message=FALSE}
+ordered_metrics <- c(
+  # "total_before_filtering.total_reads",
+  "total_low_quality_reads",
+  "reads_mapped_chicken",
+  "reads_mapped_human",
+  "reads_mapped_pig",
+  "reads_mapped_mag",
+  "reads_unmapped_mag",
+  "reads_other"
+)
+
+figs3_5_1a <- sn3_5_df %>%
+  mutate(other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
+  + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag)) %>%
+  pivot_longer(
+    cols = -c(names(mssm_sample_metadata), comparison, lib_method, comparison_grid, cov_filtering),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  filter(metric %in% ordered_metrics) %>%
+  mutate(microsample = as.factor(microsample)) %>%
+  ggplot(aes(x = microsample, y = value, fill = metric)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_manual(values = c(
+    "#346254", "#4a6ab7", "#8c1c47",
+    "#9c8464", "#c49d4b", "#462410", "lightblue"
+  )) +
+  labs(x = "Microsample", y = "", fill = "Read type") +
+  facet_nested(. ~ comparison + comparison_grid, scales = "free", space = "free", switch = "y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  custom_ggplot_theme +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(title = "Proportion \nSequencing \nReads"))
+
+figs3_5_1a
+ggsave(filename = "figures/FigS3_5_1a.pdf", figs3_5_1a, width = 8, height = 6)
+ggsave(filename = "figures/FigS3_5_1a.png", figs3_5_1a, width = 8, height = 6)
+```
+
+```{r sn3_5_dreamprep_df , message=FALSE}
+# Prepare data: extract plate and filter
+sn3_5_dreamprep_df_f  <- sn3_5_dreamprep_df %>%
+  mutate(plate = str_extract(sample, "^Plate \\d+")) %>%
+  filter(
+    !Range %in% c("35 bp to 100 bp"),
+    !concentration %in% c("0.01"),
+    type %in% c("Positive")
+  ) %>% # remove rows with that level
+  mutate(
+    Range = droplevels(Range),
+    plate = case_when(
+      grepl("Plate 1", plate, ignore.case = TRUE) ~ "Single-Plate",
+      grepl("Plate 2", plate, ignore.case = TRUE) ~ "Dual-Plate A",
+      grepl("Plate 3", plate, ignore.case = TRUE) ~ "Dual-Plate B",
+      TRUE ~ NA_character_
+    ),
+    plate = factor(plate, levels = c("Single-Plate", "Dual-Plate A", "Dual-Plate B")),
+    concentration = paste0("DNA Input ", concentration, " ng/μL"),
+    Range = case_when(
+      grepl("100 bp to 200 bp", Range, ignore.case = TRUE) ~ "Non-specific Short Fragments",
+      grepl("200 bp to 1000 bp", Range, ignore.case = TRUE) ~ "Library",
+      TRUE ~ NA_character_
+    )
+  )
+
+```
+
+
+```{r FigS3_5_1b, message=FALSE}
+comparisons <- list(c("Single-Plate", "Dual-Plate A"), c("Dual-Plate A", "Dual-Plate B"), c("Single-Plate", "Dual-Plate B"))
+
+figs3_5_1b <- sn3_5_dreamprep_df_f %>%
+  ggplot(aes(x = plate, y = nmole_L, fill = plate)) +
+  geom_boxplot(position = position_dodge(width = 0.75)) +
+  geom_boxplot() +
+  geom_point(position = position_jitterdodge(0.2)) +
+  stat_compare_means(
+    comparisons = comparisons,
+    method = "wilcox.test",
+    label = "p.signif", # <-- show stars, not p =
+    p.adjust.method = "BH",
+    size = 4,
+    vjust = 0.2,
+    # step.increase = 0.02,   # Reduces vertical distance between labels
+    tip.length = 0.01
+  ) +
+  # scale_y_continuous(trans="log10") +
+  facet_grid(Range ~ concentration, scales = "free") +
+  labs(
+    y = "nmol/μL",
+    x = "",
+  ) +
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#79b1a3", "#f58262", "#e3c7a0")) +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
+
+figs3_5_1b
+```
+
+```{r FigS3_5_1, message=FALSE}
+figs3_5_1 <- cowplot::plot_grid(figs3_5_1a, figs3_5_1b,
+  ncol = 1, labels = c("a", "b"),
+  label_size = 16
+)
+
+figs3_5_1 
+ggsave("figures/FigS3_5_1.png", figs3_5_1, width = 10, height = 13, dpi = 300)
+ggsave("figures/FigS3_5_1.pdf", figs3_5_1, width = 10, height = 13)
+
+```
+
+## MSSM method validation
+### Discriminative power and replicability of MSSM data
+#### Data selection
+```{r mssm_discriminative_df, message=FALSE}
+mssm_discriminative_df <- macroquant_genome_counts_filt_30 %>%
+  select(genome, macroquant_metrics_filt_30 %>% # select dataset
+    filter(
+      batch %in% c("MSEB0011"),
+      type_binomial %in% c("positive")
+    ) %>% pull(microsample)) %>%
+  select(where(~ !all(. == 0))) %>%
+  melt(id = "genome") %>%
+  setNames(c("genome", "microsample", "count")) %>%
+  pivot_wider(names_from = genome, values_from = count, values_fill = 0) %>% # samples as rows
+  select(where(~ any(. != 0))) %>%
+  mutate(across(-microsample, ~ . / rowSums(across(where(is.numeric))) * 100)) %>% # relative abundance
+  column_to_rownames(var = "microsample")
+```
+
+#### Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA)
+**Note:** The perform_pca() function needs to be loaded.
+```{r mssm_discriminative_object, warning=FALSE, comments="", message=FALSE}
+mssm_discriminative_obj <- perform_pca(mssm_discriminative_df)
+```
+
+
+#### Permutational Multivariate Analysis of Variance (PERMANOVA)
+
+```{r mssm_discriminative_metadata, message=FALSE}
+mssm_discriminative_metadata <- macroquant_metrics_filt_30 %>%
+  filter(microsample %in% c(rownames(mssm_discriminative_obj$df_clr_dist)))
+unique(mssm_discriminative_metadata$animal)
+unique(mssm_discriminative_metadata$cryosection)
+```
+
+```{r mssm_discriminative_betadispersion_animal, message=FALSE}
+# Perform betadisper analysis
+betadisper_animal <- vegdist(mssm_discriminative_obj$df_clr_dist, method = "euclidean") %>%
+  betadisper(., mssm_discriminative_metadata %>% pull(animal))
+# Check if there are significant differences in dispersion
+permutest(betadisper_animal, pairwise = TRUE)
+```
+
+```{r mssm_discriminative_betadispersion_cryosection, message=FALSE}
+# Perform betadisper analysis
+betadisper_animal <- vegdist(mssm_discriminative_obj$df_clr_dist, method = "euclidean") %>%
+  betadisper(., mssm_discriminative_metadata %>% pull(cryosection))
+# Check if there are significant differences in dispersion
+permutest(betadisper_animal, pairwise = TRUE)
+```
+
+```{r mssm_discriminative_betadispersion_animal&cryosection, message=FALSE}
+# Tests homogeneity of dispersion and pairwise comparisons between groups using permutations.
+mssm_discriminative_metadata$group <- interaction(mssm_discriminative_metadata$animal, mssm_discriminative_metadata$cryosection)
+betadisp_combined <- betadisper(vegdist(mssm_discriminative_obj$df_clr_dist, method = "euclidean"), mssm_discriminative_metadata$group)
+permutest(betadisp_combined, permutations = 999)
+```
+
+
+```{r mssm_discriminative_permanova, message=FALSE}
+vegdist(mssm_discriminative_obj$df_clr_dist, method = "euclidean") %>%
+  adonis2(
+    formula = . ~ animal + cryosection,
+    data = mssm_discriminative_metadata,
+    permutations = 999, by = "terms"
+  ) %>%
+  broom::tidy()
+```
+
+#### Amalia: PCA Visualisation Across Animal & Cryosection (Suppl Fig. 5)
+```{r supplementary_figure_5, message=FALSE}
+autoplot(mssm_discriminative_obj$pca_result, data = mssm_discriminative_metadata, colour = "animal", shape = "cryosection", size = 3, alpha = 0.5, loadings = FALSE, scale = 0) + custom_ggplot_theme
+```
+
+### Amalia: MSSM compared to FISH and Macro-scale Metagenomics
+
+#### Amalia: MSSM vs FISH
+```{r x3, message=FALSE}
+```
+
+#### Macro-scale Metagenomics vs Micro-scale Spatial Metagenomics
+
+##### Compare Abundance At Genus level
+
+```{r mivsma_ra, message=FALSE}
+mivsma_ra_long <- data.frame(otu_table(physeq_genus_relabund)) %>%
+  rownames_to_column("genome") %>%
+  melt(id = "genome", variable.name = "microsample", value.name = "ra") %>%
+  left_join(data.frame(sample_data(physeq_genus_relabund)) %>%
+    rownames_to_column(var = "microsample"), by = "microsample")
+
+mivsma_ra_plot <- mivsma_ra_long %>%
+  filter(ra > 0, group %in% c("Micro-scale Spatial Metagenomics")) %>%
+  group_by(genome, animal) %>%
+  summarise(
+    mssm_mean_ra = mean(ra),
+    mssm_sd_ra = sd(ra), .groups = "drop"
+  ) %>%
+  left_join(mivsma_ra_long %>%
+    filter(group %in% c("Macro-scale Metagenomics")) %>%
+    select(genome, microsample, animal, ra) %>%
+    rename(macro_ra = ra), by = c("genome", "animal")) %>%
+  left_join(data.frame(tax_table(physeq_genus_relabund)) %>%
+    rownames_to_column(var = "genome"), by = "genome") %>%
+  mutate(
+    dev = abs(mssm_mean_ra - macro_ra),
+    genus_label = ifelse(dev > 0.03, genus, ""),
+    genus_color = ifelse( genus_label == "", "", order)
+  ) 
+
+ggplot(mivsma_ra_plot, aes(x = macro_ra, y = mssm_mean_ra, color = genus_color)) +
+  geom_point() +
+  geom_text_repel(
+    aes(label = genus_label, color = genus_color),
+    size = 3,
+    max.overlaps = 100
+  ) +
+  geom_errorbar(aes(ymin = mssm_mean_ra -  mssm_sd_ra, ymax = mssm_mean_ra +  mssm_sd_ra), width = 0.002) + # Error bars
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") + # Diagonal reference line
+  labs(x = "Relative abundance conventional", y = "Relative abundance MSSM (mean)") +
+  theme(legend.position = "none") +
+  facet_wrap(~animal) +
+  custom_ggplot_theme + 
+  scale_color_manual(values = order_colors, drop = FALSE) +
+  scale_x_continuous(limits = c(0, 0.3)) + #
+  scale_y_continuous(limits = c(0, 0.3)) #
+```
+
+
+```{r mivsma_ra_nrmse, message=FALSE}
+mivsma_ra_genus_nmse <- mivsma_ra_long %>%
+  filter(ra > 0, group %in% c("Micro-scale Spatial Metagenomics")) %>%
+  left_join(mivsma_ra_long %>%
+    filter(group %in% c("Macro-scale Metagenomics")) %>%
+    select(genome, animal, ra) %>%
+    rename(macro_ra = ra), by = c("genome", "animal")) %>%
+  group_by(genome, animal) %>%
+  summarise(
+    genus_rmse = sqrt(mean((ra - macro_ra)^2, na.rm = TRUE)),
+    genus_nrmse_sd = genus_rmse / sd(ra, na.rm = TRUE), # Best option for RA and CLR
+    genus_nrmse_range = genus_rmse / (max(ra, na.rm = TRUE) - min(ra, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  left_join(data.frame(tax_table(physeq_genus_relabund)) %>%
+    rownames_to_column(var = "genome"), by = "genome") %>%
+  mutate(
+    label_sd = ifelse(genus_nrmse_sd  > 6, genus, ""),
+    label_rg = ifelse(genus_nrmse_range > 2.5, genus, ""),
+    label_rg_ord = ifelse(label_rg == "","", order) ,
+    label_sd_ord = ifelse(label_sd == "","", order) 
+  )
+
+mivsma_ra_nmse <- mivsma_ra_genus_nmse %>%
+  group_by(animal) %>%
+  summarise(
+    mean = mean(genus_rmse),
+    median = median(genus_rmse ),
+    mean_sd = mean(genus_nrmse_sd),
+    median_sd = median(genus_nrmse_sd),
+    mean_range = mean(genus_nrmse_range),
+    median_range = median(genus_nrmse_range) 
+  )
+
+mivsma_ra_genus_nmse %>%
+  ggplot(aes(x = animal, y = genus_nrmse_sd)) +
+  geom_boxplot(width = 0.3, outlier.shape = NA) +
+  geom_jitter(aes(color = label_rg_ord), width = 0.1, alpha = 0.9) +
+  geom_text_repel(
+    aes(label = label_rg, color = label_rg_ord),
+    size = 3,
+    max.overlaps = 100
+  ) +
+  scale_color_manual(values = order_colors, drop = FALSE) +
+  custom_ggplot_theme + 
+  labs(x = "Animal", y = "Normalize RMSE \n(Root Mean Squared Error)", colour = "Order")
+```
+
+
+```{r mivsma_clr, message=FALSE}
+mivsma_long <- data.frame(otu_table(physeq_genus)) %>%
+  rownames_to_column("genome") %>%
+  melt(id = "genome", variable.name = "microsample", value.name = "count") %>%
+  pivot_wider(names_from = genome, values_from = count, values_fill = 0) %>%
+  #mutate(across(-microsample, ~ . / rowSums(across(where(is.numeric))) * 100)) %>%
+  column_to_rownames(var = "microsample")
+mivsma_clr <- perform_pca(mivsma_long)
+mivsma_clr_meta <- data.frame(sample_data(physeq_genus)) %>%
+  rownames_to_column("microsample") %>%
+  filter(microsample %in% c(rownames(mivsma_clr$df_clr)))
+
+mivsma_clr_long <- mivsma_clr$df_clr %>%
+  rownames_to_column(var = "microsample") %>%
+  pivot_longer(-microsample, names_to = "genome", values_to = "clr_value") %>%
+  left_join(data.frame(tax_table(physeq_genus)) %>%
+    rownames_to_column(var = "genome"), by = "genome") %>%
+  left_join(data.frame(sample_data(physeq_genus)) %>%
+    rownames_to_column(var = "microsample"), by = "microsample") %>%
+  select(microsample, genome, clr_value, domain, phylum, class, order, family, genus, animal, cryosection, group)
+
+```
+```{r mivsma_clr_pca, message=FALSE}
+autoplot(mivsma_clr$pca_result, data = mivsma_clr_meta, colour = "group", shape = "animal", size = 3, alpha = 0.5) + custom_ggplot_theme
+```
+
+```{r mivsma_clr_nrmse, message=FALSE}
+mivsma_clr_genus_nmse <- mivsma_clr_long %>%
+  filter(group %in% c("Micro-scale Spatial Metagenomics")) %>%
+  left_join(mivsma_clr_long %>%
+    filter(group %in% c("Macro-scale Metagenomics")) %>%
+    select(genome, animal, clr_value) %>%
+    rename(macro_clr = clr_value), by = c("genome", "animal")) %>%
+  group_by(genome, animal) %>%
+  summarise(
+    genus_rmse = sqrt(mean((clr_value - macro_clr)^2, na.rm = TRUE)),
+    genus_nrmse_sd = genus_rmse / sd(clr_value, na.rm = TRUE), # Best option for RA and CLR
+    genus_nrmse_range = genus_rmse / (max(clr_value, na.rm = TRUE) - min(clr_value, na.rm = TRUE)),
+    .groups = "drop"
+  ) %>%
+  left_join(data.frame(tax_table(physeq_genus)) %>%
+    rownames_to_column(var = "genome"), by = "genome") %>%
+  mutate(
+    label_sd = ifelse(genus_nrmse_sd  > 5, genus, ""),
+    label_rg = ifelse(genus_nrmse_range > 1, genus, ""),
+    label_rg_ord = ifelse(label_rg == "","", order),
+    label_sd_ord = ifelse(label_sd == "","", order) 
+  )
+
+mivsma_clr_nmse <- mivsma_clr_genus_nmse  %>%
+  group_by(animal) %>%
+  summarise(
+    mean = mean(genus_rmse),
+    median = median(genus_rmse ),
+    mean_sd = mean(genus_nrmse_sd),
+    median_sd = median(genus_nrmse_sd),
+    mean_range = mean(genus_nrmse_range),
+    median_range = median(genus_nrmse_range) 
+  )
+
+mivsma_clr_genus_nmse %>%
+  ggplot(aes(x = animal, y = genus_nrmse_sd)) +
+  geom_boxplot(width = 0.3, outlier.shape = NA) +
+  geom_jitter(aes(color = label_rg_ord), width = 0.1, alpha = 0.9) +
+  geom_text_repel(
+    aes(label = label_rg, color = label_rg_ord),
+    size = 3,
+    max.overlaps = 100
+  ) +
+  scale_color_manual(values = order_colors, drop = FALSE) +
+  custom_ggplot_theme + 
+  labs(x = "Animal", y = "Normalize RMSE \n(Root Mean Squared Error)", colour = "Order")
+```
+
+##### Compare Presence/Absence At Genus level
+
+```{r all_overlap, message=FALSE}
+mivsma_phylo_lg <- pivot_phylo(
+  phyloseq_obj = subset_samples(
+    physeq_all,
+    type_binomial == "positive" & !section == "Colon" & !section == "Ileum"
+  ),
+  glom = TRUE,
+  tax_transform = TRUE,
+  taxon_level = "genus",
+  tr_method = "compositional"
+) %>% filter(abundance > 0)
+```
+
+###### Shared Genera 
+```{r mivsma_genus, message=FALSE}
+mivsma_micro <- unique(mivsma_phylo_lg %>% filter(group %in% c("Micro-scale Spatial Metagenomics")) %>% pull(genus))
+mivsma_macro <- unique(mivsma_phylo_lg %>% filter(group %in% c("Macro-scale Metagenomics")) %>% pull(genus))
+mivsma_micro_unique <- setdiff(mivsma_micro, mivsma_macro)
+mivsma_macro_unique <- setdiff(mivsma_macro, mivsma_micro)
+mivsma_df <- tibble(
+  genus = c(mivsma_micro_unique, mivsma_macro_unique),
+  source = c(
+    rep("Micro-scale Spatial Metagenomics", length(mivsma_micro_unique)),
+    rep("Macro-scale Metagenomics", length(mivsma_macro_unique))
+  )
+)
+
+cat("Shared Genera =", length(intersect(mivsma_micro, mivsma_macro)),"\n")
+cat("Unique Genera in Micro-scale Spatial Metagenomics =", length(mivsma_micro_unique), "\n")
+cat("Unique Genera in Macro-scale Metagenomics =", length(mivsma_macro_unique), "\n")
+
+(length(intersect(mivsma_micro, mivsma_macro))/length(unique(mivsma_phylo_lg %>% pull(genus))))*100
+(length(mivsma_micro_unique)/length(unique(mivsma_phylo_lg %>% pull(genus))))*100
+(length(mivsma_macro_unique)/length(unique(mivsma_phylo_lg %>% pull(genus))))*100
+```
+
+###### Shared Genera 35 Days Animal (G121e)  
+```{r mivsma_35d_genus, message=FALSE}
+mivsma_35d_micro <- unique(mivsma_phylo_lg %>% filter(group %in% c("Micro-scale Spatial Metagenomics"),
+                                                      animal %in% c("G121e")) %>% pull(genus))
+mivsma_35d_macro <- unique(mivsma_phylo_lg %>% filter(group %in% c("Macro-scale Metagenomics"),
+                                                      animal %in% c("G121e")) %>% pull(genus))
+mivsma_35d_micro_unique <- setdiff(mivsma_35d_micro, mivsma_35d_macro)
+mivsma_35d_macro_unique <- setdiff(mivsma_35d_macro, mivsma_35d_micro)
+mivsma_35d_df <- tibble(
+  genus = c(mivsma_35d_micro_unique, mivsma_35d_macro_unique),
+  source = c(
+    rep("Micro-scale Spatial Metagenomics", length(mivsma_35d_micro_unique)),
+    rep("Macro-scale Metagenomics", length(mivsma_35d_macro_unique))
+  )
+)
+
+cat("Shared Genera =", length(intersect(mivsma_35d_micro, mivsma_35d_macro)),"\n")
+cat("Unique Genera in Micro-scale Spatial Metagenomics =", length(mivsma_35d_micro_unique), "\n")
+cat("Unique Genera in Macro-scale Metagenomics =", length(mivsma_35d_macro_unique), "\n")
+
+(length(intersect(mivsma_35d_micro, mivsma_35d_macro))/length(unique(mivsma_phylo_lg %>% filter(
+                                                      animal %in% c("G121e")) %>% pull(genus))))*100
+(length(mivsma_35d_micro_unique)/length(unique(mivsma_phylo_lg %>% filter(
+                                                      animal %in% c("G121e"))%>% pull(genus))))*100
+(length(mivsma_35d_macro_unique)/length(unique(mivsma_phylo_lg %>% filter(
+                                                      animal %in% c("G121e"))%>% pull(genus))))*100
+```
+
+###### Shared Genera 14 Days Animal (G103b)  
+```{r mivsma_14d_genus, message=FALSE}
+mivsma_14d_micro <- unique(mivsma_phylo_lg %>% filter(group %in% c("Micro-scale Spatial Metagenomics"),
+                                                      animal %in% c("G103b")) %>% pull(genus))
+mivsma_14d_macro <- unique(mivsma_phylo_lg %>% filter(group %in% c("Macro-scale Metagenomics"),
+                                                      animal %in% c("G103b")) %>% pull(genus))
+mivsma_14d_micro_unique <- setdiff(mivsma_14d_micro, mivsma_14d_macro)
+mivsma_14d_macro_unique <- setdiff(mivsma_14d_macro, mivsma_14d_micro)
+mivsma_14d_df <- tibble(
+  genus = c(mivsma_14d_micro_unique, mivsma_14d_macro_unique),
+  source = c(
+    rep("Micro-scale Spatial Metagenomics", length(mivsma_14d_micro_unique)),
+    rep("Macro-scale Metagenomics", length(mivsma_14d_macro_unique))
+  )
+)
+
+cat("Shared Genera =", length(intersect(mivsma_14d_micro, mivsma_14d_macro)),"\n")
+cat("Unique Genera in Micro-scale Spatial Metagenomics =", length(mivsma_14d_micro_unique), "\n")
+cat("Unique Genera in Macro-scale Metagenomics =", length(mivsma_14d_macro_unique), "\n")
+
+(length(intersect(mivsma_14d_micro, mivsma_14d_macro))/length(unique(mivsma_phylo_lg %>% filter(
+                                                      animal %in% c("G103b")) %>% pull(genus))))*100
+(length(mivsma_14d_micro_unique)/length(unique(mivsma_phylo_lg %>% filter(
+                                                      animal %in% c("G103b"))%>% pull(genus))))*100
+(length(mivsma_14d_macro_unique)/length(unique(mivsma_phylo_lg %>% filter(
+                                                      animal %in% c("G103b"))%>% pull(genus))))*100
+```
+###### Supplementary Table 1
+```{r sup_table_1, message=FALSE}
+total_microsamples <- length(unique(mivsma_phylo_lg %>% filter(group %in% c("Micro-scale Spatial Metagenomics"),
+                           animal %in% c("G121e"),
+                           !section %in%c("Colon", "Ileum")) %>% pull(microsample)))
+
+mivsma_phylo_lg %>% filter(group %in% c("Micro-scale Spatial Metagenomics"),
+                           animal %in% c("G121e"),
+                           !section %in%c("Colon", "Ileum"),
+                           genus %in% mivsma_35d_micro_unique) %>% 
+  group_by(genus) %>%
+  summarise(
+    #Prevalence = sum(abundance > 0),
+    Prevalence_Total = round(sum(abundance > 0)/total_microsamples, 3),
+    mean_abundance = round(mean(abundance),3)
+  ) 
+ 
+```
+
+
+###### Fig. 5a
+
+```{r fig5a, message=FALSE}
+total_microsamples <- length(unique(mivsma_phylo_lg %>% filter(group %in% c("Micro-scale Spatial Metagenomics"),
+                           animal %in% c("G103b"),
+                           !section %in%c("Colon", "Ileum")) %>% pull(microsample)))
+
+mivsma_14d_phylo <- subset_samples(
+    physeq_all,
+    type_binomial == "positive" & 
+    !section == "Colon" & 
+    !section == "Ileum" &
+    animal == "G103b"
+  )
+
+mivsma_14d_phylo <- prune_taxa(taxa_sums(mivsma_14d_phylo) > 0, mivsma_14d_phylo)
+
+cols1 <- c("#346254", "grey")
+names(cols1) <- unique(samdat_tbl(mivsma_14d_phylo)$group)
+fig5a <- tax_transform(mivsma_14d_phylo, "binary", rank = "genus") %>%
+  comp_heatmap(
+    sample_anno = sampleAnnotation(
+      "Dataset" = anno_sample_cat(
+        "group",
+        col = cols1,
+        box_col = NA,
+        border_col = "black",
+        legend_title = "Dataset"
+      ),
+      "Sequencing Yield" = anno_sample("total_before_filtering.total_reads"),
+      border = TRUE,
+      show_legend = c(TRUE)
+    ), # Show sample annotation legend
+    sample_names_show = FALSE,
+    tax_anno = taxAnnotation(
+      Prev. = anno_tax_prev(),
+      Abun. = anno_tax_box()
+    ),
+    show_heatmap_legend = FALSE,
+    heatmap_legend_param = list(
+      title_position = "lefttop", # Customize heatmap legend title position if needed
+      legend_direction = "horizontal", # Move heatmap legend horizontally
+      legend_width = unit(6, "cm") # Adjust the heatmap legend width
+    )
+  )
+
+save_heatmap <- function() {
+  # Save as PDF with appropriate size in inches
+  pdf("figures/Fig5a.pdf", width = 10, height = 8.8) # Adjust to desired paper size
+  fig5a %>% ComplexHeatmap::draw(
+    annotation_legend_list = attr(fig5a, "AnnoLegends"),
+    heatmap_legend_side = "bottom",
+    annotation_legend_side = "bottom"
+  )
+  dev.off()
+}
+
+save_heatmap()
+
+save_heatmap <- function() {
+  png("figures/Fig5a.png", width = 2500, height = 2200, res = 300)
+  fig5a %>% ComplexHeatmap::draw(
+    annotation_legend_list = attr(fig5a, "AnnoLegends"),
+    heatmap_legend_side = "bottom",
+    annotation_legend_side = "bottom"
+  )
+  dev.off()
+}
+save_heatmap()
+```
+
+### MSSM method implementation
+
+#### Spatial Pattern
+##### Data selection
+```{r data_spatial, message=FALSE}
+metadata <- macroquant_metrics_filt_30 %>%
+  filter(
+    type_binomial %in% c("positive"),
+    cov_filtering %in% c("Retained By Filtering"),
+    !section %in% "Ileum",
+    !is.na(Xcoord),
+    !animal %in% "G103b"
+  )
+
+comm_data <- macroquant_genome_counts_filt_30 %>%
+  select(genome, metadata$microsample) %>%
+  t() %>%
+  data.frame() %>%
+  row_to_names(row_number = 1) %>%
+  mutate(across(everything(), as.numeric))
+
+#table(rowSums(comm_data) > 0)
+#all(metadata$microsample == rownames(comm_data))
+#table(is.na(comm_data))
+#table(metadata$section, metadata$cryosection)
+
+comm_ca <- comm_data[metadata$section == "Caecum right", ]
+comm_ca <- comm_ca[, colSums(comm_ca) > 0]
+comm_co <- comm_data[metadata$section == "Colon", ]
+comm_co <- comm_co[, colSums(comm_co) > 0]
+metadata_ca <- metadata[metadata$section == "Caecum right", ]
+metadata_co <- metadata[metadata$section == "Colon", ]
+table(metadata$section, metadata$cryosection)
+table(metadata$section, metadata$animal)
+```
+
+##### Transform the data for posterior multivariate analyses
+
+```{r data_spatial_clr, comment="", message=FALSE, warning=FALSE}
+comm_ca_zeroRepl <- cmultRepl(comm_ca, method = "GBM", output = "prop", z.warning = 0.95)
+comm_co_zeroRepl <- cmultRepl(comm_co, method = "GBM", output = "prop", z.warning = 0.95)
+
+metadata_ca_clr <- metadata_ca[metadata_ca$microsample %in% rownames(comm_ca_zeroRepl), ]
+metadata_co_clr <- metadata_co[metadata_co$microsample %in% rownames(comm_co_zeroRepl), ]
+
+clr_transform <- function(x) {
+  log(x) - mean(log(x), na.rm = TRUE)
+}
+comm_ca_clr <- data.frame(t(apply(comm_ca_zeroRepl, 1, clr_transform)))
+comm_co_clr <- data.frame(t(apply(comm_co_zeroRepl, 1, clr_transform)))
+```
+
+##### Diversity partitioning
+
+```{r diversity_partitioning, comment="", message=FALSE, warning=FALSE}
+## Diversity partitioning in caecum and colon
+ca_adipart <- adipart(as.matrix(comm_ca > 0) * 1, as.matrix(metadata_ca[, c("microsample", "cryosection")]),
+  index = "richness", weights = "unif", relative = FALSE, nsimul = 999, method = "r2dtable"
+)
+
+co_adipart <- adipart(as.matrix(comm_co > 0) * 1, as.matrix(metadata_co[, c("microsample", "cryosection")]),
+  index = "richness", weights = "unif", relative = FALSE, nsimul = 999, method = "r2dtable"
+)
+
+ca <- cbind(
+  c(ca_adipart$oecosimu$mean[1], ca_adipart$statistic[1]),
+  c(ca_adipart$oecosimu$mean[3], ca_adipart$statistic[3]),
+  c(ca_adipart$oecosimu$mean[2], ca_adipart$statistic[2])
+)
+rownames(ca) <- c("observed", "expected")
+colnames(ca) <- c("alpha", "beta", "gamma")
+
+co <- cbind(
+  c(co_adipart$oecosimu$mean[1], co_adipart$statistic[1]),
+  c(co_adipart$oecosimu$mean[3], co_adipart$statistic[3]),
+  c(co_adipart$oecosimu$mean[2], co_adipart$statistic[2])
+)
+rownames(co) <- c("observed", "expected")
+colnames(co) <- c("alpha", "beta", "gamma")
+
+
+par(mfrow = c(1, 2))
+bp <- barplot(ca,
+  beside = TRUE,
+  col = c("black", "white"),
+  ylim = c(0, 110)
+)
+text(x = apply(bp, 2, mean), y = apply(ca, 2, max) + 7, labels = "***")
+title(main = "Caecum", font.main = 4)
+bp <- barplot(co,
+  beside = TRUE,
+  col = c("black", "white"),
+  ylim = c(0, 110)
+)
+text(x = apply(bp, 2, mean), y = apply(co, 2, max) + 7, labels = "***")
+title(main = "Colon", font.main = 4)
+par(mfrow = c(1, 1))
+```
+
+##### Explore Spatial Pattern
+**Note:** The spatial_cryosections() function needs to be loaded.
+###### Ceacum Cryosection (G121eI104C)
+```{r cryosection_ca, message=FALSE}
+results_ca <- spatial_cryosections(
+  cryosection_list = "G121eI104C",
+  metadata_df = metadata_ca_clr,
+  comm_clr = comm_ca_clr
+)
+```
+
+####### Mantel test
+```{r caecum_spatial_mantel, comment="", message=FALSE, warning=FALSE}
+results_ca$mantel_results$G121eI104C
+#results_ca$mantel_results$G121eI104C$statistic
+#results_ca$mantel_results$G121eI104C$signif
+# p < 0.05 → Statistically significant correlation between two distance matrices
+# p > 0.05 → No significant correlation between two distance matrices
+```
+
+
+####### Mantel Correlogram Stat
+```{r caecum_spatial_mantelcor, comment="", message=FALSE, warning=FALSE}
+results_ca$mantelcor_results
+```
+
+####### Mantel Correlogram Plot
+```{r caecum_spatial_mantelcor_plot, comment="", message=FALSE, warning=FALSE}
+mantel_ca_grob <- ggplot(
+  data.frame(results_ca$mantelcor_results$G121eI104C$mantel.res) %>%
+    mutate(sign_label = ifelse(`Pr.Mantel.` <= 0.05, "Significant", "Not significant")) %>%
+    filter(!is.na(Mantel.cor)),
+  aes(x = class.index, y = Mantel.cor)
+) +
+  geom_point(aes(fill = sign_label), shape = 23, size = 3) +
+  geom_line() +
+  scale_fill_manual(values = c("Significant" = "black", "Not significant" = "white")) +
+  labs(
+    title = "G121eI104C",
+    x = "Distance Class Index",
+    y = "Mantel Correlation",
+    color = "Significance"
+  ) +
+  geom_hline(yintercept = 0, color = "red") +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
+
+mantel_ca_grob 
+```
+
+#######  Distance Decay Stat
+```{r caecum_spatial_decay, comment="", message=FALSE, warning=FALSE}
+aovperm(lmperm(comm_dist~spat_dist,data=results_ca$decay_dfs$G121eI104C),np=10000)
+# p < 0.05 → Significant correlation: Spatial distance influences microbial composition.
+# p > 0.05 → No significant relationship: Microbial communities do not change with distance.
+
+```
+
+#######  Distance Decay Plot
+
+```{r caecum_spatial_decay_plot, comment="", message=FALSE, warning=FALSE}
+results_ca$distance_decay_plots$G121eI104C
+```
+
+###### Colon Cryosection (G121eO301A)
+```{r cryosection_c0, message=FALSE}
+results_co <- spatial_cryosections(
+  cryosection_list = "G121eO301A",
+  metadata_df = metadata_co_clr,
+  comm_clr = comm_co_clr
+)
+```
+
+####### Mantel test
+```{r colon_spatial_mantel, comment="", message=FALSE, warning=FALSE}
+results_co$mantel_results$G121eO301A
+# p < 0.05 → Statistically significant correlation between two distance matrices
+# p > 0.05 → No significant correlation between two distance matrices
+```
+
+####### Mantel Correlogram Stat
+```{r colon_spatial_mantelcor, comment="", message=FALSE, warning=FALSE}
+results_co$mantelcor_results
+```
+
+####### Mantel Correlogram Plot
+```{r colon_spatial_mantelcor_plot, comment="", message=FALSE, warning=FALSE}
+mantel_co_grob <- ggplot(
+  data.frame(results_co$mantelcor_results$G121eO301A$mantel.res) %>%
+    mutate(sign_label = ifelse(`Pr.Mantel.` <= 0.05, "Significant", "Not significant")) %>%
+    filter(!is.na(Mantel.cor)),
+  aes(x = class.index, y = Mantel.cor)
+) +
+  geom_point(aes(fill = sign_label), shape = 23, size = 3) +
+  geom_line() +
+  scale_fill_manual(values = c("Significant" = "black", "Not significant" = "white")) +
+  labs(
+    title = "G121eO301A",
+    x = "Distance Class Index",
+    y = "Mantel Correlation",
+    color = "Significance"
+  ) +
+  geom_hline(yintercept = 0, color = "red") +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
+mantel_co_grob 
+```
+
+#######  Distance Decay Stat
+```{r colon_spatial_decay, comment="", message=FALSE, warning=FALSE}
+#summary(lmPerm::lmp(comm_dist ~ spat_dist, data = results_co$decay_dfs$G121eO301A))
+aovperm(lmperm(comm_dist~spat_dist,data=results_co$decay_dfs$G121eO301A),np=10000)
+# Performs an ANOVA to check if spat_dist significantly explains variation in comm_dist.
+# p < 0.05 → Significant correlation: Spatial distance influences microbial composition.
+# p > 0.05 → No significant relationship: Microbial communities do not change with distance.
+```
+
+#######  Distance Decay Plot
+
+```{r colon_spatial_decay_plot, comment="", message=FALSE, warning=FALSE}
+results_co$distance_decay_plots$G121eO301A
+```
+
+```{r figs4_2, message=FALSE}
+figs4_2 <- cowplot::plot_grid(
+  results_co$distance_decay_plots$G121eO301A,
+  mantel_co_grob,
+  results_ca$distance_decay_plots$G121eI104C,
+  mantel_ca_grob,
+  ncol = 2,
+  labels = c("a", "b", "c", "d"),
+  label_size = 16
+)
+
+figs4_2 
+ggsave("figures/FigS4_2.png", figs4_2, width = 10, height = 9, dpi = 300)
+```
+
+###### RLQ-rlqESLTP Analysis (G121eO301A)
+
+```{r load_data_rlqESLTP, comment="", message=FALSE, warning=FALSE}
+source("data/JEC_1743_sm_apps5.txt")
+```
+
+```{r prepare_data_rlqESLTP, comment="", message=FALSE, warning=FALSE}
+# comm_co_G121eO301A <- results_co$cryosection_dfs[[cryosection]]$comm_clr
+# metadata_co_G121eO301A <- results_co$cryosection_dfs[[cryosection]]$metadata
+comm_co_G121eO301A <- comm_co %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "microsample") %>%
+  bind_cols(metadata_co) %>%
+  filter(cryosection == "G121eO301A") %>%
+  select(contains("bin_"))
+metadata_co_G121eO301A <- metadata_co %>%
+  filter(cryosection == "G121eO301A")
+
+comp <- decostand(comm_co_G121eO301A, MARGIN = 1, method = "hellinger") # Standardize composition by rows
+colnames(comp) <- gsub("\\.", ":", names(comp))
+env <- data.frame(
+  log_seq_counts = log(metadata_co_G121eO301A$total_after_filtering.total_reads),
+  div = rowSums(comp > 0)
+) # Environmental matrix
+
+genome_gifts <- macromag_gifts[rownames(macromag_gifts) %in% colnames(comp), ]
+genome_funct <- genome_gifts %>%
+  data.frame() %>%
+  rownames_to_column(var = "id") %>% # Preserve row names as a column
+  pivot_longer(-id, names_to = "column", values_to = "value") %>% # Reshape to long format
+  mutate(group = substr(column, 1, 3)) %>% # Extract the first 3 characters of column names
+  group_by(id, group) %>% # Group by row (id) and prefix
+  summarise(mean_value = mean(value, na.rm = TRUE), .groups = "drop") %>% # Calculate rowMeans for each group
+  pivot_wider(names_from = group, values_from = mean_value) %>% # Reshape back to wide format
+  column_to_rownames(var = "id")
+genome_funct <- genome_funct[, -c(19:21)]
+
+phy <- macromag_tree # Phylogenetic tree constructed with Phylomatic V3 + Phylocom
+
+phy <- drop.tip(phy, setdiff(phy$tip.label, rownames(genome_funct)))
+spa <- metadata_co_G121eO301A[, c("Xcoord", "Ycoord")] # Matrix of X Y spatial coordinates
+comp <- comp[, match(phy$tip.label, colnames(comp))]
+genome_funct <- genome_funct[match(phy$tip.label, rownames(genome_funct)), ]
+
+mean(phy$tip.label == colnames(comp))
+
+# Change the phylogenetic tree (an object of the class "phylo") into an object of the class "phylog", used by ade4
+phylog <- newick2phylog(write.tree(phy)) # => "phylog" class
+colnames(comp) <- gsub(":", "_", colnames(comp))
+rownames(genome_funct) <- gsub(":", "_", rownames(genome_funct))
+```
+
+###### Correspondence analysis of the composition matrix 
+```{r correspondence_rlqESLTP, comment="", message=FALSE, warning=FALSE}
+coacomp <- dudi.coa(comp, scan = FALSE, nf = 108)
+summary(coacomp)
+```
+
+###### Spatial analysis 
+
+###### Gabriel graph
+
+```{r gabriel_graph, comment="", message=FALSE, warning=FALSE}
+# Create the Gabriel graph
+nb1 <- graph2nb(gabrielneigh(as.matrix(spa)), sym = T)
+nb1
+
+# Spatial autocorrelation in diversity and sequence count distribution
+sp.correlogram(nb1, log(env$div), order = 8, method = "I")
+sp.correlogram(nb1, env$log_seq_counts, order = 8, method = "I")
+
+lw1 <- nb2listw(nb1) # gives a neighbours list with spatial weights (i.e. matrix W)
+lw1
+```
+
+```{r gabriel_graph_plot, comment="", message=FALSE, warning=FALSE}
+par(mfrow = c(1, 1))
+plot(nb1, spa, pch = 21, bg = "red")
+title(main = "Gabriel Graph")
+class(nb1)
+
+# [1] "nb"
+# This is the Gabriel graph -the graph that in this case defines which points
+# are connected
+
+# The matrix of spatial variables is obtained as the eigenvectors of a
+# neighbour matrix. This matrix is analysed by principal component analysis.
+nb1.neigh <- nb2neig(nb1)
+vecspa <- scores.neig(nb1.neigh)
+pcaspa <- dudi.pca(vecspa, coacomp$lw, scan = FALSE, nf = ncol(vecspa))
+summary(pcaspa)
+```
+
+###### PCA analysis of the env matrix
+```{r env_pca, comment="", message=FALSE, warning=FALSE}
+pcaenv <- dudi.pca(env, row.w = coacomp$lw, scannf = FALSE, nf = 2)
+summary(pcaenv)
+```
+
+###### The distances between species based on their biological traits, analyzed by PCoA.
+
+```{r distances_traits, comment="", message=FALSE, warning=FALSE}
+# Distance matrices for traits separately
+listdis <- ldist.ktab(ktab.list.df(list(genome_funct)), c("Q"), scan = FALSE)
+# choose 1
+
+# Distance matrix for traits together
+disT <- dist.ktab(ktab.list.df(list(genome_funct)), c("Q"), scan = FALSE)
+# choose 1
+pcotraits <- dudi.pco(disT, coacomp$cw, full = TRUE)
+summary(pcotraits)
+```
+
+###### The distances between species based on their phylogenetic relatedness, analysed by PCoA.
+
+```{r distances_phylogeny, comment="", message=FALSE, warning=FALSE}
+pcophy <- dudi.pco(as.dist(as.matrix(phylog$Wdist)[names(comp), names(comp)]), coacomp$cw, full = TRUE)
+summary(pcophy)
+
+## 11. Tests for phylogenetic signals in traits
+## *******************************************
+# Function rtest.decdiv() in appendix S5, Pavoine et al., 2011. [1]
+# All traits together
+phystot <- rtest.decdiv(phylog, rep(1, 108), as.dist(as.matrix(disT)[names(phylog$leaves), names(phylog$leaves)]),
+  nrep = 99, vranking = "droot", optiontest = "less", ties.method = "average", option = 3
+)
+phystot
+
+# All traits independently
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$D01)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$D02)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$D03)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$D05)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$D06)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$D07)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$D08)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$D09)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$B01)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$B02)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$B03)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$B06)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$B07)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$B08)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$B09)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+rtest.decdiv(phylog, rep(1, ncol(comp)), as.dist(as.matrix(listdis$B10)[
+  names(phylog$leaves),
+  names(phylog$leaves)
+]),
+nrep = 99, vranking = "droot", optiontest = "less",
+ties.method = "average", option = 3
+)
+
+## Update the PCOA of traits to remove traits without phylogenetic signal
+# Distance matrix for traits together
+disT <- dist.ktab(ktab.list.df(list(genome_funct[, -c(4, 8, 13)])), c("Q"), scan = FALSE)
+# choose 1
+pcotraits <- dudi.pco(disT, coacomp$cw, full = TRUE)
+summary(pcotraits)
+
+```
+
+###### Extended RLQ analysis
+
+```{r extended_rlq, comment="", message=FALSE, warning=FALSE}
+rlqmix <- rlqESLTP(pcaenv, pcaspa, coacomp, pcotraits, pcophy, scan = F, nf = 2)
+barplot(rlqmix$eig)
+rlqmix$eig[1] / sum(rlqmix$eig)
+# [1] 0.73
+rlqmix$eig[2] / sum(rlqmix$eig)
+# [1] 0.12
+```
+
+**1st axis**
+```{r extended_rlq_axis1_1, comment="", message=FALSE, warning=FALSE}
+plot(rlqmix, xy = spa, ax = 1, wh = "S")
+plot(rlqmix, phy = phylog, ax = 1, wh = "P")
+plot(rlqmix, traits = genome_funct[, -c(4, 8, 13)], ax = 1, type = "Q", wh = "T")
+plot(rlqmix, env = pcaenv$tab, ax = 1, type = "Q", wh = "E")
+
+s.value(metadata_co_G121eO301A[, c("Xcoord", "Ycoord")],
+  rlqmix$lR[, 1],
+  sub = "Patterns in S and E",
+  csub = 1.5,
+  include.origin = F,
+  csize = 0.8
+)
+
+plot(rlqmix, env = pcaenv$tab, ax = 1, type = "Q", wh = "E")
+dotchart.phylog(phylog, rlqmix$lQ[names(phylog$leaves), 1],
+  cleav = 0, cdot = 1,
+  scaling = F, yjoi = 0, cex.axis = 1.5, sub = "patterns in T and P", csub = 0
+)
+```
+
+**1st axis**
+```{r extended_rlq_axis1_2, comment="", message=FALSE, warning=FALSE}
+png("figures/plot_a.png", width = 800, height = 400, res = 150)
+s.value(
+  metadata_co_G121eO301A[, c("Xcoord", "Ycoord")],
+  rlqmix$lR[, 1],
+  sub = "Patterns in S and E",
+  csub = 1.5,
+  include.origin = FALSE,
+  csize = 0.8
+)
+mtext("a", side = 3, line = 0.5, at = par("usr")[1], font = 2, cex = 1.5)
+dev.off()
+
+png("figures/plot_b.png", width = 800, height = 400, res = 150)
+plot(rlqmix, env = pcaenv$tab, ax = 1, type = "Q", wh = "E")
+# mtext("b", side = 3, line = 0.5, at = par("usr")[1], font = 2, cex = 1.5)
+dev.off()
+
+png("figures/plot_c.png", width = 800, height = 600, res = 150)
+dotchart.phylog(
+  phylog,
+  rlqmix$lQ[names(phylog$leaves), 1],
+  cleav = 0,
+  cdot = 1,
+  scaling = FALSE,
+  yjoi = 0,
+  cex.axis = 1.5,
+  sub = "patterns in T and P",
+  csub = 0
+)
+# mtext("c", side = 3, line = 0.5, at = par("usr")[1], font = 2, cex = 1.5)
+dev.off()
+
+img_a <- image_read("figures/plot_a.png")
+img_b <- image_read("figures/plot_b.png")
+img_c <- image_read("figures/plot_c.png")
+
+combined <- image_append(c(img_b, img_c), stack = TRUE)
+image_write(combined, "figures/combined_plots.png")
+```
+
+
+
+**2nd axis**
+
+```{r extended_rlq_axis2, comment="", message=FALSE, warning=FALSE}
+plot(rlqmix, xy = spa, ax = 2, wh = "S")
+plot(rlqmix, phy = phylog, ax = 2, wh = "P")
+plot(rlqmix, traits = genome_funct, ax = 2, type = "Q", wh = "T")
+plot(rlqmix, env = pcaenv$tab, ax = 2, type = "Q", wh = "E")
+```
+
+
+#### Subspecies Segregation and Spatial Structuring
+
+##### Visual Distribution Lawsonibacter subspecies
+```{r plot_98ANI}
+macroquant_lawsonibacter <- macroquant_counts_filt_30_98 %>%
+  filter(genome %in% c(macromag_genomemetadata_98 %>%
+    filter(genus == "Lawsonibacter") %>%
+    pull(genome))) %>%
+  pivot_longer(-genome, names_to = "microsample", values_to = "abundance") %>%
+  left_join(macroquant_metrics_filt_30 %>%
+    select(microsample, batch, cryosection, animal, Xcoord, Ycoord), by = "microsample") %>%
+  filter(
+    abundance > 0,
+    !is.na(Xcoord),
+    !is.na(Ycoord)
+  ) %>% left_join(macromag_genomemetadata_98, by = "genome")
+
+macroquant_lawsonibacter %>% 
+  distinct(genome, .keep_all = TRUE) %>% 
+  select(genome, species, completeness, contamination) %>% 
+  arrange(species, completeness) %>% write.table("lawsonibacter_mags.txt")
+
+macroquant_lawsonibacter_bar <- macroquant_lawsonibacter %>% 
+  arrange(microsample) %>% 
+  mutate(mag_species = paste0(genome, "_", species, "_", circul)) %>% 
+ggplot(aes(x = abundance, y = microsample, fill = mag_species)
+) +
+  geom_bar(position = "fill", stat = "identity", width = 0.8) +
+  facet_wrap(~animal, scales = "free_y", ncol = 1) +
+  scale_fill_viridis_d(option = "turbo", name = "MAG (98% ANI)") +
+  theme(axis.text.y = element_blank(), axis.ticks.y = element_blank()) 
+
+ggsave(filename = "figures/macroquant_lawsonibacter_bar.png", macroquant_lawsonibacter_bar, width = 10, height = 7)
+macroquant_lawsonibacter_bar 
+```
+
+```{r Fig6_a}
+# Order and group data for cumulative pie angles
+lawsonibacter_pie_df <- macroquant_lawsonibacter %>%
+  filter(
+    cryosection %in% c("G121eI103A", "G103bI301A"),
+    !microsample %in% c("M300840", "M301068", "M301085", "M301084")#, # wrong coordinates 
+    #circul %in% c("Y")
+  ) %>%
+  group_by(microsample) %>%
+  mutate(
+    abundance = abundance / sum(abundance) # normalize counts to proportions
+  ) %>%
+  arrange(microsample, genome) %>%
+  mutate(
+    start = cumsum(lag(abundance, default = 0)) * 2 * pi,
+    end = cumsum(abundance) * 2 * pi,
+    r0 = 0,
+    r = 75
+  )
+
+lawsonibacter_piecharts <- split(lawsonibacter_pie_df, lawsonibacter_pie_df$cryosection) %>%
+  map(~ {
+    ggplot(.x) +
+      geom_arc_bar(
+        aes(
+          x0 = Xcoord, y0 = Ycoord, r0 = r0, r = r,
+          start = start, end = end, fill = genome
+        ),
+        color = "black", linewidth = 0.1
+      ) +
+      coord_fixed() +
+      ggtitle(unique(.x$cryosection))  +
+      theme(legend.position = "none") +
+  custom_ggplot_theme + scale_fill_manual(values = lawsonibacter_colors, drop = FALSE) 
+  })
+fig6_a <- cowplot::plot_grid(plotlist = lawsonibacter_piecharts, ncol = 2)
+
+fig6_a 
+ggsave(filename = "figures/Fig6_a.pdf", fig6_a , width = 10, height = 5)
+ggsave(filename = "figures/Fig6_a.png", fig6_a , width = 10, height = 5)
+
+ggsave(filename = "figures/Fig6_a_legend.png", 
+       lawsonibacter_piecharts$G121eI103A +
+      theme(legend.position = "right"), width = 10, height = 5)
+```
+
+##### Test Spatial Distribution Lawsonibacter subspecies
+**Note:** The lawsonibacter_mantel_analysis() function needs to be loaded.
+###### 35 Days Animal (G121e)
+```{r lawsonibacter_mantel_G121e }
+lawsonibacter_G121e <- lawsonibacter_mantel_analysis(
+    data = macroquant_lawsonibacter,
+    animal_id = "G121e",
+    circul_selection = "N"
+)
+lawsonibacter_G121e 
+```
+
+###### 14 Days Animal (G103b)
+
+```{r lawsonibacter_mantel_G103b }
+lawsonibacter_G103b <- lawsonibacter_mantel_analysis(
+    data = macroquant_lawsonibacter,
+    animal_id = "G103b",
+    circul_selection = "N"
+)
+lawsonibacter_G103b 
+```
+
+
+
+#### SNP level microdiversity (Lorikeet)
+##### Visual PopANI for GPB_bin_000044
+```{r lawsonibacter_popANI}
+lawsonibacter_popANI <- map_dfr(names(ani_list), function(bin_id) {
+  ani_mat <- ani_list[[bin_id]]
+  ani_mat %>%
+  as.data.frame() %>%
+  rownames_to_column("microsample_1") %>%
+  pivot_longer(-microsample_1, names_to = "microsample_2", values_to = "popANI") %>%
+  filter(microsample_1 != microsample_2) %>%  # Exclude self-comparisons
+  mutate(
+    bin = bin_id,
+    # Create unordered pair identifier
+    sample_pair = pmap_chr(list(microsample_1, microsample_2), ~ paste(sort(c(..1, ..2)), collapse = "_"))
+  ) %>%
+  distinct(bin, sample_pair, .keep_all = TRUE) %>%  # Keep only one of each unordered pair
+  select(-sample_pair)
+})
+
+lawsonibacter_popANI_meta <- macroquant_metrics_filt_30 %>%
+      filter(
+        cryosection %in% c("G121eI103A", "G103bI301A"),
+        type_binomial %in% c("positive"),
+        cov_filtering %in% c("Retained By Filtering"),
+        !is.na(Xcoord),
+        !is.na(Ycoord),
+        !microsample %in% c("M300840", "M301068", "M301085", "M301084", "M301055", # exclude based on spatial coordinate OUT
+                            "M300833", "M300886") # exclude based on spatial coordinate SAME
+      ) %>% select(microsample, animal, Xcoord, Ycoord)
+
+lawsonibacter_popANI_df <- lawsonibacter_popANI %>% 
+  filter(!is.nan(popANI),
+         !is.na(popANI),
+         microsample_1 %in% c(lawsonibacter_popANI_meta$microsample),
+         microsample_2 %in% c(lawsonibacter_popANI_meta$microsample),
+         bin %in%c("GPB_bin_000044")
+         ) %>%
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_1" = "microsample")) %>% 
+  rename(animal_microsample_1=animal) %>% 
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_2" = "microsample")) %>% 
+  rename(animal_microsample_2=animal) 
+
+```
+
+###### Distribution popANI by Group (Fig6_c)
+
+```{r Fig6_c}
+fig6_c <- lawsonibacter_popANI_df %>% 
+  mutate(group=ifelse(animal_microsample_1==animal_microsample_2, animal_microsample_1, "G121e-G103b")) %>%
+  ggplot(aes(x = group, y = popANI, fill = group)) +
+  geom_boxplot(aes(group = group), outlier.shape = NA) +
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 0.3, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#79b1a3", "#e35d51", "#ffcc62")) +
+  custom_ggplot_theme + 
+  stat_compare_means(method = "wilcox.test", 
+                     comparisons = list(c("G121e", "G103b"), 
+                                        c("G121e", "G121e-G103b"),
+                                        c("G103b", "G121e-G103b")),
+                     label = "p.signif", 
+                     p.adjust.method = "BH",                     
+                     hide.ns = TRUE) +
+  labs(
+    # title = "a",
+    x = "",
+    y = "popANI GPB_bin_000044"
+  ) +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = c("G103b" = "Within Animal \nG103b", "G121e" = "Within Animal \nG121e",
+                              "G121e-G103b" ="Between Animals")) +
+  # Hide last tick label by replacing it with blank
+  scale_y_continuous(labels = function(x) {
+    lbls <- as.character(x)
+    lbls[length(lbls)] <- ""  # blank out last label
+    lbls
+  })
+  #facet_wrap(~bin)
+
+fig6_c 
+ggsave(filename = "figures/Fig6_c.pdf", fig6_c, width = 10, height = 5)
+ggsave(filename = "figures/Fig6_c.png", fig6_c, width = 10, height = 5)
+```
+###### Heatmap popANI (Fig6_b)
+
+```{r Fig6_b}
+# Remove pairs with NA for visualisation
+popani_044 <- ani_list$GPB_bin_000044[rownames(ani_list$GPB_bin_000044) %in% lawsonibacter_popANI_meta$microsample, ] %>% 
+  select(lawsonibacter_popANI_meta$microsample) 
+
+sum(is.na(popani_044)) # Count of NA
+
+metadata_044 <- macroquant_metrics_filt_30 %>%
+  filter(microsample %in% colnames(popani_044)) %>%
+  select(microsample, animal, cryosection) %>%
+  column_to_rownames(var = "microsample") %>% 
+  rename(Cryosection = cryosection,
+         Animal = animal)
+
+annotation_colors <- list(
+  Animal = c("G121e" = "#e35d51",
+    "G103b" = "#79b1a3"),        # light blue
+  Cryosection = c("G121eI103A" = "darkgrey",
+    "G103bI301A" = "#ffcc62")    # soft orange
+)
+
+fig6_b <- pheatmap(
+  popani_044 ,
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  clustering_method = "ward",
+  display_numbers = FALSE,
+  legend = TRUE,
+  show_rownames = TRUE,
+  show_colnames = TRUE,
+  color = colorRampPalette(c("black", "#fbffe0"))(100),
+  annotation_col = metadata_044,
+  annotation_row = metadata_044,
+  annotation_colors = annotation_colors,
+  main = "Clustered ANI Heatmap"
+)
+fig6_b 
+
+ggsave(filename = "figures/Fig6_b.pdf", fig6_b, width = 10, height = 5)
+ggsave(filename = "figures/Fig6_b.png", fig6_b, width = 10, height = 5)
+
+```
+
+
+
+##### Test Distance-decay Relationship Microdiversity
+
+###### Strategy 1 
+```{r distance_decay_1}
+set.seed(1234)
+ids_35day <- lawsonibacter_popANI_meta %>% filter(animal %in% c("G121e")) %>% pull(microsample)
+popani_044_35day <- ani_list$GPB_bin_000044[rownames(ani_list$GPB_bin_000044) %in% ids_35day, ] %>% 
+  select(ids_35day) 
+diag(popani_044_35day) <- NA
+popani_distance_lmp <- (1 - popani_044_35day) %>% as.dist()
+
+# Strategy 1 distance
+spatial_distance_lmp <- dist(macroquant_metrics_filt_30 %>%
+  filter(microsample %in% colnames(popani_044_35day)) %>%
+  select(microsample, Xcoord, Ycoord) %>%
+  column_to_rownames(var = "microsample"))
+
+toplot <- data.frame(spat_dist=as.numeric(spatial_distance_lmp),
+                   comm_dist=as.numeric(popani_distance_lmp))
+ggplot(toplot,aes(x=spat_dist,y=comm_dist))+
+  geom_smooth()
+aovperm(lmperm(comm_dist~spat_dist,data=toplot),np=10000)
+```
+
+
+
+
+

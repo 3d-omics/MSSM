@@ -1,0 +1,13 @@
+"genome" "species" "completeness" "contamination"
+"1" "GPB:bin_000080" "Lawsonibacter asaccharolyticus" 97.57 0.62
+"2" "GPB:bin_000063" "Lawsonibacter pullicola" 97.77 1.4
+"3" "GPB:bin_000015" "Lawsonibacter pullicola" 98.41 1.31
+"4" "GPB:bin_000137" "Lawsonibacter sp019424865" 86.04 1.96
+"5" "D300470:bin_000020" "Lawsonibacter sp900545895" 83.2 6.91
+"6" "GPB:bin_000044" "Lawsonibacter sp900545895" 98.76 2.21
+"7" "GPB:bin_000072" "Lawsonibacter sp900545895" 99.2 1.31
+"8" "GPB:bin_000118" "Lawsonibacter sp900545895" 99.25 1.94
+"9" "GPB:bin_000034" "Lawsonibacter sp900545895" 99.26 0.75
+"10" "GPB:bin_000077" "Lawsonibacter sp900545895" 99.56 1.42
+"11" "GPB:bin_000047" "Lawsonibacter sp900545895" 99.77 2.37
+"12" "GPB:bin_000217" "unclassified_Lawsonibacter" 75.32 1.91
