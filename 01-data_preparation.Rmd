@@ -47,15 +47,15 @@ mssm_sample_metadata <- airtable("4-MSE-Info", "appKakM1bnKSekwuW") %>%  #get ba
   ) %>%
   unnest(c(section, Xcoord, Ycoord, size, collection, cycles)) %>%
   arrange(microsample)
-#write.table(mssm_sample_metadata, "data/mssm_sample_metadata.tsv")
-#mssm_sample_metadata <- read.table("data/mssm_sample_metadata.tsv")
+#write.table(mssm_sample_metadata, "data/data_preparation/mssm_sample_metadata.tsv")
+#mssm_sample_metadata <- read.table("data/data_preparation/mssm_sample_metadata.tsv")
 ```
 
 ## Sequencing Data Quality 
 ### Read Quality: Pre- vs Post-Filtering (fastp)
 **Note:** The parse_fastp() function in index needs to be loaded.
 ```{r read_quality, eval=FALSE}
-#mssm_json_data <- fromJSON("data/multiqc_data.json") # Download file from ERDA
+#mssm_json_data <- fromJSON("data/data_preparation/multiqc_data.json") # Download file from ERDA
 #mssm_fastp <- parse_fastp(mssm_json_data) %>%
 #  rename_with(~ gsub("^(summary|filtering_result|adapter_cutting|polyx_trimming)\\.", "", .)) %>%
 #  select(
@@ -80,7 +80,7 @@ mssm_sample_metadata <- airtable("4-MSE-Info", "appKakM1bnKSekwuW") %>%  #get ba
 #    across(ends_with("content"), mean, .names = "percent_{.col}"),
 #    across(ends_with("rate"), mean, .names = "percent_{.col}")
 #  )
-mssm_fastp <- read_tsv("data/mssm_fastp.tsv")
+mssm_fastp <- read_tsv("data/data_preparation/mssm_fastp.tsv")
 ```
 
 
@@ -112,8 +112,8 @@ mssm_euk_mapping <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/resu
 
 ### Genome-Centric Mapping Statistics: Macroscale MAG Catalogue
 ```{r mapping_macro_catalogue, eval=FALSE}
-# download.file("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify.zip", "data/quantify.zip", mode = "wb")
-mssm_mag_mapping <- read.table(unz("data/quantify.zip", "multiqc_samtools_stats.txt"), header = T, sep = "\t", quote = "\"") %>%
+# download.file("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify.zip", "data/data_preparation/quantify.zip", mode = "wb")
+mssm_mag_mapping <- read.table(unz("data/data_preparation/quantify.zip", "multiqc_samtools_stats.txt"), header = T, sep = "\t", quote = "\"") %>%
   mutate(microsample = str_extract(Sample, "M\\d+")) %>%
   filter(grepl("^M", microsample)) %>%
   select(Sample, microsample, raw_total_sequences, reads_mapped, reads_unmapped) %>%
@@ -304,7 +304,7 @@ macromag_genomemetadata <- macromag_taxonomy %>%
 
 ```{r mag_annotation_macro, eval=FALSE}
 # macromag_annotations <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/dram.annotations.tsv.gz", show_col_types = FALSE) %>%
-macromag_annotations <- read_tsv("data/annotations.tsv", show_col_types = FALSE) %>%
+macromag_annotations <- read_tsv("data/data_preparation/annotations.tsv", show_col_types = FALSE) %>%
   rename(gene = 1, genome = 2) %>%
   filter(genome %in% macroquant_read_counts$genome)
 macromag_gifts <- distill(macromag_annotations, GIFT_db, genomecol = 2, annotcol = c(9, 10, 19))
@@ -488,7 +488,7 @@ micromag_genomemetadata <- micromag_taxonomy %>%
 
 ```{r mag_annotation_micro, eval=FALSE}
 #micromag_annotations <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0025-MSEB0011/dram.annotations.tsv.gz", show_col_types = FALSE) %>%
-#micromag_annotations <- read_tsv("data/micro_annotations.tsv.xz", show_col_types = FALSE) %>%
+#micromag_annotations <- read_tsv("data/data_preparation/micro_annotations.tsv.xz", show_col_types = FALSE) %>%
 #  rename(gene = 1, genome = 2)  %>%
 #  filter(genome %in% microquant_read_counts$genome)
 #micromag_gifts <- distill(micromag_annotations, GIFT_db, genomecol = 2, annotcol = c(9, 10, 19))
@@ -569,7 +569,7 @@ microquant_metrics_filt_30 <- calculate_alpha_diversity(
 ##### Mapping Data
 ```{r load_98ANI, eval=FALSE}
 # Read count
-macroquant_read_counts_98 <- read_tsv("data/genome.count.REF0015-g_mg_hybrid-0.98.tsv", show_col_types = FALSE) %>%
+macroquant_read_counts_98 <- read_tsv("data/data_preparation/genome.count.REF0015-g_mg_hybrid-0.98.tsv", show_col_types = FALSE) %>%
   rename(genome = 1) %>%
   pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
   mutate(sample = str_extract(data, "M\\d+")) %>%
@@ -577,7 +577,7 @@ macroquant_read_counts_98 <- read_tsv("data/genome.count.REF0015-g_mg_hybrid-0.9
   summarise(counts = sum(counts), .groups = "drop") %>%
   pivot_wider(names_from = "sample", values_from = "counts")
 # Covered bases
-macroquant_covered_bases_98 <- read_tsv("data/genome.covered_bases.REF0015-g_mg_hybrid-0.98.tsv", show_col_types = FALSE) %>%
+macroquant_covered_bases_98 <- read_tsv("data/data_preparation/genome.covered_bases.REF0015-g_mg_hybrid-0.98.tsv", show_col_types = FALSE) %>%
   rename(genome = 1) %>%
   pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
   mutate(sample = str_extract(data, "M\\d+")) %>%
@@ -658,7 +658,7 @@ macroquant_genome_counts_98 <- macroquant_read_counts_98 %>%
 ## Macro-scale Metagenomics (MACRO)
 ### Merge Genome Count to MSSM
 ```{r genome_count_combined, eval=FALSE}
-macro_genome_count_macro_filt_30 <- read_tsv("data/conventional_REF0015-g_mg_hybrid.0.95_genome_count_filt.tsv") %>%
+macro_genome_count_macro_filt_30 <- read_tsv("data/data_preparation/conventional_REF0015-g_mg_hybrid.0.95_genome_count_filt.tsv") %>%
   filter(rowSums(select(., -genome)) != 0)
 
 if (all(macro_genome_count_macro_filt_30$genome %in% macromag_genomemetadata$genome)) {
@@ -729,7 +729,7 @@ physeq_genus_relabund <- transform_sample_counts(physeq_genus, function(x) x / s
 ### Confocal microscopy of DAPI-stained microsections
 
 ```{r DAP_quantification_df, eval=FALSE}
-dapi_df <- read_csv("data/data_DAPI_bact_quant_selected.csv", show_col_types = FALSE) %>%
+dapi_df <- read_csv("data/data_preparation/data_DAPI_bact_quant_selected.csv", show_col_types = FALSE) %>%
   separate(Organ_source, into = c("Age_1", "Section"), sep = " ") %>% 
   group_by(Cryosection) %>% # Group by the column(s) containing duplicates
   mutate(Sequence = row_number()) %>%
@@ -755,7 +755,7 @@ dapi_df <- read_csv("data/data_DAPI_bact_quant_selected.csv", show_col_types = F
 ## Fragment Analyzer
 
 ```{r frag_anal_df, eval=FALSE}
-sn3_5_dreamprep_df <- read_csv("data/CSV_2vs1plate_2FAplates.csv",
+sn3_5_dreamprep_df <- read_csv("data/data_preparation/CSV_2vs1plate_2FAplates.csv",
   col_types = cols_only(
     "Sample ID" = col_character(),
     "Range" = col_character(),
@@ -782,7 +782,7 @@ sn3_5_dreamprep_df <- read_csv("data/CSV_2vs1plate_2FAplates.csv",
 ## SNP level microdiversity (Lorikeet)
 
 ```{r lorikeet_df, eval=FALSE}
-ani_files <- list.files("data/", pattern = "_population_ani.tsv$", full.names = TRUE)
+ani_files <- list.files("data/data_preparation/", pattern = "_population_ani.tsv$", full.names = TRUE)
 # Return a named list of cleaned ANI matrices
 ani_list <- purrr::map(ani_files, function(file_path) {
   # Extract bin ID
@@ -819,9 +819,9 @@ names(ani_list) <- stringr::str_extract(basename(ani_files), "GPB_bin_\\d+")
 In the last step, the objects that are needed for downstream analyses are stored in an R object.
 
 ```{r wrap_objects, eval=FALSE}
-#save.image(file = "data/25_06_27data.Rdata")
-#save.image(file = "data/25_07_01data.Rdata")
-save.image(file = "data/25_07_11_data.Rdata")
+#save.image(file = "data/data_preparation/25_06_27data.Rdata")
+#save.image(file = "data/data_preparation/25_07_01data.Rdata")
+save.image(file = "data/data_preparation/25_07_11_data.Rdata")
 save(
   mssm_sample_metadata,
   macromag_genomemetadata,
@@ -846,7 +846,7 @@ save(
   macromag_genomemetadata_98,
   ani_list,
   GIFT_db_df,
-  file = "data/25_07_11_selected_data.Rdata"
+  file = "data/data_preparation/25_07_11_selected_data.Rdata"
 )
 ```
 
