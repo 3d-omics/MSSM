@@ -1,13 +1,17 @@
 bookdown::gitbook:
+  self_contained: true
   css: style.css
   config:
     toc:
       before: |
-        <li><a href="./">A Minimal Book Example</a></li>
+        <li class="toc-logo"><a href="index.html" target="blank"><img src="3domics-logo.png" alt="AlberdiLab logo"></a></li>
+        <li align="center"><b>Ongoing study</b></li>
       after: |
-        <li><a href="https://github.com/rstudio/bookdown" target="blank">Published with bookdown</a></li>
-    edit: https://github.com/USERNAME/REPO/edit/BRANCH/%s
+        <li><a href="https://www.3domics.eu" target="blank"><b>www.3domics.eu</b></a></li>
+        <li><a href="https://github.com/3d-omics" target="blank"><b>www.github.com/3d-omics</b></a></li>
+        <li><a href="https://www.alberdilab.dk" target="blank"><b>www.alberdilab.dk</b></a></li>
     download: ["pdf", "epub"]
+  fig_width: 8
 bookdown::pdf_book:
   includes:
     in_header: preamble.tex

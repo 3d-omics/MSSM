@@ -227,8 +227,8 @@ figs1_1a <- sn1_alpha_df_lg %>%
   ) +
   theme(legend.position = "bottom")
 figs1_1a
-# ggsave(filename = "mssm_figures/FigS1_1a.pdf", figs1_1a, width = 12, height = 5)
-# ggsave(filename = "mssm_figures/FigS1_1a.png", figs1_1a, width = 12, height = 5)
+# ggsave(filename = "figures/FigS1_1a.pdf", figs1_1a, width = 12, height = 5)
+# ggsave(filename = "figures/FigS1_1a.png", figs1_1a, width = 12, height = 5)
 ```
 
 ```{r paired_Wilcoxon_richness, warning = FALSE, comments = "", message = FALSE}
@@ -345,8 +345,8 @@ figs1_1b <- ggplot() +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 figs1_1b
-# ggsave(filename = "mssm_figures/FigS1_1b.pdf", figs1_1b, width = 12, height = 9)
-# ggsave(filename = "mssm_figures/FigS1_1b.png", figs1_1b, width = 12, height = 9)
+# ggsave(filename = "figures/FigS1_1b.pdf", figs1_1b, width = 12, height = 9)
+# ggsave(filename = "figures/FigS1_1b.png", figs1_1b, width = 12, height = 9)
 ```
 
 
@@ -399,7 +399,7 @@ figs1 <- cowplot::plot_grid(figs1_1a, figs1_1b, figs1_1c,
   ncol = 1, labels = c("a", "b", "c"),
   rel_heights = c(1, 1.3, 1), label_size = 16
 )
-ggsave("mssm_figures/FigS1.png", figs1, width = 10, height = 13, dpi = 300)
+# ggsave("figures/FigS1.png", figs1, width = 10, height = 13, dpi = 300)
 ```
 
 
@@ -499,8 +499,8 @@ figs3_2_2 <- sn3_2_df %>%
   theme(legend.position = "bottom")
 
 figs3_2_2
-ggsave(filename = "mssm_figures/FigS3_2_2.pdf", figs3_2_2, width = 8, height = 7)
-ggsave(filename = "mssm_figures/FigS3_2_2.png", figs3_2_2, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_2_2.pdf", figs3_2_2, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_2_2.png", figs3_2_2, width = 8, height = 7)
 ```
 
 ###### Statistical Comparison of Sequencing Performance
@@ -795,8 +795,8 @@ figs3_3_1 <- sn3_3_df %>%
   theme(legend.position = "none")
 
 figs3_3_1
-ggsave(filename = "mssm_figures/FigS3_3_1.pdf", figs3_3_1, width = 8, height = 7)
-ggsave(filename = "mssm_figures/FigS3_3_1.png", figs3_3_1, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_3_1.pdf", figs3_3_1, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_3_1.png", figs3_3_1, width = 8, height = 7)
 ```
 
 ###### Statistical Comparison of Sequencing Performance
@@ -1084,8 +1084,8 @@ figs3_3_2 <- sn3_3_physeq_lg %>%
   theme(legend.position = "bottom")
 
 figs3_3_2
-ggsave(filename = "mssm_figures/FigS3_3_2.pdf", figs3_3_2, width = 8, height = 7)
-ggsave(filename = "mssm_figures/FigS3_3_2.png", figs3_3_2, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_3_2.pdf", figs3_3_2, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_3_2.png", figs3_3_2, width = 8, height = 7)
 ```
 
 
@@ -1141,8 +1141,8 @@ figs3_3_3a <- ggplot(sn3_3_dapi_df, aes(x = Distance_from_one_side_mn, y = media
   theme(legend.position = "bottom")
 
 figs3_3_3a
-ggsave(filename = "mssm_figures/FigS3_3_3a.pdf", figs3_3_3a, width = 8, height = 7)
-ggsave(filename = "mssm_figures/FigS3_3_3a.png", figs3_3_3a, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_3_3a.pdf", figs3_3_3a, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_3_3a.png", figs3_3_3a, width = 8, height = 7)
 ```
 
 
@@ -1201,8 +1201,8 @@ figs3_4_1 <- macroquant_metrics_filt_30 %>%
   theme(legend.position = "bottom")
 
 figs3_4_1
-ggsave(filename = "mssm_figures/FigS3_4_1.pdf", figs3_4_1, width = 8, height = 11)
-ggsave(filename = "mssm_figures/FigS3_4_1.png", figs3_4_1, width = 8, height = 11)
+# ggsave(filename = "figures/FigS3_4_1.pdf", figs3_4_1, width = 8, height = 11)
+# ggsave(filename = "figures/FigS3_4_1.png", figs3_4_1, width = 8, height = 11)
 ```
 
 
@@ -1250,8 +1250,8 @@ figs3_4_4 <- macroquant_metrics_filt_30 %>%
   theme(legend.position = "bottom")
 
 figs3_4_4
-ggsave(filename = "mssm_figures/FigS3_4_4.pdf", figs3_4_4, width = 8, height = 6)
-ggsave(filename = "mssm_figures/FigS3_4_4.png", figs3_4_4, width = 8, height = 6)
+# ggsave(filename = "figures/FigS3_4_4.pdf", figs3_4_4, width = 8, height = 6)
+# ggsave(filename = "figures/FigS3_4_4.png", figs3_4_4, width = 8, height = 6)
 ```
 
 
@@ -1298,8 +1298,8 @@ figs3_4_5 <- sn3_4_physeq_lg %>%
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
   theme(legend.position = "bottom")
 figs3_4_5
-# ggsave(filename = "mssm_figures/FigS3_4_5.pdf", figs3_4_5, width = 8, height = 7)
-# ggsave(filename = "mssm_figures/FigS3_4_5.png", figs3_4_5, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_4_5.pdf", figs3_4_5, width = 8, height = 7)
+# ggsave(filename = "figures/FigS3_4_5.png", figs3_4_5, width = 8, height = 7)
 ```
 
 ### Amalia: Design considerations: Microsample Sizes
@@ -1424,8 +1424,8 @@ figs3_5_1a <- sn3_5_df %>%
   guides(fill = guide_legend(title = "Proportion \nSequencing \nReads"))
 
 figs3_5_1a
-# ggsave(filename = "mssm_figures/FigS3_5_1a.pdf", figs3_5_1a, width = 8, height = 6)
-# ggsave(filename = "mssm_figures/FigS3_5_1a.png", figs3_5_1a, width = 8, height = 6)
+# ggsave(filename = "figures/FigS3_5_1a.pdf", figs3_5_1a, width = 8, height = 6)
+# ggsave(filename = "figures/FigS3_5_1a.png", figs3_5_1a, width = 8, height = 6)
 ```
 
 ```{r sn3_5_dreamprep_df , warning = FALSE, comments = "", message = FALSE}
@@ -1497,8 +1497,8 @@ figs3_5_1 <- cowplot::plot_grid(figs3_5_1a, figs3_5_1b,
   label_size = 16
 )
 figs3_5_1
-ggsave("mssm_figures/FigS3_5_1.png", figs3_5_1, width = 10, height = 13, dpi = 300)
-ggsave("mssm_figures/FigS3_5_1.pdf", figs3_5_1, width = 10, height = 13)
+# ggsave("figures/FigS3_5_1.png", figs3_5_1, width = 10, height = 13, dpi = 300)
+# ggsave("figures/FigS3_5_1.pdf", figs3_5_1, width = 10, height = 13)
 ```
 
 ## MSSM method validation
@@ -1935,7 +1935,7 @@ fig5a <- tax_transform(mivsma_14d_phylo, "binary", rank = "genus") %>%
 
 save_heatmap <- function() {
   # Save as PDF with appropriate size in inches
-  pdf("mssm_figures/Fig5a.pdf", width = 10, height = 8.8) # Adjust to desired paper size
+  pdf("figures/Fig5a.pdf", width = 10, height = 8.8) # Adjust to desired paper size
   fig5a %>% ComplexHeatmap::draw(
     annotation_legend_list = attr(fig5a, "AnnoLegends"),
     heatmap_legend_side = "bottom",
@@ -1947,7 +1947,7 @@ save_heatmap <- function() {
 save_heatmap()
 
 save_heatmap <- function() {
-  png("mssm_figures/Fig5a.png", width = 2500, height = 2200, res = 300)
+  png("figures/Fig5a.png", width = 2500, height = 2200, res = 300)
   fig5a %>% ComplexHeatmap::draw(
     annotation_legend_list = attr(fig5a, "AnnoLegends"),
     heatmap_legend_side = "bottom",
@@ -2190,7 +2190,7 @@ figs4_2 <- cowplot::plot_grid(
   label_size = 16
 )
 figs4_2
-ggsave("mssm_figures/FigS4_2.png", figs4_2, width = 10, height = 9, dpi = 300)
+# ggsave("figures/FigS4_2.png", figs4_2, width = 10, height = 9, dpi = 300)
 ```
 
 ###### RLQ-rlqESLTP Analysis (G121eO301A)
@@ -2478,7 +2478,7 @@ dotchart.phylog(phylog, rlqmix$lQ[names(phylog$leaves), 1],
 
 **1st axis**
 ```{r extended_rlq_axis1_2, comment="", message=FALSE, warning=FALSE}
-png("mssm_figures/plot_a.png", width = 800, height = 400, res = 150)
+png("figures/plot_a.png", width = 800, height = 400, res = 150)
 s.value(
   metadata_co_G121eO301A[, c("Xcoord", "Ycoord")],
   rlqmix$lR[, 1],
@@ -2490,12 +2490,12 @@ s.value(
 mtext("a", side = 3, line = 0.5, at = par("usr")[1], font = 2, cex = 1.5)
 dev.off()
 
-png("mssm_figures/plot_b.png", width = 800, height = 400, res = 150)
+png("figures/plot_b.png", width = 800, height = 400, res = 150)
 plot(rlqmix, env = pcaenv$tab, ax = 1, type = "Q", wh = "E")
 # mtext("b", side = 3, line = 0.5, at = par("usr")[1], font = 2, cex = 1.5)
 dev.off()
 
-png("mssm_figures/plot_c.png", width = 800, height = 600, res = 150)
+png("figures/plot_c.png", width = 800, height = 600, res = 150)
 dotchart.phylog(
   phylog,
   rlqmix$lQ[names(phylog$leaves), 1],
@@ -2510,12 +2510,12 @@ dotchart.phylog(
 # mtext("c", side = 3, line = 0.5, at = par("usr")[1], font = 2, cex = 1.5)
 dev.off()
 
-img_a <- image_read("mssm_figures/plot_a.png")
-img_b <- image_read("mssm_figures/plot_b.png")
-img_c <- image_read("mssm_figures/plot_c.png")
+img_a <- image_read("figures/plot_a.png")
+img_b <- image_read("figures/plot_b.png")
+img_c <- image_read("figures/plot_c.png")
 
 combined <- image_append(c(img_b, img_c), stack = TRUE)
-image_write(combined, "mssm_figures/combined_plots.png")
+image_write(combined, "figures/combined_plots.png")
 ```
 
 
@@ -2549,6 +2549,7 @@ macroquant_lawsonibacter <- macroquant_counts_filt_30_98 %>%
   left_join(macromag_genomemetadata_98, by = "genome")
 
 macroquant_lawsonibacter_bar <- macroquant_lawsonibacter %>%
+  filter(cryosection %in%  c("G121eI103A")) %>% 
   arrange(microsample) %>%
   mutate(mag_species = paste0(genome, "_", species, "_", circul)) %>%
   ggplot(aes(x = abundance, y = microsample, fill = mag_species)) +
@@ -2556,7 +2557,7 @@ macroquant_lawsonibacter_bar <- macroquant_lawsonibacter %>%
   facet_wrap(~animal, scales = "free_y", ncol = 1) +
   scale_fill_viridis_d(option = "turbo", name = "MAG (98% ANI)") +
   theme(axis.text.y = element_blank(), axis.ticks.y = element_blank())
-ggsave(filename = "mssm_figures/macroquant_lawsonibacter_bar.png", macroquant_lawsonibacter_bar, width = 10, height = 7)
+# ggsave(filename = "figures/macroquant_lawsonibacter_bar.png", macroquant_lawsonibacter_bar, width = 10, height = 7)
 macroquant_lawsonibacter_bar
 ```
 
@@ -2598,14 +2599,10 @@ lawsonibacter_piecharts <- split(lawsonibacter_pie_df, lawsonibacter_pie_df$cryo
   })
 fig6_a <- cowplot::plot_grid(plotlist = lawsonibacter_piecharts, ncol = 2)
 fig6_a
-ggsave(filename = "mssm_figures/Fig6_a.pdf", fig6_a, width = 10, height = 5)
-ggsave(filename = "mssm_figures/Fig6_a.png", fig6_a, width = 10, height = 5)
+# ggsave(filename = "figures/Fig6_a.pdf", fig6_a, width = 10, height = 5)
+# ggsave(filename = "figures/Fig6_a.png", fig6_a, width = 10, height = 5)
 
-ggsave(
-  filename = "mssm_figures/Fig6_a_legend.png",
-  lawsonibacter_piecharts$G121eI103A +
-    theme(legend.position = "right"), width = 10, height = 5
-)
+# ggsave(filename = "figures/Fig6_a_legend.png",lawsonibacter_piecharts$G121eI103A + theme(legend.position = "right"), width = 10, height = 5)
 ```
 
 #### Test Spatial Distribution Lawsonibacter subspecies
@@ -2660,8 +2657,8 @@ lawsonibacter_popANI_meta <- macroquant_metrics_filt_30 %>%
     !is.na(Ycoord),
     !microsample %in% c(
       "M300840", "M301068", "M301085", "M301084", "M301055", # exclude based on spatial coordinate OUT
-      "M300833", "M300886"
-    ) # exclude based on spatial coordinate SAME
+      "M300833", "M300886" # exclude based on spatial coordinate SAME
+    ) 
   ) %>%
   select(microsample, animal, Xcoord, Ycoord)
 
@@ -2721,8 +2718,8 @@ fig6_c <- lawsonibacter_popANI_df %>%
   })
 # facet_wrap(~bin)
 fig6_c
-# ggsave(filename = "mssm_figures/Fig6_c.pdf", fig6_c, width = 10, height = 5)
-# ggsave(filename = "mssm_figures/Fig6_c.png", fig6_c, width = 10, height = 5)
+# ggsave(filename = "figures/Fig6_c.pdf", fig6_c, width = 10, height = 5)
+# ggsave(filename = "figures/Fig6_c.png", fig6_c, width = 10, height = 5)
 ```
 
 ##### Heatmap popANI (Fig6_b)
@@ -2770,8 +2767,8 @@ fig6_b <- pheatmap(
 )
 fig6_b
 
-# ggsave(filename = "mssm_figures/Fig6_b.pdf", fig6_b, width = 10, height = 5)
-# ggsave(filename = "mssm_figures/Fig6_b.png", fig6_b, width = 10, height = 5)
+# ggsave(filename = "figures/Fig6_b.pdf", fig6_b, width = 10, height = 5)
+# ggsave(filename = "figures/Fig6_b.png", fig6_b, width = 10, height = 5)
 ```
 
 
@@ -2780,6 +2777,83 @@ fig6_b
 
 ##### Strategy 1 
 ```{r distance_decay_1, warning = FALSE, comments = "", message = FALSE}
+run_ani_spatial_analysis <- function(bin_name, ani_list, ids_35day, meta_data) {
+  
+  # Subset ANI matrix to samples of interest
+  popani <- ani_list[[bin_name]][rownames(ani_list[[bin_name]]) %in% ids_35day, ]
+  popani <- popani[, colnames(popani) %in% ids_35day]  # keep only matching columns too
+  diag(popani) <- NA
+  popani_dist <- as.dist(1 - popani)
+  
+  # Spatial distance for those samples
+  spatial_dist <- dist(meta_data %>%
+                         filter(microsample %in% colnames(popani)) %>%
+                         select(Xcoord, Ycoord))
+  
+  # Data frame for plotting and stats
+  toplot <- data.frame(
+    spat_dist = as.numeric(spatial_dist),
+    comm_dist = as.numeric(popani_dist)
+  )
+  
+  # Plot smooth relationship
+  p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
+    geom_smooth() + 
+    ggtitle(paste("Spatial vs ANI distance:", bin_name))
+  
+  print(p)
+  
+  # Permutation ANOVA test for linear relationship
+  perm_aov <- aovperm(comm_dist ~ spat_dist, data = toplot, np = 10000)
+  
+  # Mantel correlogram
+  mantel_res <- vegan::mantel.correlog(popani_dist, spatial_dist, nperm = 999, cutoff = TRUE, n.class = 15, r.type = "spearman")
+  plot(mantel_res, main = paste("Mantel correlogram:", bin_name))
+  
+  list(
+    plot = p,
+    perm_aov = perm_aov,
+    mantel = mantel_res,
+    mantel_summary = summary(mantel_res)
+  )
+}
+
+names(ani_list)
+# Example bin names you want to analyze
+bins_to_run <- c("GPB_bin_000044","GPB_bin_000047","GPB_bin_000063")  # add your list here
+
+# Metadata for filtering ids (you already have this)
+ids_35day <- lawsonibacter_popANI_meta %>%
+  filter(animal == "G121e") %>%
+  pull(microsample)
+
+# coord_data = macroquant_metrics_filt_30 with microsample, Xcoord, Ycoord
+
+results_list <- list()
+
+for (bin in bins_to_run) {
+  cat("Running analysis for", bin, "\n")
+  res <- run_ani_spatial_analysis(bin, ani_list, ids_35day, lawsonibacter_popANI_meta)
+  results_list[[bin]] <- res
+}
+
+supfigs7 <- cowplot::plot_grid(results_list$GPB_bin_000044$plot, 
+                            results_list$GPB_bin_000047$plot, 
+                            results_list$GPB_bin_000063$plot,
+  ncol = 1, label_size = 16
+)
+
+# ggsave(filename = "figures/lawsonib_distance.png", supfigs7, width = 8, height = 10)
+
+results_list$GPB_bin_000044$plot
+results_list$GPB_bin_000047$plot
+results_list$GPB_bin_000063$plot
+
+results_list$GPB_bin_000044$mantel
+results_list$GPB_bin_000047$mantel
+results_list$GPB_bin_000063$mantel
+
+
 set.seed(1234)
 ids_35day <- lawsonibacter_popANI_meta %>%
   filter(animal %in% c("G121e")) %>%
@@ -2802,4 +2876,11 @@ toplot <- data.frame(
 ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
   geom_smooth()
 aovperm(lmperm(comm_dist ~ spat_dist, data = toplot), np = 10000)
+
+vegan::mantel.correlog(popani_distance_lmp,spatial_distance_lmp,nperm = 999,cutoff = TRUE,n.class = 25,r.type = "spearman")
+plot(vegan::mantel.correlog(popani_distance_lmp,spatial_distance_lmp,nperm = 999,cutoff = TRUE,n.class = 25,r.type = "spearman"))
+
+aovperm(lmperm(comm_dist~spat_dist,data=toplot),np=10000)
+summary(lmperm(comm_dist~spat_dist,data=toplot),np=10000)
+
 ```

@@ -2,3 +2,5 @@
 .Rhistory
 .RData
 .Ruserdata
+# Ignore all contents of the "data_preparation" folder
+data/data_preparation/ 

@@ -59,7 +59,7 @@ if (!require("pacman")) install.packages("pacman")
 pacman::p_load(
   tidyverse, rairtable, jsonlite, ape, # If the package is not installed, installs from CRAN
   ggpubr, broom, reshape2, zCompositions, ANCOMBC,
-  ALDEx2, car, DHARMa, sjPlot, ggeffects, microViz,
+  ALDEx2, car, DHARMa, sjPlot, ggeffects,
   ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork,
   grid, pheatmap, janitor, spdep, adespatial, adegraphics, # lmPerm,
   ade4, magick, permuco, airtabler2, rmarkdown, purrr, PerformanceAnalytics
@@ -67,10 +67,12 @@ pacman::p_load(
 pacman::p_load_gh(
   "anttonalberdi/hilldiv2", # If the package is not installed, installs from GitHub
   "anttonalberdi/distillR",
-  "wilkelab/cowplot"
+  "wilkelab/cowplot",
+  "david-barnett/microViz"
 )
 select <- dplyr::select
 recode <- dplyr::recode
+
 ```
 ### Notes:
 #### Installation of modules
