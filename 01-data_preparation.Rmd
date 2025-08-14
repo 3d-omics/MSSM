@@ -8,7 +8,7 @@ mssm_sample_metadata <- airtable("4-MSE-Info", "appKakM1bnKSekwuW") %>%  #get ba
     "ID", "LabBatch_text", "IntestinalSection", "SampleType",
     "Xcoord", "Ycoord", "SizeApprox", "cryosection_text", "buffer_text", "Collection_method_text",
     "Collection_Success", "Collection_attempts", "UsedCycles", "animal_temp", "Protocol_text",
-    "adapter_type_text"
+    "adapter_type_text", "nmole_L_100_200_bp", "nmole_L_200_1000_bp"
   ), id_to_col = TRUE) %>% 
   filter(
     LabBatch_text %in% c(
@@ -29,7 +29,7 @@ mssm_sample_metadata <- airtable("4-MSE-Info", "appKakM1bnKSekwuW") %>%  #get ba
   select(
     microsample, section, type, batch, cryosection, buffer, Xcoord, Ycoord, 
     size, collection_method, collection, collection_attempts, cycles, animal, 
-    protocol, adapter
+    protocol, adapter, nmole_L_100_200_bp, nmole_L_200_1000_bp
   ) %>%
   mutate(
     type_binomial = ifelse(type == "Positive", "positive", "negative"),
@@ -45,7 +45,7 @@ mssm_sample_metadata <- airtable("4-MSE-Info", "appKakM1bnKSekwuW") %>%  #get ba
       TRUE ~ buffer
     )
   ) %>%
-  unnest(c(section, Xcoord, Ycoord, size, collection, cycles)) %>%
+  unnest(c(section, Xcoord, Ycoord, size, collection, cycles, nmole_L_100_200_bp, nmole_L_200_1000_bp)) %>%
   arrange(microsample)
 #write.table(mssm_sample_metadata, "data/data_preparation/mssm_sample_metadata.tsv")
 #mssm_sample_metadata <- read.table("data/data_preparation/mssm_sample_metadata.tsv")
@@ -55,32 +55,31 @@ mssm_sample_metadata <- airtable("4-MSE-Info", "appKakM1bnKSekwuW") %>%  #get ba
 ### Read Quality: Pre- vs Post-Filtering (fastp)
 **Note:** The parse_fastp() function in index needs to be loaded.
 ```{r read_quality, eval=FALSE}
-#mssm_json_data <- fromJSON("data/data_preparation/multiqc_data.json") # Download file from ERDA
-#mssm_fastp <- parse_fastp(mssm_json_data) %>%
-#  rename_with(~ gsub("^(summary|filtering_result|adapter_cutting|polyx_trimming)\\.", "", .)) %>%
-#  select(
-#    sample_id,
-#    before_filtering.total_reads,
-#    after_filtering.total_reads,
-#    before_filtering.total_bases,
-#    after_filtering.total_bases,
-#    before_filtering.gc_content,
-#    after_filtering.gc_content,
-#    low_quality_reads,
-#    adapter_trimmed_reads,
-#    adapter_trimmed_bases,
-#    duplication.rate
-#  ) %>%
-#  mutate(microsample = str_remove(sample_id, "\\.lib\\d+$")) %>%
-#  filter(grepl("^M", microsample)) %>%
-#  group_by(microsample) %>%
-#  summarise(
-#    across(contains("reads"), sum, .names = "total_{.col}"),
-#    across(contains("bases"), sum, .names = "total_{.col}"),
-#    across(ends_with("content"), mean, .names = "percent_{.col}"),
-#    across(ends_with("rate"), mean, .names = "percent_{.col}")
-#  )
-mssm_fastp <- read_tsv("data/data_preparation/mssm_fastp.tsv")
+mssm_json_data <- fromJSON("data/data_preparation/multiqc_data.json")  #Download file from ERDA
+mssm_fastp <- parse_fastp(mssm_json_data) %>%
+  rename_with(~ gsub("^(summary|filtering_result|adapter_cutting|polyx_trimming)\\.", "", .)) %>%
+  select(
+    sample_id,
+    before_filtering.total_reads,
+    after_filtering.total_reads,
+    before_filtering.total_bases,
+    after_filtering.total_bases,
+    before_filtering.gc_content,
+    after_filtering.gc_content,
+    low_quality_reads,
+    adapter_trimmed_reads,
+    adapter_trimmed_bases,
+    duplication.rate
+  ) %>%
+  mutate(microsample = str_remove(sample_id, "\\.lib\\d+$")) %>%
+  filter(grepl("^M", microsample)) %>%
+  group_by(microsample) %>%
+  summarise(
+    across(contains("reads"), sum, .names = "total_{.col}"),
+    across(contains("bases"), sum, .names = "total_{.col}"),
+    across(ends_with("content"), mean, .names = "percent_{.col}"),
+    across(ends_with("rate"), mean, .names = "percent_{.col}")
+  )
 ```
 
 
@@ -176,13 +175,19 @@ mssm_nonpareil <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/result
 
 ### Combined Quality Statistics
 ```{r data_quality_df, eval=FALSE}
-mssm_quality <- mssm_sample_metadata %>%
-  full_join(mssm_fastp, by = "microsample") %>%
-  full_join(mssm_euk_mapping, by = "microsample") %>%
-  full_join(mssm_mag_mapping, by = "microsample") %>%
-  full_join(mssm_singlem, by = "microsample") %>%
-  full_join(mssm_kraken, by = "microsample") %>%
-  full_join(mssm_nonpareil, by = "microsample") %>%
+mssm_quality <- reduce(
+  list(
+    mssm_sample_metadata,
+    mssm_fastp,
+    mssm_euk_mapping,
+    mssm_mag_mapping,
+    mssm_singlem,
+    mssm_kraken,
+    mssm_nonpareil
+  ),
+  full_join,
+  by = "microsample"
+)  %>%
   mutate(
     lowquality_reads_pct = ((total_before_filtering.total_reads - total_after_filtering.total_reads) / total_before_filtering.total_reads),
     adapter_contamination_pct = (total_adapter_trimmed_bases / total_before_filtering.total_bases),
@@ -195,6 +200,8 @@ mssm_quality <- mssm_sample_metadata %>%
     mapmag_prokreads_pct = (reads_mapped_mag / raw_total_sequences_mag)
   ) %>%
   filter(microsample %in% c(mssm_sample_metadata$microsample))
+
+
 ```
 
 ## Input Preparation For Metagenomic Analysis
@@ -380,7 +387,17 @@ macroquant_metrics_filt_30 <- calculate_alpha_diversity(
 ) %>% filter(!microsample %in% c("Undeter"))
 ``` 
 
+```{r nMOL, eval=FALSE}
+# Calculate alpha diversity for filtered genome counts data
+macroquant_metrics_filt_30 %>% 
+  group_by(type_binomial, cov_filtering, size) %>% 
+  summarise(nmole_median=median(nmole_L_200_1000_bp,na.rm = TRUE),
+            nmole_IQR1=quantile(nmole_L_200_1000_bp, probs = c(0.25), na.rm = TRUE),
+            nmole_IQR2=quantile(nmole_L_200_1000_bp, probs = c(0.75), na.rm = TRUE),
+            nmole_min=min(nmole_L_200_1000_bp, na.rm = TRUE),
+            nmole_max=max(nmole_L_200_1000_bp, na.rm = TRUE))
 
+```
 
 
 ### Abundance Estimation Using Micro-scale MAGs Catalogue
@@ -720,6 +737,8 @@ physeq_G103b <- subset_samples(physeq_all, animal %in% c("G103b"))
 physeq_G103b  <- prune_taxa(taxa_sums(physeq_G103b) > 0, physeq_G103b)
 physeq_genus <- tax_glom(physeq_all, "genus")
 physeq_genus_relabund <- transform_sample_counts(physeq_genus, function(x) x / sum(x))
+
+
 ```
 
 

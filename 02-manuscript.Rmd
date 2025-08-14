@@ -250,6 +250,7 @@ microscale_taxa <- left_join(
   micromag_taxonomy,
   by = "genome"
 )
+
 macroscale_taxa <- left_join(
   macroquant_genome_counts_filt_30 %>%
     select(genome, all_of(sn1_sample_id)) %>%
@@ -305,7 +306,6 @@ sn1_betacount_df <- data.frame(otu_table(sn1_physeq_species)) %>%
   column_to_rownames(var = "microsample")
 ```
 
-
 ```{r FigS1_1b, warning = FALSE, comments = "", message = FALSE}
 sn1_beta_obj <- perform_pca(sn1_betacount_df)
 sn1_beta_metadata <- data.frame(sample_data(sn1_physeq_species)) %>%
@@ -347,19 +347,39 @@ figs1_1b <- ggplot() +
 figs1_1b
 # ggsave(filename = "figures/FigS1_1b.pdf", figs1_1b, width = 12, height = 9)
 # ggsave(filename = "figures/FigS1_1b.png", figs1_1b, width = 12, height = 9)
+data.frame(otu_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>% 
+  rownames_to_column("genome")  %>% 
+  pivot_longer(cols = -c(genome), names_to = "microsample", values_to = "abundance") %>% 
+  mutate(dataset = str_sub(microsample, -5, -1)) %>% 
+  group_by(dataset, genome) %>% 
+  summarise(sum_abundance=sum(abundance)) %>% 
+  filter(sum_abundance==0) %>% 
+  left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>% 
+  rownames_to_column("genome"), by = "genome" ) %>% arrange(species)
 ```
 
 
-
-```{r FigS1_1c, warning = FALSE, comments = "", message = FALSE}
-sn1_aldex_G121e_counts <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, "genus")))
+```{r FigS1_1c_aldex, warning = FALSE, comments = "", message = FALSE}
+structural_zero <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>% 
+  rownames_to_column("genome")  %>% 
+  pivot_longer(cols = -c(genome), names_to = "microsample", values_to = "abundance") %>% 
+  mutate(dataset = str_sub(microsample, -5, -1)) %>% 
+  group_by(dataset, genome) %>% 
+  summarise(sum_abundance=sum(abundance)) %>% 
+  filter(sum_abundance==0) %>% pull(genome)
+  
+  
+sn1_aldex_G121e_counts <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, "species"))) %>% 
+  rownames_to_column("genome") %>% 
+  #filter(!genome %in%c(structural_zero)) %>% 
+  column_to_rownames("genome")
 sn1_aldex_G121e_pseudo_counts <- round(sn1_aldex_G121e_counts * 1e6)
-sn1_aldex_G121e_conditions <- data.frame(sample_data(tax_glom(sn1_physeq_G121e, "genus"))) %>% pull(dataset)
+sn1_aldex_G121e_conditions <- data.frame(sample_data(tax_glom(sn1_physeq_G121e, "species"))) %>% pull(dataset)
 # Perform the ALDEx2 differential abundance test
 # Use 't' test for two groups; 'glm' for multi-class or covariates
 sn1_aldex_G121e_results <- aldex(sn1_aldex_G121e_pseudo_counts,
   sn1_aldex_G121e_conditions,
-  test = "t", # or "wilcox"
+  test = "t", 
   effect = TRUE, # include effect sizes
   denom = "all", # normalization denominator
   mc.samples = 256, # number of Monte Carlo instances
@@ -377,31 +397,191 @@ sn1_aldex_G121e_effect <- sn1_aldex_G121e_sig[abs(sn1_aldex_G121e_sig$effect) > 
 sn1_aldex <-
   sn1_aldex_G121e_effect %>%
   rownames_to_column("genome") %>%
-  left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, "genus"))) %>% rownames_to_column("genome"), by = "genome")
+  left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, "species"))) %>% rownames_to_column("genome"), by = "genome")
 
 # Create horizontal barplot
 figs1_1c <- sn1_aldex %>%
-  ggplot(., aes(x = reorder(genus, effect), y = diff.btw, fill = abs(effect) > 1)) +
+  mutate(structural_zero=ifelse(genome %in% c(structural_zero), "Y", "N")) %>% 
+  ggplot(., aes(x = diff.btw, y = reorder(species, effect), fill = abs(effect) > 1)) +
   geom_bar(stat = "identity", show.legend = FALSE) +
   coord_flip() +
   labs(
-    x = "Genus",
-    y = "Median difference in CLR values between groups"
+    x = "Median difference in \nCLR values between groups",
+    y = "Species"
   ) +
   scale_fill_manual(values = c("TRUE" = "#e35d51", "FALSE" = "darkgrey")) +
-  theme_minimal(base_size = 14)
+  custom_ggplot_theme + facet_wrap(~structural_zero, scale="free") + 
+  theme(axis.text.x = element_text(angle = 40, hjust = 1))
 figs1_1c
 ```
 
 #### Fig. S1
 ```{r FigS1, warning = FALSE, comments = "", message = FALSE}
-figs1 <- cowplot::plot_grid(figs1_1a, figs1_1b, figs1_1c,
-  ncol = 1, labels = c("a", "b", "c"),
-  rel_heights = c(1, 1.3, 1), label_size = 16
+figs1 <- cowplot::plot_grid(figs1_1a, figs1_1b,
+  ncol = 1, labels = c("a", "b"),
+  rel_heights = c(1, 1), label_size = 16
 )
-# ggsave("figures/FigS1.png", figs1, width = 10, height = 13, dpi = 300)
+ggsave("figures/FigS1.png", figs1, width = 10, height = 11, dpi = 300)
 ```
 
+
+```{r ancombc2_G121e, message=FALSE, eval=FALSE}
+set.seed(1234) # set seed for reproducibility
+ancombc_output_sn1_physeq_G121e <- ancombc2(
+  data = sn1_physeq_G121e,
+  assay_name = "counts",
+  tax_level = "species", # change to agglomerate analysis to a higher taxonomic range
+  fix_formula = "dataset",
+  p_adj_method = "holm",
+  pseudo_sens = TRUE,
+  prv_cut = 0,
+  lib_cut = 0,
+  s0_perc = 0.05,
+  group = "dataset",
+  struc_zero = TRUE,
+  neg_lb = FALSE,
+  alpha = 0.05,
+  n_cl = 2,
+  verbose = TRUE,
+  global = FALSE,
+  pairwise = FALSE,
+  dunnet = FALSE,
+  trend = FALSE,
+  iter_control = list(tol = 1e-5, max_iter = 20, verbose = FALSE),
+  em_control = list(tol = 1e-5, max_iter = 100),
+  mdfdr_control = list(fwer_ctrl_method = "holm", B = 100),
+  trend_control = NULL
+)
+
+names(ancombc_output_sn1_physeq_G121e$res)
+any(ancombc_output_sn1_physeq_G121e$res$`passed_ss_datasetMicro-scale` == TRUE &
+  ancombc_output_sn1_physeq_G121e$res$`q_datasetMicro-scale` < 0.05)
+
+ancom <- ancombc_output_sn1_physeq_G121e$res %>%
+  select(
+    genus = taxon,
+    lfc = `lfc_datasetMicro-scale`,
+    qval = `q_datasetMicro-scale`,
+    passed_ss = `passed_ss_datasetMicro-scale`,
+    diff = `diff_datasetMicro-scale`
+  ) %>%
+  filter(qval < 0.05) %>%
+  arrange(qval, lfc) %>%
+  mutate(
+    hjust_label = ifelse(lfc > 0, -0.05, 1.05),
+    q_label = paste0("q=", signif(round(qval, 2), 2)),
+    q_label = ifelse(q_label == "q=0", "q<0.01", q_label)
+  ) %>%
+  ggplot(aes(
+    x = lfc,
+    y = fct_reorder(genus, lfc),
+    fill = passed_ss
+  )) +
+  geom_col() +
+  geom_text(
+    aes(label = q_label, hjust = hjust_label),
+    size = 3.2,
+    color = "black"
+  ) +
+  scale_fill_manual(values = c("darkgrey", "#e35d51")) +
+  geom_hline(yintercept = 0) +
+  custom_ggplot_theme +
+  labs(
+    #title = "c",
+    x = "log2FoldChange",
+    y = "Genus"
+  ) +
+  guides(fill = guide_legend(title = "Eligible for Differential \nAbundance Testing")) +
+  theme(legend.position = "bottom") +
+  coord_cartesian(xlim = c(-1.2, 1.2))
+
+
+```
+
+```{r ancom, warning = FALSE, comments = "", message = FALSE}
+G121e_df <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>%
+  rownames_to_column("genome") %>%
+  melt(id = "genome") %>%
+  setNames(c("genome", "microsample", "count")) %>%
+  left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>%
+    rownames_to_column("genome"), by = "genome") %>%
+  select(species, microsample, count) %>%
+  filter(count > 0) %>%
+  pivot_wider(names_from = species, values_from = count, values_fill = 0) %>% # change here
+  select(where(~ any(. != 0))) %>%
+  mutate(across(-microsample, ~ . / rowSums(across(where(is.numeric))) * 100)) %>%
+  column_to_rownames(var = "microsample")
+G121e_df_obj <- perform_pca(G121e_df)
+G121e_df_metadata <- data.frame(sample_data(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>%
+  rownames_to_column("microsample") %>%
+  filter(microsample %in% c(rownames(G121e_df_obj$df_clr))) %>%
+  rename(
+    `MAGs Catalogue` = dataset,
+    Animal = animal
+  )
+
+
+ancom_species <- ancombc_output_sn1_physeq_G121e$res %>%
+  select(
+    genus = taxon,
+    lfc = `lfc_datasetMicro-scale`,
+    qval = `q_datasetMicro-scale`,
+    passed_ss = `passed_ss_datasetMicro-scale`,
+    diff = `diff_datasetMicro-scale`
+  ) %>%
+  filter(qval < 0.05, passed_ss == TRUE) %>% pull(genus)
+  
+  
+G121e_df_obj$df_clr %>% rownames_to_column("microsample") %>% 
+  pivot_longer(cols=(-microsample), names_to = "species", values_to = "clr") %>%  
+  left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>% rownames_to_column("genome"), by = "species") %>% 
+  #left_join(data.frame(structural_zero) %>% mutate(genome=structural_zero), by= "genome") %>% 
+  mutate(dataset = str_sub(microsample, -5, -1),
+         structural_zero=ifelse(genome %in% c(structural_zero), "Y", "N"),
+         ancom=ifelse(genome %in% c(ancom_species), "Y", "N")) %>% 
+  #filter(structural_zero=="N") %>% 
+  arrange(dataset, clr) %>% 
+  ggplot(aes(x = species, y = clr, fill=dataset)) +
+  geom_boxplot() +
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) +
+  theme_minimal() +
+  scale_fill_manual(values = c("#79b1a3", "#f58262")) +
+  custom_ggplot_theme +
+  labs(
+    title = "",
+    x = "",
+    y = ""
+  ) +
+  theme(legend.position = "none") + 
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  facet_grid(structural_zero~ancom, scale="free") #+ coord_flip() #+theme(axis.text.y = element_blank())
+```
+
+#### Supplementary Table 1
+```{r sup_table_1, warning = FALSE, comments = "", message = FALSE}
+total_microsamples <- length(unique(mivsma_phylo_lg %>% filter(
+  group %in% c("Micro-scale Spatial Metagenomics"),
+  animal %in% c("G121e"),
+  !section %in% c("Colon", "Ileum")
+) %>% pull(microsample)))
+
+mivsma_phylo_lg %>%
+  filter(
+    group %in% c("Micro-scale Spatial Metagenomics"),
+    animal %in% c("G121e"),
+    !section %in% c("Colon", "Ileum"),
+    genus %in% mivsma_35d_micro_unique
+  ) %>%
+  group_by(genus) %>%
+  summarise(
+    # Prevalence = sum(abundance > 0),
+    Prevalence_Total = round(sum(abundance > 0) / total_microsamples, 3),
+    mean_abundance = round(mean(abundance), 3)
+  )
+```
 
 ## FISH probes design?
 
@@ -798,6 +978,64 @@ figs3_3_1
 # ggsave(filename = "figures/FigS3_3_1.pdf", figs3_3_1, width = 8, height = 7)
 # ggsave(filename = "figures/FigS3_3_1.png", figs3_3_1, width = 8, height = 7)
 ```
+
+```{r validate_section_conclusion, warning = FALSE, comments = "", message = FALSE}
+macroquant_metrics_filt_30 %>% 
+  filter(#animal == "G121e", 
+         !cycles %in% c(19), section=="Caecum right") %>%
+  ggplot(aes(x = section, y = human_pct*100, fill = batch)) +
+  geom_boxplot(alpha = 0.6) +
+  theme_minimal() +
+  labs(
+    title = "Low-Quality Reads (%) in Colon (G121e)",
+    x = "Section",
+    y = "Low-Quality Reads (%)",
+    fill = "Batch"
+  ) +
+  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) 
+
+macroquant_metrics_filt_30 %>% 
+  filter(#animal == "G121e", 
+         !cycles %in% c(19), section=="Caecum right") %>%
+  ggplot(aes(x = section, y = lowquality_reads_pct*100, fill = batch)) +
+  geom_boxplot(alpha = 0.6) +
+  theme_minimal() +
+  labs(
+    title = "Low-Quality Reads (%) in Colon (G121e)",
+    x = "Section",
+    y = "Low-Quality Reads (%)",
+    fill = "Batch"
+  ) +
+  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) 
+
+
+macroquant_metrics_filt_30 %>% 
+  filter(animal == "G121e", 
+         type_binomial == "positive", !cycles %in% c(19)) %>%
+  ggplot(aes(x = section, y = mapmag_prokreads_pct, fill = batch)) +
+  geom_boxplot(alpha = 0.6) +
+  theme_minimal() +
+  labs(
+    title = "Low-Quality Reads (%) in Colon (G121e)",
+    x = "Section",
+    y = "Reads Mapping MAG Catalogue (%)",
+    fill = "Batch"
+  ) +
+  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) 
+```
+
 
 ###### Statistical Comparison of Sequencing Performance
 
@@ -1330,6 +1568,7 @@ sn3_5_df <- macroquant_metrics_filt_30 %>%
     comparison = as.factor(comparison),
     comparison_grid = as.factor(comparison_grid)
   ) # %>% count(comparison, batch)
+ table(sn3_5_df$comparison_grid)
 ```
 
 ```{r sn3_5_total_pct, warning = FALSE, comments = "", message = FALSE}
@@ -1430,11 +1669,13 @@ figs3_5_1a
 
 ```{r sn3_5_dreamprep_df , warning = FALSE, comments = "", message = FALSE}
 # Prepare data: extract plate and filter
-sn3_5_dreamprep_df_f <- sn3_5_dreamprep_df %>%
+sn3_5_dreamprep_df_f <- sn3_5_dreamprep_df %>% 
+  #group_by(Range, type, concentration) %>% 
+  #summarise(mean=mean(nmole_L))
   mutate(plate = str_extract(sample, "^Plate \\d+")) %>%
   filter(
     !Range %in% c("35 bp to 100 bp"),
-    !concentration %in% c("0.01"),
+    concentration %in% c("0.1"),
     type %in% c("Positive")
   ) %>% # remove rows with that level
   mutate(
@@ -1457,9 +1698,15 @@ sn3_5_dreamprep_df_f <- sn3_5_dreamprep_df %>%
 
 
 ```{r FigS3_5_1b, warning = FALSE, comments = "", message = FALSE}
+sn3_5_dreamprep_df_f %>% 
+  filter(!nmole_L==0) %>% 
+  group_by(Range, type, concentration) %>% 
+  summarise(mean=mean(nmole_L))
+
 comparisons <- list(c("Single-Plate", "Dual-Plate A"), c("Dual-Plate A", "Dual-Plate B"), c("Single-Plate", "Dual-Plate B"))
 
 figs3_5_1b <- sn3_5_dreamprep_df_f %>%
+  #filter(concentration == "DNA Input 0.01 ng/μL") %>% 
   ggplot(aes(x = plate, y = nmole_L, fill = plate)) +
   geom_boxplot(position = position_dodge(width = 0.75)) +
   geom_boxplot() +
@@ -1475,7 +1722,7 @@ figs3_5_1b <- sn3_5_dreamprep_df_f %>%
     tip.length = 0.01
   ) +
   # scale_y_continuous(trans="log10") +
-  facet_grid(Range ~ concentration, scales = "free") +
+  facet_wrap(~Range, scales = "free") +
   labs(
     y = "nmol/μL",
     x = "",
@@ -1497,7 +1744,7 @@ figs3_5_1 <- cowplot::plot_grid(figs3_5_1a, figs3_5_1b,
   label_size = 16
 )
 figs3_5_1
-# ggsave("figures/FigS3_5_1.png", figs3_5_1, width = 10, height = 13, dpi = 300)
+ggsave("figures/FigS3_5_1.png", figs3_5_1, width = 10, height = 13, dpi = 300)
 # ggsave("figures/FigS3_5_1.pdf", figs3_5_1, width = 10, height = 13)
 ```
 
@@ -1682,6 +1929,7 @@ mivsma_ra_genus_nmse %>%
 
 ```{r mivsma_clr, warning = FALSE, comments = "", message = FALSE}
 mivsma_long <- data.frame(otu_table(physeq_genus)) %>%
+  #data.frame(otu_table(tax_glom(physeq_G103b, "genus"))) %>%
   rownames_to_column("genome") %>%
   melt(id = "genome", variable.name = "microsample", value.name = "count") %>%
   pivot_wider(names_from = genome, values_from = count, values_fill = 0) %>%
@@ -1700,6 +1948,8 @@ mivsma_clr_long <- mivsma_clr$df_clr %>%
   left_join(data.frame(sample_data(physeq_genus)) %>%
     rownames_to_column(var = "microsample"), by = "microsample") %>%
   select(microsample, genome, clr_value, domain, phylum, class, order, family, genus, animal, cryosection, group)
+
+
 ```
 
 ```{r mivsma_clr_pca, warning = FALSE, comments = "", message = FALSE}
@@ -1723,7 +1973,7 @@ mivsma_clr_genus_nmse <- mivsma_clr_long %>%
   left_join(data.frame(tax_table(physeq_genus)) %>%
     rownames_to_column(var = "genome"), by = "genome") %>%
   mutate(
-    label_sd = ifelse(genus_nrmse_sd > 5, genus, ""),
+    label_sd = ifelse(genus_nrmse_sd > 1, genus, ""),
     label_rg = ifelse(genus_nrmse_range > 1, genus, ""),
     label_rg_ord = ifelse(label_rg == "", "", order),
     label_sd_ord = ifelse(label_sd == "", "", order)
@@ -1741,7 +1991,7 @@ mivsma_clr_nmse <- mivsma_clr_genus_nmse %>%
   )
 
 mivsma_clr_genus_nmse %>%
-  ggplot(aes(x = animal, y = genus_nrmse_sd)) +
+  ggplot(aes(x = animal, y = genus_nrmse_range)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
   geom_jitter(aes(color = label_rg_ord), width = 0.1, alpha = 0.9) +
   geom_text_repel(
@@ -1752,6 +2002,65 @@ mivsma_clr_genus_nmse %>%
   scale_color_manual(values = order_colors, drop = FALSE) +
   custom_ggplot_theme +
   labs(x = "Animal", y = "Normalize RMSE \n(Root Mean Squared Error)", colour = "Order")
+
+
+
+```
+
+
+```{r all_overlap, warning = FALSE, comments = "", message = FALSE}
+mivsma_clr_genus_nmse_G121e %>%
+  ggplot(aes(x = animal, y = genus_nrmse_range)) +
+  geom_boxplot(width = 0.3, outlier.shape = NA) +
+  geom_jitter(aes(color = label_rg_ord), width = 0.1, alpha = 0.9) +
+  geom_text_repel(
+    aes(label = label_rg, color = label_rg_ord),
+    size = 3,
+    max.overlaps = 100
+  ) +
+  scale_color_manual(values = order_colors, drop = FALSE) +
+  custom_ggplot_theme +
+  labs(x = "Animal", y = "Normalize RMSE \n(Root Mean Squared Error)", colour = "Order")
+
+
+mivsma_clr_genus_nmse_G121e %>%
+  group_by(animal) %>%
+  summarise(
+    mean = mean(genus_rmse),
+    median = median(genus_rmse),
+    mean_sd = mean(genus_nrmse_sd),
+    median_sd = median(genus_nrmse_sd),
+    mean_range = mean(genus_nrmse_range),
+    median_range = median(genus_nrmse_range)
+  )
+
+```
+
+```{r all_overlap, warning = FALSE, comments = "", message = FALSE}
+mivsma_clr_genus_nmse_G103b %>%
+  ggplot(aes(x = animal, y = genus_nrmse_range)) +
+  geom_boxplot(width = 0.3, outlier.shape = NA) +
+  geom_jitter(aes(color = label_rg_ord), width = 0.1, alpha = 0.9) +
+  geom_text_repel(
+    aes(label = label_rg, color = label_rg_ord),
+    size = 3,
+    max.overlaps = 100
+  ) +
+  scale_color_manual(values = order_colors, drop = FALSE) +
+  custom_ggplot_theme +
+  labs(x = "Animal", y = "Normalize RMSE \n(Root Mean Squared Error)", colour = "Order")
+
+mivsma_clr_genus_nmse_G103b %>%
+  group_by(animal) %>%
+  summarise(
+    mean = mean(genus_rmse),
+    median = median(genus_rmse),
+    mean_sd = mean(genus_nrmse_sd),
+    median_sd = median(genus_nrmse_sd),
+    mean_range = mean(genus_nrmse_range),
+    median_range = median(genus_nrmse_range)
+  )
+
 ```
 
 #### Compare Presence/Absence At Genus level
@@ -1861,6 +2170,7 @@ cat("Unique Genera in Macro-scale Metagenomics =", length(mivsma_14d_macro_uniqu
   animal %in% c("G103b")
 ) %>% pull(genus)))) * 100
 ```
+
 #### Supplementary Table 1
 ```{r sup_table_1, warning = FALSE, comments = "", message = FALSE}
 total_microsamples <- length(unique(mivsma_phylo_lg %>% filter(
@@ -1992,6 +2302,15 @@ metadata_ca <- metadata[metadata$section == "Caecum right", ]
 metadata_co <- metadata[metadata$section == "Colon", ]
 table(metadata$section, metadata$cryosection)
 table(metadata$section, metadata$animal)
+
+metadata %>% 
+  filter(cryosection=="G121eO301A") %>% 
+  ggplot() +
+  geom_point(aes(
+    x = Xcoord,
+    y = Ycoord,
+    color = cycles
+  )) + coord_fixed()
 ```
 
 #### Transform the data for posterior multivariate analyses
@@ -2087,7 +2406,7 @@ results_ca$mantelcor_results
 ```{r caecum_spatial_mantelcor_plot, comment="", message=FALSE, warning=FALSE}
 mantel_ca_grob <- ggplot(
   data.frame(results_ca$mantelcor_results$G121eI104C$mantel.res) %>%
-    mutate(sign_label = ifelse(`Pr.Mantel.` <= 0.05, "Significant", "Not significant")) %>%
+    mutate(sign_label = ifelse(`Pr.corrected.` <= 0.05, "Significant", "Not significant")) %>%
     filter(!is.na(Mantel.cor)),
   aes(x = class.index, y = Mantel.cor)
 ) +
@@ -2145,7 +2464,7 @@ results_co$mantelcor_results
 ```{r colon_spatial_mantelcor_plot, comment="", message=FALSE, warning=FALSE}
 mantel_co_grob <- ggplot(
   data.frame(results_co$mantelcor_results$G121eO301A$mantel.res) %>%
-    mutate(sign_label = ifelse(`Pr.Mantel.` <= 0.05, "Significant", "Not significant")) %>%
+    mutate(sign_label = ifelse(`Pr.corrected.` <= 0.05, "Significant", "Not significant")) %>%
     filter(!is.na(Mantel.cor)),
   aes(x = class.index, y = Mantel.cor)
 ) +
@@ -2532,8 +2851,78 @@ plot(rlqmix, env = pcaenv$tab, ax = 2, type = "Q", wh = "E")
 
 ### Subspecies Segregation and Spatial Structuring
 
+#### Visual Gene based on Pangenome
+```{r pangenome_lawsonibacte_Fig6_b, warning = FALSE, comments = "", message = FALSE}
+# duplication 2025_07_mean_persistent_duplication.tsv
+# gene category 2025_07_22_matrix.csv
+# presence/absence 2025_07_22_gene_presence_absence.Rtab
+genepa_pg <- read_tsv("data/data_preparation/2025_07_22_gene_presence_absence.Rtab", show_col_types = FALSE) %>%
+  rename(gene = Gene)
+duplication_pg <- read_tsv("data/data_preparation/2025_07_22_mean_persistent_duplication.tsv", show_col_types = FALSE) %>%
+  rename(gene = persistent_family) %>% 
+  select(gene, is_single_copy_marker)
+partition_pg <- read_csv("data/data_preparation/2025_07_22_matrix.csv", show_col_types = FALSE) %>%
+  rename(gene = Gene, `Family Partition`=`Non-unique Gene name`) %>% select(gene,`Family Partition`)
+
+
+
+# Convert to numeric
+wide_data <- left_join(genepa_pg, duplication_pg, by = "gene") %>% left_join(partition_pg, by = "gene") %>% 
+  pivot_longer(!c(gene, is_single_copy_marker, `Family Partition`), names_to = "Genome",  values_to = "Presence/Absence") %>%
+  mutate(`Presence/Absence` = as.character(`Presence/Absence`)) %>%
+  mutate(`Presence/Absence` = case_when(
+    `Presence/Absence` == "1" & is_single_copy_marker == "FALSE" ~ "2",
+    TRUE ~ `Presence/Absence`
+  )) %>%
+  mutate(`Presence/Absence` = as.numeric(`Presence/Absence`)) %>% 
+  select(gene, Genome, `Presence/Absence`) %>%
+  pivot_wider(names_from = Genome, values_from = `Presence/Absence`, values_fill = 0)
+
+# Matrix for heatmap
+mat <- as.matrix(wide_data[,-1])
+rownames(mat) <- wide_data$gene
+
+# Annotation for rows (genes)
+gene_anno <- left_join(genepa_pg, duplication_pg, by = "gene") %>% left_join(partition_pg, by = "gene") %>% 
+  pivot_longer(!c(gene, is_single_copy_marker, `Family Partition`), names_to = "Genome",  values_to = "Presence/Absence") %>%
+  distinct(gene, `Family Partition`) %>%
+  arrange(`Family Partition`) %>% 
+  column_to_rownames("gene")
+
+# Reorder mat rows based on gene_anno rownames
+mat <- mat[rownames(gene_anno), ]
+
+
+# Plot
+fig6_b <- pheatmap(mat,
+         color = c("0" = "white", "1" = "#1b9e77", "2" = "#7570b3"),  # Named colors
+         annotation_row = gene_anno,
+         cluster_cols = TRUE,
+         cluster_rows = FALSE,
+         show_rownames = FALSE,
+         legend_breaks = c(0, 1, 2),
+         legend_labels = c("Absence", "Presence", "Multicopy"))
+
+ggsave(filename = "figures/fig6_b.pdf", fig6_b, width = 8, height = 9)
+
+pdf("figures/fig6_b.pdf", width = 8, height = 9)
+pheatmap(mat,
+         color = c("0" = "lightgrey", "1" = "#1b9e77", "2" = "#7570b3"),
+         annotation_row = gene_anno,
+         cluster_cols = TRUE,
+         cluster_rows = FALSE,
+         show_rownames = FALSE,
+         legend_breaks = c(0, 1, 2),
+         legend_labels = c("Absence", "Presence", "Multicopy"))
+dev.off()
+
+```
+
 #### Visual Distribution Lawsonibacter subspecies
 ```{r plot_98ANI, warning = FALSE, comments = "", message = FALSE}
+macromag_genomemetadata_98 %>% 
+  filter(genus %in% c("Lawsonibacter"))
+
 macroquant_lawsonibacter <- macroquant_counts_filt_30_98 %>%
   filter(genome %in% c(macromag_genomemetadata_98 %>%
     filter(genus == "Lawsonibacter") %>%
@@ -2548,8 +2937,13 @@ macroquant_lawsonibacter <- macroquant_counts_filt_30_98 %>%
   ) %>%
   left_join(macromag_genomemetadata_98, by = "genome")
 
+macroquant_lawsonibacter %>% 
+  filter(abundance >0,
+         cryosection %in% c("G121eI103A", "G103bI301A", "G121eI104C")) %>% 
+  group_by(genome) %>% distinct(genome)
+
 macroquant_lawsonibacter_bar <- macroquant_lawsonibacter %>%
-  filter(cryosection %in%  c("G121eI103A")) %>% 
+  filter(cryosection %in%  c("G121eI104C")) %>% 
   arrange(microsample) %>%
   mutate(mag_species = paste0(genome, "_", species, "_", circul)) %>%
   ggplot(aes(x = abundance, y = microsample, fill = mag_species)) +
@@ -2565,10 +2959,11 @@ macroquant_lawsonibacter_bar
 # Order and group data for cumulative pie angles
 lawsonibacter_pie_df <- macroquant_lawsonibacter %>%
   filter(
-    cryosection %in% c("G121eI103A", "G103bI301A"),
-    !microsample %in% c("M300840", "M301068", "M301085", "M301084") # , # wrong coordinates
+    cryosection %in% c("G121eI103A", "G103bI301A", "G121eI104C"),
+    !microsample %in% c("M300840", "M301068", "M301085", "M301084", "M301055", # exclude based on spatial coordinate OUT
+      "M300833", "M300886") # exclude based on spatial coordinate SAME
     # circul %in% c("Y")
-  ) %>%
+  ) %>% 
   group_by(microsample) %>%
   mutate(
     abundance = abundance / sum(abundance) # normalize counts to proportions
@@ -2597,7 +2992,7 @@ lawsonibacter_piecharts <- split(lawsonibacter_pie_df, lawsonibacter_pie_df$cryo
       custom_ggplot_theme +
       scale_fill_manual(values = lawsonibacter_colors, drop = FALSE)
   })
-fig6_a <- cowplot::plot_grid(plotlist = lawsonibacter_piecharts, ncol = 2)
+fig6_a <- cowplot::plot_grid(plotlist = lawsonibacter_piecharts, ncol = 3)
 fig6_a
 # ggsave(filename = "figures/Fig6_a.pdf", fig6_a, width = 10, height = 5)
 # ggsave(filename = "figures/Fig6_a.png", fig6_a, width = 10, height = 5)
@@ -2610,19 +3005,26 @@ fig6_a
 ##### 35 Days Animal (G121e)
 ```{r lawsonibacter_mantel_G121e, warning = FALSE, comments = "", message = FALSE}
 lawsonibacter_G121e <- lawsonibacter_mantel_analysis(
-  data = macroquant_lawsonibacter,
-  animal_id = "G121e",
+  data = macroquant_lawsonibacter %>% filter(cryosection %in% c("G121eI103A")),
   circul_selection = "N"
 )
 lawsonibacter_G121e
 ```
 
+```{r lawsonibacter_mantel_G121e, warning = FALSE, comments = "", message = FALSE}
+lawsonibacter_G121e <- lawsonibacter_mantel_analysis(
+  data = macroquant_lawsonibacter %>% filter(cryosection %in% c("G121eI104C")),
+  circul_selection = "N"
+)
+lawsonibacter_G121e
+```
+
+
 ##### 14 Days Animal (G103b)
 
 ```{r lawsonibacter_mantel_G103b, warning = FALSE, comments = "", message = FALSE}
 lawsonibacter_G103b <- lawsonibacter_mantel_analysis(
-  data = macroquant_lawsonibacter,
-  animal_id = "G103b",
+  data = macroquant_lawsonibacter %>% filter(cryosection %in% c("G103bI301A")),
   circul_selection = "N"
 )
 lawsonibacter_G103b
@@ -2650,7 +3052,7 @@ lawsonibacter_popANI <- map_dfr(names(ani_list), function(bin_id) {
 
 lawsonibacter_popANI_meta <- macroquant_metrics_filt_30 %>%
   filter(
-    cryosection %in% c("G121eI103A", "G103bI301A"),
+    cryosection %in% c("G121eI103A", "G103bI301A","G121eI104C"),
     type_binomial %in% c("positive"),
     cov_filtering %in% c("Retained By Filtering"),
     !is.na(Xcoord),
@@ -2660,9 +3062,13 @@ lawsonibacter_popANI_meta <- macroquant_metrics_filt_30 %>%
       "M300833", "M300886" # exclude based on spatial coordinate SAME
     ) 
   ) %>%
-  select(microsample, animal, Xcoord, Ycoord)
+  select(cryosection, microsample, animal, Xcoord, Ycoord)
 
-lawsonibacter_popANI_df <- lawsonibacter_popANI %>%
+```
+
+##### Distribution popANI by Group (Fig6_c and SupFig7_a)
+```{r Fig6_c, warning = FALSE, comments = "", message = FALSE}
+fig6_c <- lawsonibacter_popANI %>%
   filter(
     !is.nan(popANI),
     !is.na(popANI),
@@ -2673,13 +3079,7 @@ lawsonibacter_popANI_df <- lawsonibacter_popANI %>%
   left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_1" = "microsample")) %>%
   rename(animal_microsample_1 = animal) %>%
   left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_2" = "microsample")) %>%
-  rename(animal_microsample_2 = animal)
-```
-
-##### Distribution popANI by Group (Fig6_c)
-
-```{r Fig6_c, warning = FALSE, comments = "", message = FALSE}
-fig6_c <- lawsonibacter_popANI_df %>%
+  rename(animal_microsample_2 = animal) %>%
   mutate(group = ifelse(animal_microsample_1 == animal_microsample_2, animal_microsample_1, "G121e-G103b")) %>%
   ggplot(aes(x = group, y = popANI, fill = group)) +
   geom_boxplot(aes(group = group), outlier.shape = NA) +
@@ -2722,7 +3122,61 @@ fig6_c
 # ggsave(filename = "figures/Fig6_c.png", fig6_c, width = 10, height = 5)
 ```
 
-##### Heatmap popANI (Fig6_b)
+```{r supfig7_a, warning = FALSE, comments = "", message = FALSE}
+supfig7_a <- lawsonibacter_popANI %>%
+  filter(
+    !is.nan(popANI),
+    !is.na(popANI),
+    microsample_1 %in% c(lawsonibacter_popANI_meta$microsample),
+    microsample_2 %in% c(lawsonibacter_popANI_meta$microsample),
+    bin %in% c("GPB_bin_000047","GPB_bin_000063")
+  ) %>%
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_1" = "microsample")) %>%
+  rename(animal_microsample_1 = animal) %>%
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_2" = "microsample")) %>%
+  rename(animal_microsample_2 = animal) %>%
+  mutate(group = ifelse(animal_microsample_1 == animal_microsample_2, animal_microsample_1, "G121e-G103b")) %>%
+  ggplot(aes(x = group, y = popANI, fill = group)) +
+  geom_boxplot(aes(group = group), outlier.shape = NA) +
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 0.3, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#79b1a3", "#e35d51", "#ffcc62")) +
+  custom_ggplot_theme +
+  stat_compare_means(
+    method = "wilcox.test",
+    comparisons = list(
+      c("G121e", "G103b"),
+      c("G121e", "G121e-G103b"),
+      c("G103b", "G121e-G103b")
+    ),
+    label = "p.signif",
+    p.adjust.method = "BH",
+    hide.ns = TRUE
+  ) +
+  labs(
+    # title = "a",
+    x = "",
+    y = "popANI"
+  ) +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = c(
+    "G103b" = "Within Animal \nG103b", "G121e" = "Within Animal \nG121e",
+    "G121e-G103b" = "Between Animals"
+  )) +
+  # Hide last tick label by replacing it with blank
+  scale_y_continuous(labels = function(x) {
+    lbls <- as.character(x)
+    lbls[length(lbls)] <- "" # blank out last label
+    lbls
+  }) + facet_wrap(~bin)
+supfig7_a 
+# ggsave(filename = "figures/SupFig7_a.pdf", supfig7_a , width = 10, height = 5)
+# ggsave(filename = "figures/SupFig7_a.png", supfig7_a , width = 10, height = 5)
+```
+
+##### Heatmap popANI GPB_bin_000044 (Fig6_b)
 ```{r Fig6_b, warning = FALSE, comments = "", message = FALSE}
 # Remove pairs with NA for visualisation
 popani_044 <- ani_list$GPB_bin_000044[rownames(ani_list$GPB_bin_000044) %in% lawsonibacter_popANI_meta$microsample, ] %>%
@@ -2746,7 +3200,8 @@ annotation_colors <- list(
   ), # light blue
   Cryosection = c(
     "G121eI103A" = "darkgrey",
-    "G103bI301A" = "#ffcc62"
+    "G103bI301A" = "#ffcc62",
+    "G121eI104C" = "blue"
   ) # soft orange
 )
 
@@ -2773,114 +3228,292 @@ fig6_b
 
 
 
-#### Test Distance-decay Relationship Microdiversity
 
-##### Strategy 1 
-```{r distance_decay_1, warning = FALSE, comments = "", message = FALSE}
-run_ani_spatial_analysis <- function(bin_name, ani_list, ids_35day, meta_data) {
-  
-  # Subset ANI matrix to samples of interest
-  popani <- ani_list[[bin_name]][rownames(ani_list[[bin_name]]) %in% ids_35day, ]
-  popani <- popani[, colnames(popani) %in% ids_35day]  # keep only matching columns too
-  diag(popani) <- NA
-  popani_dist <- as.dist(1 - popani)
-  
-  # Spatial distance for those samples
-  spatial_dist <- dist(meta_data %>%
-                         filter(microsample %in% colnames(popani)) %>%
-                         select(Xcoord, Ycoord))
-  
-  # Data frame for plotting and stats
-  toplot <- data.frame(
-    spat_dist = as.numeric(spatial_dist),
-    comm_dist = as.numeric(popani_dist)
-  )
-  
-  # Plot smooth relationship
-  p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
-    geom_smooth() + 
-    ggtitle(paste("Spatial vs ANI distance:", bin_name))
-  
-  print(p)
-  
-  # Permutation ANOVA test for linear relationship
-  perm_aov <- aovperm(comm_dist ~ spat_dist, data = toplot, np = 10000)
-  
-  # Mantel correlogram
-  mantel_res <- vegan::mantel.correlog(popani_dist, spatial_dist, nperm = 999, cutoff = TRUE, n.class = 15, r.type = "spearman")
-  plot(mantel_res, main = paste("Mantel correlogram:", bin_name))
-  
-  list(
-    plot = p,
-    perm_aov = perm_aov,
-    mantel = mantel_res,
-    mantel_summary = summary(mantel_res)
-  )
-}
+#### Spatial Pattern Microdiversity
+##### Stat
+```{r mantel_cor_bins, warning = FALSE, comments = "", message = FALSE}
+bins_id <- c("GPB_bin_000044","GPB_bin_000047","GPB_bin_000063")  
 
-names(ani_list)
-# Example bin names you want to analyze
-bins_to_run <- c("GPB_bin_000044","GPB_bin_000047","GPB_bin_000063")  # add your list here
-
-# Metadata for filtering ids (you already have this)
 ids_35day <- lawsonibacter_popANI_meta %>%
-  filter(animal == "G121e") %>%
+  filter(animal == "G121e",
+         cryosection %in% c("G121eI103A")) %>%
   pull(microsample)
 
-# coord_data = macroquant_metrics_filt_30 with microsample, Xcoord, Ycoord
-
 results_list <- list()
-
-for (bin in bins_to_run) {
+for (bin in bins_id) {
   cat("Running analysis for", bin, "\n")
   res <- run_ani_spatial_analysis(bin, ani_list, ids_35day, lawsonibacter_popANI_meta)
   results_list[[bin]] <- res
 }
 
-supfigs7 <- cowplot::plot_grid(results_list$GPB_bin_000044$plot, 
-                            results_list$GPB_bin_000047$plot, 
-                            results_list$GPB_bin_000063$plot,
-  ncol = 1, label_size = 16
-)
+results_list$GPB_bin_000044$mantel
+results_list$GPB_bin_000047$mantel
+results_list$GPB_bin_000063$mantel
 
-# ggsave(filename = "figures/lawsonib_distance.png", supfigs7, width = 8, height = 10)
+222.67176-43.25015
+402.09338-222.67176
+222.67176+
+  
 
-results_list$GPB_bin_000044$plot
-results_list$GPB_bin_000047$plot
-results_list$GPB_bin_000063$plot
+  bins_id <- c("GPB_bin_000044","GPB_bin_000047","GPB_bin_000063")  
+
+ids_35day <- lawsonibacter_popANI_meta %>%
+  filter(animal == "G121e",
+         cryosection %in% c("G121eI104C")) %>%
+  pull(microsample)
+
+results_list <- list()
+for (bin in bins_id) {
+  cat("Running analysis for", bin, "\n")
+  res <- run_ani_spatial_analysis(bin, ani_list, ids_35day, lawsonibacter_popANI_meta)
+  results_list[[bin]] <- res
+}
 
 results_list$GPB_bin_000044$mantel
 results_list$GPB_bin_000047$mantel
 results_list$GPB_bin_000063$mantel
 
 
-set.seed(1234)
-ids_35day <- lawsonibacter_popANI_meta %>%
-  filter(animal %in% c("G121e")) %>%
-  pull(microsample)
-popani_044_35day <- ani_list$GPB_bin_000044[rownames(ani_list$GPB_bin_000044) %in% ids_35day, ] %>%
-  select(ids_35day)
-diag(popani_044_35day) <- NA
-popani_distance_lmp <- (1 - popani_044_35day) %>% as.dist()
+results_list$GPB_bin_000063$mantel$mantel.res[ , 2]
+```
 
-# Strategy 1 distance
-spatial_distance_lmp <- dist(macroquant_metrics_filt_30 %>%
-  filter(microsample %in% colnames(popani_044_35day)) %>%
-  select(microsample, Xcoord, Ycoord) %>%
-  column_to_rownames(var = "microsample"))
+##### Visual (SupFig7_b)
+```{r mantel_bins, warning = FALSE, comments = "", message = FALSE}
+mantel_GPB_bin_000044 <- ggplot(
+  data.frame(results_list$GPB_bin_000044$mantel$mantel.res) %>%
+    mutate(sign_label = ifelse(`Pr.corrected.` <= 0.05, "Significant", "Not significant")) %>%
+    filter(!is.na(Mantel.cor)),
+  aes(x = class.index, y = Mantel.cor)
+) +
+  geom_point(aes(fill = sign_label), shape = 23, size = 3) +
+  geom_line() +
+  scale_fill_manual(values = c("Significant" = "black", "Not significant" = "white")) +
+  labs(
+    title = "GPB_bin_000044",
+    x = "Distance Class Index",
+    y = "Mantel Correlation",
+    color = "Significance"
+  ) +
+  geom_hline(yintercept = 0, color = "red") +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
 
-toplot <- data.frame(
-  spat_dist = as.numeric(spatial_distance_lmp),
-  comm_dist = as.numeric(popani_distance_lmp)
+mantel_GPB_bin_000047 <- ggplot(
+  data.frame(results_list$GPB_bin_000047$mantel$mantel.res) %>%
+    mutate(sign_label = ifelse(`Pr.corrected.` <= 0.05, "Significant", "Not significant")) %>%
+    filter(!is.na(Mantel.cor)),
+  aes(x = class.index, y = Mantel.cor)
+) +
+  geom_point(aes(fill = sign_label), shape = 23, size = 3) +
+  geom_line() +
+  scale_fill_manual(values = c("Significant" = "black", "Not significant" = "white")) +
+  labs(
+    title = "GPB_bin_000047",
+    x = "Distance Class Index",
+    y = "Mantel Correlation",
+    color = "Significance"
+  ) +
+  geom_hline(yintercept = 0, color = "red") +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
+
+mantel_GPB_bin_000063 <- ggplot(
+  data.frame(results_list$GPB_bin_000063$mantel$mantel.res) %>%
+    mutate(sign_label = ifelse(`Pr.corrected.` <= 0.05, "Significant", "Not significant")) %>%
+    filter(!is.na(Mantel.cor)),
+  aes(x = class.index, y = Mantel.cor)
+) +
+  geom_point(aes(fill = sign_label), shape = 23, size = 3) +
+  geom_line() +
+  scale_fill_manual(values = c("Significant" = "black", "Not significant" = "white")) +
+  labs(
+    title = "GPB_bin_000063",
+    x = "Distance Class Index",
+    y = "Mantel Correlation",
+    color = "Significance"
+  ) +
+  geom_hline(yintercept = 0, color = "red") +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
+
+
+supfigs7_b <- cowplot::plot_grid(mantel_GPB_bin_000044, 
+                            mantel_GPB_bin_000047, 
+                            mantel_GPB_bin_000063,
+  ncol = 2, label_size = 16
 )
-ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
-  geom_smooth()
-aovperm(lmperm(comm_dist ~ spat_dist, data = toplot), np = 10000)
+supfigs7_b 
 
-vegan::mantel.correlog(popani_distance_lmp,spatial_distance_lmp,nperm = 999,cutoff = TRUE,n.class = 25,r.type = "spearman")
-plot(vegan::mantel.correlog(popani_distance_lmp,spatial_distance_lmp,nperm = 999,cutoff = TRUE,n.class = 25,r.type = "spearman"))
+supfigs7 <- cowplot::plot_grid(supfig7_a, supfigs7_b, 
+  ncol = 1, labels = c("a", "b"), label_size = 16
+)
 
-aovperm(lmperm(comm_dist~spat_dist,data=toplot),np=10000)
-summary(lmperm(comm_dist~spat_dist,data=toplot),np=10000)
+ggsave(filename = "figures/supfig7.png", supfigs7, width = 10, height = 12)
 
+
+
+supfigs7c <- cowplot::plot_grid(results_list$GPB_bin_000044$plot_cor, 
+                            results_list$GPB_bin_000047$plot_cor, 
+                            results_list$GPB_bin_000063$plot_cor,
+  ncol = 1, label_size = 16
+)
+```
+
+```{r test_distance, warning = FALSE, comments = "", message = FALSE}
+# Subset coordinate
+coords <- lawsonibacter_popANI_meta %>%
+  filter(cryosection %in% c("G121eI103A")) %>%
+  select(microsample, Xcoord, Ycoord)
+# Compute pairwise distances
+dist_matrix <- dist(coords %>% select(Xcoord, Ycoord))
+# Convert to matrix and name the rows/cols with microsample
+dist_matrix_named <- as.matrix(dist_matrix)
+rownames(dist_matrix_named) <- coords$microsample
+colnames(dist_matrix_named) <- coords$microsample
+# Convert to long format and filter for distances > 1000 µm
+dist_df <- as.data.frame(as.table(dist_matrix_named)) %>%
+  rename(sample1 = Var1, sample2 = Var2, distance = Freq) %>%
+  filter(sample1 != sample2) 
+
+# Group sizes based on n.dist
+group_sizes <- c(18, 44, 48, 48, 40, 60, 60, 86, 88, 112, 78)  # 
+# Create group labels
+group_labels <- rep(sprintf("br_%02d", seq_along(group_sizes)), times = group_sizes)
+
+# Slice comparison based on total  n.dist
+dist_df_unique <- dist_df %>%
+  #rowwise() %>%
+  #mutate(pair_id = paste(sort(c(sample1, sample2)), collapse = "_")) %>%
+  #ungroup() %>%
+  #distinct(pair_id, .keep_all = TRUE) %>%
+  #select(-pair_id) %>%
+  arrange(distance) %>% 
+  slice(1:682)
+
+
+# Apply to your data frame
+dist_df_unique$distance_bin <- group_labels
+
+
+#dist_df_unique <- dist_df_unique %>%
+#  rowwise() %>%
+#  mutate(pair_id = paste(sort(c(sample1, sample2)), collapse = "_")) %>%
+#  ungroup() %>%
+#  distinct(pair_id, .keep_all = TRUE) %>%
+#  select(-pair_id) 
+
+# View the result
+distance_visual <- dist_df_unique %>%
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, Xcoord, Ycoord), by = c("sample1" = "microsample")) %>%
+  rename(Xcoord_microsample_1 = Xcoord,
+         Ycoord_microsample_1 = Ycoord) %>%
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, Xcoord, Ycoord), by = c("sample2" = "microsample")) %>%
+  rename(Xcoord_microsample_2 = Xcoord,
+         Ycoord_microsample_2 = Ycoord) %>% 
+  #filter(distance_bin %in% c("br_01", "br_06", "br_11")) %>% 
+  ggplot() +
+  geom_segment(aes(
+    x = Xcoord_microsample_1,
+    y = Ycoord_microsample_1,
+    xend = Xcoord_microsample_2,
+    yend = Ycoord_microsample_2,
+    color = distance_bin
+  ),
+  size = 1, alpha = 0.6
+  ) +
+  # Add dots for sample1
+  geom_point(aes(x = Xcoord_microsample_1, y = Ycoord_microsample_1, color = distance_bin), size = 2) +
+  # Add dots for sample2
+  geom_point(aes(x = Xcoord_microsample_2, y = Ycoord_microsample_2, color = distance_bin), size = 2) +
+  coord_fixed() +  # Preserves aspect ratio
+  #scale_color_brewer(palette = "Set2") +  # Optional: nicer color palette
+  custom_ggplot_theme +
+  labs(
+    x = "X coordinate",
+    y = "Y coordinate",
+    color = "Distance bin",
+    title = "Microsample Pairs Colored by Distance Bin"
+  ) + facet_wrap(~distance_bin, ncol=4)
+
+ggsave(filename = "figures/distance_visual.png", distance_visual, width = 20, height = 10)
+```
+
+```{r test_distance, warning = FALSE, comments = "", message = FALSE}
+# Subset coordinate
+coords <- lawsonibacter_popANI_meta %>%
+  filter(cryosection %in% c("G121eI104C")) %>%
+  select(microsample, Xcoord, Ycoord)
+# Compute pairwise distances
+dist_matrix <- dist(coords %>% select(Xcoord, Ycoord))
+# Convert to matrix and name the rows/cols with microsample
+dist_matrix_named <- as.matrix(dist_matrix)
+rownames(dist_matrix_named) <- coords$microsample
+colnames(dist_matrix_named) <- coords$microsample
+# Convert to long format and filter for distances > 1000 µm
+dist_df <- as.data.frame(as.table(dist_matrix_named)) %>%
+  rename(sample1 = Var1, sample2 = Var2, distance = Freq) %>%
+  filter(sample1 != sample2) 
+
+# Group sizes based on n.dist
+group_sizes <- results_list$GPB_bin_000063$mantel$mantel.res[ , 2]  # 
+# Create group labels
+group_labels <- rep(sprintf("br_%02d", seq_along(group_sizes)), times = group_sizes)
+
+# Slice comparison based on total  n.dist
+dist_df_unique <- dist_df %>%
+  #rowwise() %>%
+  #mutate(pair_id = paste(sort(c(sample1, sample2)), collapse = "_")) %>%
+  #ungroup() %>%
+  #distinct(pair_id, .keep_all = TRUE) %>%
+  #select(-pair_id) %>%
+  arrange(distance) %>% 
+  slice(1:length(group_labels))
+
+
+# Apply to your data frame
+dist_df_unique$distance_bin <- group_labels
+
+
+#dist_df_unique <- dist_df_unique %>%
+#  rowwise() %>%
+#  mutate(pair_id = paste(sort(c(sample1, sample2)), collapse = "_")) %>%
+#  ungroup() %>%
+#  distinct(pair_id, .keep_all = TRUE) %>%
+#  select(-pair_id) 
+
+# View the result
+distance_visual <- dist_df_unique %>%
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, Xcoord, Ycoord), by = c("sample1" = "microsample")) %>%
+  rename(Xcoord_microsample_1 = Xcoord,
+         Ycoord_microsample_1 = Ycoord) %>%
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, Xcoord, Ycoord), by = c("sample2" = "microsample")) %>%
+  rename(Xcoord_microsample_2 = Xcoord,
+         Ycoord_microsample_2 = Ycoord) %>% 
+  #filter(distance_bin %in% c("br_01", "br_06", "br_11")) %>% 
+  ggplot() +
+  geom_segment(aes(
+    x = Xcoord_microsample_1,
+    y = Ycoord_microsample_1,
+    xend = Xcoord_microsample_2,
+    yend = Ycoord_microsample_2,
+    color = distance_bin
+  ),
+  size = 1, alpha = 0.6
+  ) +
+  # Add dots for sample1
+  geom_point(aes(x = Xcoord_microsample_1, y = Ycoord_microsample_1, color = distance_bin), size = 2) +
+  # Add dots for sample2
+  geom_point(aes(x = Xcoord_microsample_2, y = Ycoord_microsample_2, color = distance_bin), size = 2) +
+  coord_fixed() +  # Preserves aspect ratio
+  #scale_color_brewer(palette = "Set2") +  # Optional: nicer color palette
+  custom_ggplot_theme +
+  labs(
+    x = "X coordinate",
+    y = "Y coordinate",
+    color = "Distance bin",
+    title = "Microsample Pairs Colored by Distance Bin"
+  ) + facet_wrap(~distance_bin, ncol=4)
+
+distance_visual 
+ggsave(filename = "figures/distance_visual.png", distance_visual, width = 20, height = 10)
 ```

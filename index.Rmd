@@ -485,23 +485,21 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
 
 ### lawsonibacter_mantel_analysis 
 ```{r lawsonibacter_mantel_analysis, warning = FALSE, comments = "", message = FALSE}
-lawsonibacter_mantel_analysis <- function(data, animal_id, circul_selection) {
+lawsonibacter_mantel_analysis <- function(data, circul_selection) {
   # 1. Filter and prepare presence-absence matrix
   if (circul_selection == "Y") {
     filtered_data <- data %>%
       filter(
-        cryosection %in% c("G121eI103A", "G103bI301A"),
-        !microsample %in% c("M300840", "M301068", "M301085", "M301084"),
+        !microsample %in% c("M300840", "M301068", "M301085", "M301084", "M301055", # exclude based on spatial coordinate OUT
+      "M300833", "M300886"),
         circul == circul_selection,
-        animal == animal_id
       )
   } else {
     message("circul_selection is not 'Y'; skipping circul filter.")
     filtered_data <- data %>%
       filter(
-        cryosection %in% c("G121eI103A", "G103bI301A"),
-        !microsample %in% c("M300840", "M301068", "M301085", "M301084"),
-        animal == animal_id
+        !microsample %in% c("M300840", "M301068", "M301085", "M301084", "M301055", # exclude based on spatial coordinate OUT
+      "M300833", "M300886"),
       )
   }
 
@@ -568,12 +566,59 @@ lawsonibacter_mantel_analysis <- function(data, animal_id, circul_selection) {
   clr_lm <- aovperm(lmperm(comm_dist ~ spat_dist, data = distance_clr_df, np = 10000))
 
   return(list(
-    animal = animal_id,
+    #cryosection = cryosection_id,
     mantel_pa = mantel_result_pa,
     correlogram_pa = mantelcor_result_pa,
     mantel_clr = mantel_result_clr,
     correlogram_clr = mantelcor_result_clr,
     clr_lm = clr_lm
   ))
+}
+```
+
+### run_ani_spatial_analysis
+```{r run_ani_spatial_analysis, warning = FALSE, comments = "", message = FALSE}
+run_ani_spatial_analysis <- function(bin_name, ani_list, ids_35day, meta_data) {
+  
+  # Subset ANI matrix to samples of interest
+  popani <- ani_list[[bin_name]][rownames(ani_list[[bin_name]]) %in% ids_35day, ]
+  popani <- popani[, colnames(popani) %in% ids_35day]  # keep only matching columns too
+  diag(popani) <- NA
+  popani_dist <- as.dist(1 - popani)
+  
+  # Spatial distance for those samples
+  spatial_dist <- dist(meta_data %>%
+                         filter(microsample %in% colnames(popani)) %>%
+                         select(Xcoord, Ycoord))
+  
+  # Data frame for plotting and stats
+  toplot <- data.frame(
+    spat_dist = as.numeric(spatial_dist),
+    comm_dist = as.numeric(popani_dist)
+  )
+  
+  # Plot smooth relationship
+  p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
+    geom_smooth() + 
+    ggtitle(paste("Spatial vs ANI distance:", bin_name))
+  
+  # print(p)
+  
+  # Permutation ANOVA test for linear relationship
+  perm_aov <- aovperm(comm_dist ~ spat_dist, data = toplot, np = 10000)
+  
+  # Mantel correlogram
+  mantel_res <- vegan::mantel.correlog(popani_dist, spatial_dist, nperm = 999, cutoff = TRUE, n.class = 22, r.type = "spearman")
+  p_cor <- plot(mantel_res, main = paste("Mantel correlogram:", bin_name))
+  #print(p_cor)
+  
+  list(
+    plot = p,
+    plot_cor = p_cor,
+    perm_aov = perm_aov,
+    mantel = mantel_res,
+    spatial_dist = spatial_dist,
+    mantel_summary = summary(mantel_res)
+  )
 }
 ```
