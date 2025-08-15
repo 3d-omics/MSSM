@@ -561,7 +561,7 @@ G121e_df_obj$df_clr %>% rownames_to_column("microsample") %>%
 ```
 
 #### Supplementary Table 1
-```{r sup_table_1, warning = FALSE, comments = "", message = FALSE}
+```{r sup_table_1_comparison, warning = FALSE, comments = "", message = FALSE}
 total_microsamples <- length(unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics"),
   animal %in% c("G121e"),

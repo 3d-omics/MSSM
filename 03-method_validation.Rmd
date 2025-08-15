@@ -264,7 +264,7 @@ mivsma_clr_genus_nmse %>%
 ```
 
 
-```{r all_overlap, warning = FALSE, comments = "", message = FALSE}
+```{r all_overlap_1, warning = FALSE, comments = "", message = FALSE}
 mivsma_clr_genus_nmse_G121e %>%
   ggplot(aes(x = animal, y = genus_nrmse_range)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +
@@ -292,7 +292,7 @@ mivsma_clr_genus_nmse_G121e %>%
 
 ```
 
-```{r all_overlap, warning = FALSE, comments = "", message = FALSE}
+```{r all_overlap_2, warning = FALSE, comments = "", message = FALSE}
 mivsma_clr_genus_nmse_G103b %>%
   ggplot(aes(x = animal, y = genus_nrmse_range)) +
   geom_boxplot(width = 0.3, outlier.shape = NA) +

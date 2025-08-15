@@ -734,7 +734,7 @@ fig6_a
 #### Test Spatial Distribution Lawsonibacter subspecies
 **Note:** The lawsonibacter_mantel_analysis() function needs to be loaded.
 ##### 35 Days Animal (G121e)
-```{r lawsonibacter_mantel_G121e, warning = FALSE, comments = "", message = FALSE}
+```{r lawsonibacter_mantel_G121e_cryo1, warning = FALSE, comments = "", message = FALSE}
 lawsonibacter_G121e <- lawsonibacter_mantel_analysis(
   data = macroquant_lawsonibacter %>% filter(cryosection %in% c("G121eI103A")),
   circul_selection = "N"
@@ -742,7 +742,7 @@ lawsonibacter_G121e <- lawsonibacter_mantel_analysis(
 lawsonibacter_G121e
 ```
 
-```{r lawsonibacter_mantel_G121e, warning = FALSE, comments = "", message = FALSE}
+```{r lawsonibacter_mantel_G121e_cryo2, warning = FALSE, comments = "", message = FALSE}
 lawsonibacter_G121e <- lawsonibacter_mantel_analysis(
   data = macroquant_lawsonibacter %>% filter(cryosection %in% c("G121eI104C")),
   circul_selection = "N"
@@ -1090,7 +1090,7 @@ supfigs7c <- cowplot::plot_grid(results_list$GPB_bin_000044$plot_cor,
 )
 ```
 
-```{r test_distance, warning = FALSE, comments = "", message = FALSE}
+```{r test_distance_1, warning = FALSE, comments = "", message = FALSE}
 # Subset coordinate
 coords <- lawsonibacter_popANI_meta %>%
   filter(cryosection %in% c("G121eI103A")) %>%
@@ -1169,7 +1169,7 @@ distance_visual <- dist_df_unique %>%
 ggsave(filename = "figures/distance_visual.png", distance_visual, width = 20, height = 10)
 ```
 
-```{r test_distance, warning = FALSE, comments = "", message = FALSE}
+```{r test_distance_2, warning = FALSE, comments = "", message = FALSE}
 # Subset coordinate
 coords <- lawsonibacter_popANI_meta %>%
   filter(cryosection %in% c("G121eI104C")) %>%
