@@ -1,4 +1,10 @@
 ## MSSM Method Validation
+
+## Load data
+```{r load_data_validation, warning = FALSE, comments = "", message = FALSE}
+load("data/25_07_11_selected_data.Rdata") # load the data from 1-data_preparation
+```
+
 ### Discriminative power and replicability of MSSM data
 #### Data selection
 ```{r mssm_discriminative_df, warning = FALSE, comments = "", message = FALSE}

@@ -1,4 +1,8 @@
 ## MSSM Method Implementation
+## Load data
+```{r load_data_implementation, warning = FALSE, comments = "", message = FALSE}
+load("data/25_07_11_selected_data.Rdata") # load the data from 1-data_preparation
+```
 
 ### Investigate Spatial Pattern
 #### Data selection
@@ -294,7 +298,7 @@ colnames(comp) <- gsub(":", "_", colnames(comp))
 rownames(genome_funct) <- gsub(":", "_", rownames(genome_funct))
 ```
 
-####### Correspondence analysis of the composition matrix 
+####### Antton: Correspondence analysis of the composition matrix 
 ```{r correspondence_rlqESLTP, comment="", message=FALSE, warning=FALSE}
 coacomp <- dudi.coa(comp, scan = FALSE, nf = 108)
 summary(coacomp)

@@ -1,5 +1,5 @@
 # Loading and Tidying Data
-**Note:** This step requires access to the raw data files located at xxxx. If you prefer to skip this step, you can proceed to the next section, making sure to load the R object that contains the necessary files for the subsequent analysis in location.
+**Note:** This step requires access to the raw data files located at xxxx. If you prefer to skip this step, you can proceed to the next section, making sure to load the R object that contains the necessary files for the subsequent analysis in xxx.
 
 ## Import Sample metadata
 ```{r sample_metadata_mssm, eval=FALSE}
