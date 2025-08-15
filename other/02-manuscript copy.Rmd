@@ -640,6 +640,8 @@ ordered_metrics <- c(
 )
 
 figs3_2_2 <- sn3_2_df %>%
+  mutate(mapmag_prokreads_pct=mapmag_prokreads_pct*100,
+         percent_duplication.rate=percent_duplication.rate*100) %>% 
   pivot_longer(
     cols = -c(names(mssm_sample_metadata), "cov_filtering"),
     names_to = "metric",
@@ -936,6 +938,9 @@ ordered_metrics <- c(
 
 figs3_3_1 <- sn3_3_df %>%
   filter(!cycles %in% c("19")) %>%
+  mutate(lowquality_reads_pct=lowquality_reads_pct*100,
+         host_pct= host_pct*100,
+         mapmag_prokreads_pct=mapmag_prokreads_pct*100) %>% 
   pivot_longer(
     cols = -c(names(mssm_sample_metadata), "cov_filtering"),
     names_to = "metric",
@@ -1399,7 +1404,11 @@ ordered_metrics <- c(
 
 figs3_4_1 <- macroquant_metrics_filt_30 %>%
   filter(!section %in% c("Ileum")) %>%
-  mutate(batch = gsub("MSEB00", "B", batch)) %>%
+  mutate(batch = gsub("MSEB00", "B", batch),
+         lowquality_reads_pct=lowquality_reads_pct*100,
+         adapter_contamination_pct= adapter_contamination_pct*100,
+         human_pct=human_pct*100,
+         mapmag_prokreads_pct=mapmag_prokreads_pct*100) %>%
   pivot_longer(
     cols = -c(names(mssm_sample_metadata), "cov_filtering"),
     names_to = "metric",
