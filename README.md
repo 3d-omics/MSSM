@@ -3,18 +3,18 @@ This webbook provides all the code used in the analyses for the study "Micro-sca
 <br> 
 
 ## Input data
-The repository contain an R object containing the necessary data to run Step 2-Step 4.
-The raw datasets used for the analyses are can be downloaded from zenodo at: 
-https://zenodo.org/records/17091770
-https://zenodo.org/records/17091731 
+The data used for the analyses are can be downloaded from zenodo at: 
+https://zenodo.org/records/17091770,
+https://zenodo.org/records/17091731, and
 https://zenodo.org/records/17091749
+The repository also contains an R object containing the necessary data to run Step 2-Step 4.
 <br>
 
 
 ## Analysis steps
 
 #### Step 1 - Data Preparation
-The code in 01-data_preparation.Rmd loads the input data files, produces a filtered and normalized genome count table for further quantitative analyses and groups all the required dataframes and the customised colour palettes in an R object (xxx.Rdata) for downstream analyses.
+The code in 01-data_preparation.Rmd loads and tidies the data, generates a filtered and normalized genome count table for downstream quantitative analyses, and saves all necessary data frames along with the customized color palettes in an R object (working_data_object.Rdata).
 
 #### Step 2 – Manuscript Method Development
 The R code in 02-method_development.Rmd reproduces all analyses described in the Method Development section of the manuscript. This includes the comparison of macroscale and microscale MAG catalogues, as well as analyses focused on optimizing lysis conditions, evaluating library performance across intestinal sections and positive control reactions, and exploring resource optimization and throughput strategies to improve efficiency and sample processing capacity.
@@ -29,7 +29,7 @@ The R code in 04-method_implementation.Rmd runs all analyses described in the Me
 
 The **bookdown-rendered webbook** containing all the above code and its output is available at:
 
-[.....](...)
+[https://3d-omics.github.io/MSSM](...)
 
 While the webbook provides a user-friendly overview of the procedures, analyses can be directly reproduced using the **.Rmd** files stored in the root directory of this repository. Note that some code chunks that require heavy computation might have been turned off using 'eval=FALSE' or cached using 'cache=TRUE'. To re-render the webbook, you can use the following code:
 
