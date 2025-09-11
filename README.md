@@ -1,9 +1,13 @@
 # 3D'omics | Micro-scale spatial metagenomics (MSSM)
-This webbook contains all the code used for the analyses of in "Micro-scale spatial metagenomics: revealing high-resolution spatial biogeography of gut microbiomes".
+This webbook provides all the code used in the analyses for the study "Micro-scale spatial metagenomics: revealing high-resolution spatial biogeography of gut microbiomes". The project 3D'omics (http://www.3domics.eu) was Funded by European Union’s Horizon 2020 Research and Innovation programme. 
 <br> 
 
 ## Input data
-The main datasets used for the microbiome analyses, and included in the data folder, are: 
+The repository contain an R object containing the necessary data to run Step 2-Step 4.
+The raw datasets used for the analyses are can be downloaded from zenodo at: 
+https://zenodo.org/records/17091770
+https://zenodo.org/records/17091731 
+https://zenodo.org/records/17091749
 <br>
 
 
