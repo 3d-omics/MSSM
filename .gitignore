@@ -3,8 +3,10 @@
 .RData
 .Ruserdata
 # Ignore all contents of the "data_preparation" folder
-data/data_preparation/ 
+resources/zenodo/
+resources/
 _main_files/
 docs/_main_files/
 figures/
 .RDataTmp*
+other/

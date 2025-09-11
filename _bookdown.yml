@@ -2,3 +2,6 @@ delete_merged_file: true
 language:
   ui:
     chapter_name: "Chapter "
+output: 
+  bookdown::html_document2:
+    table_caption: false

@@ -1,68 +1,50 @@
 # MSSM Method Development
 
-## Load data
-```{r load_data_main_manuscript, warning = FALSE, comments = "", message = FALSE}
-load("data/25_07_11_selected_data.Rdata") # load the data from 1-data_preparation
+```{r load_data_development, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
+load("resources/working_data_object.Rdata") # load the data from 1-data_preparation
 ```
 
 ## Microbial Genomic Reference Data
 
-### Macro-scale MAGs Catalogue Summary Statistics 
-```{r stat_macromag, warning = FALSE, comments = "", message = FALSE}
-cat("Completeness median = ", round(median(macromag_genomemetadata$completeness), 2), "\n")
-cat(
-  "Completeness IQR = ", round(quantile(macromag_genomemetadata$completeness, probs = c(0.25)), 2),
-  "-", round(quantile(macromag_genomemetadata$completeness, probs = c(0.75)), 2), "\n"
-)
-cat("Contamination median = ", round(median(macromag_genomemetadata$contamination), 2), "\n")
-cat(
-  "Contamination IQR = ", round(quantile(macromag_genomemetadata$contamination, probs = c(0.25)), 2),
-  "-", round(quantile(macromag_genomemetadata$contamination, probs = c(0.75)), 2)
-)
+### Summary Statistics
+#### Macro-scale MAG Catalogue {-}
+```{r stat_macro,  echo = FALSE, warning = FALSE, comments = "", message = FALSE}
+print_median_iqr(macromag_genomemetadata$completeness, "Completeness:")
+print_median_iqr(macromag_genomemetadata$contamination, "Contamination:")
+```
+#### Micro-scale MAG Catalogue {-}
+```{r stat_micro,  echo = FALSE, warning = FALSE, comments = "", message = FALSE}
+print_median_iqr(micromag_genomemetadata$completeness, "Completeness:")
+print_median_iqr(micromag_genomemetadata$contamination, "Contamination:")
 ```
 
-### Micro-scale MAGs Catalogue Summary Statistics 
-```{r stat_micromag, warning = FALSE, comments = "", message = FALSE}
-cat("Completeness median = ", round(median(micromag_genomemetadata$completeness), 2), "\n")
-cat(
-  "Completeness IQR = ", round(quantile(micromag_genomemetadata$completeness, probs = c(0.25)), 2),
-  "-", round(quantile(micromag_genomemetadata$completeness, probs = c(0.75)), 2), "\n"
-)
-cat("Contamination median = ", round(median(micromag_genomemetadata$contamination), 2), "\n")
-cat(
-  "Contamination IQR = ", round(quantile(micromag_genomemetadata$contamination, probs = c(0.25)), 2),
-  "-", round(quantile(micromag_genomemetadata$contamination, probs = c(0.75)), 2)
-)
-```
-### Amalia: Macro vs Micro MAGs: Completeness and Abundance (Fig. 2a)
+### Macro vs Micro MAGs: Completeness And Abundance (Fig. 2a)
 
 ```{r fig_2a, warning = FALSE, comments = "", message = FALSE}
 ```
 
-### Amalia: Macro MAGs Overview (Fig. 2b)
+### Macro MAGs Overview (Fig. 2b)
 
 ```{r fig_2b, warning = FALSE, comments = "", message = FALSE}
 ```
 
-### Amalia: Micro MAGs Overview (Suppl. Fig. 1)
+### Micro MAGs Overview (Suppl. Fig. 1)
 
 ```{r suppl_fig_1, warning = FALSE, comments = "", message = FALSE}
 ```
 
-### Comparative Analysis of Genome Catalogues (Suppl. Note 1)
+### Comparative Analysis Of Genome Catalogues (Suppl. Note 1)
 
-```{r suppl_note_1, warning = FALSE, comments = "", message = FALSE}
+```{r suppl_note_1, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 cat("Number Genomes in Macro-scale MAGs Catalogue =", length(macromag_taxonomy$genome), "\n")
 cat("Number Genomes in Micro-scale MAGs Catalogue =", length(micromag_taxonomy$genome), "\n")
 ```
 
-#### Data selection
-
-```{r suppl_note_1_samples, warning = FALSE, comments = "", message = FALSE}
+```{r suppl_note_1_samples, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 sn1_sample_id <- microquant_metrics_filt_30 %>% # select microquant dataset
   filter(
     batch %in% c("MSEB0011"),
-    type_binomial %in% c("positive")
+    type %in% c("positive")
   ) %>% pull(microsample)
 
 sn1_phylo_count <- full_join(
@@ -84,7 +66,6 @@ sn1_phylo_count <- full_join(
     where(~ !is.numeric(.x) || sum(.x, na.rm = TRUE) != 0)
   ) %>%
   column_to_rownames("genome")
-
 
 sn1_phylo_metadata <- bind_rows(
   microquant_metrics_filt_30 %>%
@@ -120,15 +101,14 @@ if (nrow(data.frame(sn1_physeq_species@tax_table) %>%
   filter(n > 1)) > 0) {
   cat("warning: Some species appear more than once in the taxonomy table")
 } else {
-  cat("All species are unique")
+  cat("Verification: The combined macro and micro dataset contains only unique species.")
 }
-
 sn1_physeq_G121e <- subset_samples(sn1_physeq_species, animal == "G121e")
 sn1_physeq_G121e <- prune_taxa(taxa_sums(sn1_physeq_G121e) > 0, sn1_physeq_G121e)
 ```
 
 #### Read Counts 
-```{r SN1_read_count, warning = FALSE, comments = "", message = FALSE}
+```{r SN1_read_count, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 sn1_read_df <- bind_rows(
   lapply(list(
     micro = microquant_read_counts_filt_30 %>%
@@ -143,17 +123,11 @@ sn1_read_df <- bind_rows(
   .id = "source"
 ) %>% pivot_wider(names_from = source, values_from = number_reads)
 
-# Run Spearman's correlation test
 sn1_cor_result <- cor.test(sn1_read_df$micro, sn1_read_df$macro, method = "spearman")
-# Extract values
 rho <- sn1_cor_result$estimate
 pval <- sn1_cor_result$p.value
 n <- length(sn1_read_df$micro)
-# Report
-cat(sprintf("Spearman's ρ = %.2f, p = %.3f, n = %d", rho, pval, n), "\n")
-cat("Macro-scale genome catalogue mean read counts =", mean(sn1_read_df$macro) / 1000000, "\n")
-cat("Micro-scale genome catalogue mean read counts =", mean(sn1_read_df$micro) / 1000000, "\n")
-
+#cat(sprintf("Correlation Spearman's ρ = %.2f, p = %.3f, n = %d", rho, pval, n), "\n")
 
 sn1_read_count <- sn1_read_df %>%
   ggplot(aes(x = macro, y = micro)) +
@@ -168,12 +142,16 @@ sn1_read_count <- sn1_read_df %>%
     x = "Mapped Reads \nMacro-scale Catalogue",
     y = "Mapped Reads \nMicro-scale Catalogue"
   )
-# sn1_read_count
+
+print_median_iqr(sn1_read_df$macro/ 1000000, "Macro-scale genome catalogue: ")
+print_median_iqr(sn1_read_df$micro/ 1000000, "Micro-scale genome catalogue: ")
+sn1_read_count
 ```
+Read mapping results were strongly correlated across the two catalogues. 
 
-#### Alpha diversity (Fig. S1.1a)
+#### Alpha Diversity (Fig. S1.1a)
 
-```{r sn1_alpha_df, warning = FALSE, comments = "", message = FALSE}
+```{r sn1_alpha_df, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 sn1_alpha_df <- sample_data(sn1_physeq_species) %>%
   data.frame() %>%
   filter(richness > 0) %>%
@@ -186,7 +164,6 @@ sn1_alpha_df_wd <- sn1_alpha_df %>%
     names_glue = "{`MAGs Catalogue`}_{.value}",
     values_from = c(richness, neutral, phylogenetic)
   )
-
 sn1_alpha_df_lg <- sn1_alpha_df %>%
   pivot_longer(
     cols = c(richness, neutral, phylogenetic),
@@ -199,7 +176,7 @@ sn1_alpha_df_lg <- sn1_alpha_df %>%
 ```
 
 
-```{r FigS1_1a, warning = FALSE, comments = "", message = FALSE}
+```{r FigS1_1a, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 figs1_1a <- sn1_alpha_df_lg %>%
   filter(
     !metric %in% c("phylogenetic"),
@@ -211,14 +188,13 @@ figs1_1a <- sn1_alpha_df_lg %>%
     "Neutral" = "neutral"
   )) %>%
   ggplot(aes(x = metric, y = value, fill = `MAGs Catalogue`)) +
-  geom_boxplot() +
-  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_boxplot(alpha = 0.6) +
   geom_jitter(
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1.5, alpha = 0.3
   ) +
   theme_minimal() +
-  scale_fill_manual(values = c("#79b1a3", "#f58262")) +
+  scale_fill_manual(values = c("#2A9D8F","#E76F51")) +
   custom_ggplot_theme +
   labs(
     # title = "a",
@@ -227,22 +203,37 @@ figs1_1a <- sn1_alpha_df_lg %>%
   ) +
   theme(legend.position = "bottom")
 figs1_1a
-# ggsave(filename = "figures/FigS1_1a.pdf", figs1_1a, width = 12, height = 5)
-# ggsave(filename = "figures/FigS1_1a.png", figs1_1a, width = 12, height = 5)
 ```
 
-```{r paired_Wilcoxon_richness, warning = FALSE, comments = "", message = FALSE}
-wilcox.test(sn1_alpha_df_wd$`Micro-scale_richness`, sn1_alpha_df_wd$`Macro-scale_richness`, paired = TRUE, na.action = na.omit) %>%
-  tidy() # 5 nas?
+##### Richness {-}
+```{r paired_Wilcoxon_Richness, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
+# 5 nas?
+wt <- wilcox.test(
+  sn1_alpha_df_wd$`Micro-scale_richness`,
+  sn1_alpha_df_wd$`Macro-scale_richness`,
+  paired = TRUE,
+  na.action = na.omit
+) %>% broom::tidy()
+wt$p.value <- formatC(wt$p.value, format = "e", digits = 3)
+knitr::kable(wt, digits = 3)
 ```
 
-```{r paired_Wilcoxon_neutral, warning = FALSE, comments = "", message = FALSE}
-wilcox.test(sn1_alpha_df_wd$`Micro-scale_neutral`, sn1_alpha_df_wd$`Macro-scale_neutral`, paired = TRUE, na.action = na.omit) %>%
-  tidy() # 5 nas?
+##### Neutral {-}
+```{r paired_Wilcoxon_Neutral, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
+# 5 nas?
+knitr::kable(
+  wilcox.test(
+    sn1_alpha_df_wd$`Micro-scale_neutral`,
+    sn1_alpha_df_wd$`Macro-scale_neutral`,
+    paired = TRUE, na.action = na.omit
+  ) %>% broom::tidy(), digits = 3
+)
 ```
+
+We detected significant differences in alpha diversity between the two reference catalogues.
 
 #### Detected Taxa
-```{r sn1_alpha_taxa, warning = FALSE, comments = "", message = FALSE}
+```{r sn1_alpha_taxa, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 microscale_taxa <- left_join(
   microquant_genome_counts_filt_30 %>%
     select(genome, all_of(sn1_sample_id)) %>%
@@ -250,7 +241,6 @@ microscale_taxa <- left_join(
   micromag_taxonomy,
   by = "genome"
 )
-
 macroscale_taxa <- left_join(
   macroquant_genome_counts_filt_30 %>%
     select(genome, all_of(sn1_sample_id)) %>%
@@ -260,8 +250,8 @@ macroscale_taxa <- left_join(
 )
 ```
 
-
-```{r sn1_alpha_unique_species, warning = FALSE, comments = "", message = FALSE}
+##### Number Unique Species {-}
+```{r sn1_alpha_unique_species, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 micro_unique_species <- setdiff(microscale_taxa$species, macroscale_taxa$species)
 macro_unique_species <- setdiff(macroscale_taxa$species, microscale_taxa$species)
 sn1_unique_species_df <- tibble(
@@ -271,12 +261,12 @@ sn1_unique_species_df <- tibble(
     rep("Macro-scale", length(macro_unique_species))
   )
 )
-cat("Number Unique Species in Micro-scale MAGs Catalogue =", length(micro_unique_species), "\n")
-cat("Number Unique Species in Macro-scale MAGs Catalogue =", length(macro_unique_species), "\n")
+cat("Micro-scale MAGs Catalogue =", length(micro_unique_species), "\n")
+cat("Macro-scale MAGs Catalogue =", length(macro_unique_species), "\n")
 ```
 
-
-```{r sn1_alpha_unique_genera,warning = FALSE, comments = "", message = FALSE}
+##### Number Unique Genera {-}
+```{r sn1_alpha_unique_genera, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 micro_unique_genera <- setdiff(microscale_taxa$genus, macroscale_taxa$genus)
 macro_unique_genera <- setdiff(macroscale_taxa$genus, microscale_taxa$genus)
 sn1_unique_genera_df <- tibble(
@@ -286,12 +276,13 @@ sn1_unique_genera_df <- tibble(
     rep("Macro-scale", length(macro_unique_genera))
   )
 )
-cat("Number Unique Genera in Micro-scale MAGs Catalogue =", length(micro_unique_genera), "\n")
-cat("Number Unique Genera in Macro-scale MAGs Catalogue =", length(macro_unique_genera), "\n")
+cat("Micro-scale MAGs Catalogue =", length(micro_unique_genera), "\n")
+cat("Macro-scale MAGs Catalogue =", length(macro_unique_genera), "\n")
 ```
+A greater number of unique taxa were detected with the microscale.
 
-#### Beta diversity (Fig. S1.1b, Fig. S1.1c)
-```{r sn1_beta_dfs, warning = FALSE, comments = "", message = FALSE}
+#### Beta Diversity (Fig. S1.1b)
+```{r sn1_beta_dfs, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
 sn1_betacount_df <- data.frame(otu_table(sn1_physeq_species)) %>%
   rownames_to_column("genome") %>%
   melt(id = "genome") %>%
@@ -306,7 +297,10 @@ sn1_betacount_df <- data.frame(otu_table(sn1_physeq_species)) %>%
   column_to_rownames(var = "microsample")
 ```
 
-```{r FigS1_1b, warning = FALSE, comments = "", message = FALSE}
+##### Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA) {-}
+
+```{r FigS1_1b, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+cat("Zero replacement determined", "\n")
 sn1_beta_obj <- perform_pca(sn1_betacount_df)
 sn1_beta_metadata <- data.frame(sample_data(sn1_physeq_species)) %>%
   rownames_to_column("microsample") %>%
@@ -315,19 +309,17 @@ sn1_beta_metadata <- data.frame(sample_data(sn1_physeq_species)) %>%
     `MAGs Catalogue` = dataset,
     Animal = animal
   )
+
 sn1_scores <- rownames_to_column(as.data.frame(sn1_beta_obj$pca_result$x), var = "microsample")
 sn1_scores <- left_join(sn1_scores, sn1_beta_metadata, by = join_by(microsample == microsample))
-# Calculate variance explained for each principal component
 variance_explained <- (sn1_beta_obj$pca_result$sdev^2) / sum(sn1_beta_obj$pca_result$sdev^2) * 100
-# Plot the first two principal components
 figs1_1b <- ggplot() +
   geom_point(
     data = sn1_scores,
     aes(x = PC1, y = PC2, group = microsample, color = `MAGs Catalogue`, shape = Animal),
     size = 3, alpha = 0.5
   ) +
-  scale_color_manual(values = c("#79b1a3", "#f58262")) +
-  # Connect the points by group (sample_id)
+  scale_color_manual(values = c("#2A9D8F","#E76F51")) +
   geom_path(
     data = sn1_scores,
     aes(x = PC1, y = PC2, group = sample_id),
@@ -345,21 +337,13 @@ figs1_1b <- ggplot() +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 figs1_1b
-# ggsave(filename = "figures/FigS1_1b.pdf", figs1_1b, width = 12, height = 9)
-# ggsave(filename = "figures/FigS1_1b.png", figs1_1b, width = 12, height = 9)
-data.frame(otu_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>% 
-  rownames_to_column("genome")  %>% 
-  pivot_longer(cols = -c(genome), names_to = "microsample", values_to = "abundance") %>% 
-  mutate(dataset = str_sub(microsample, -5, -1)) %>% 
-  group_by(dataset, genome) %>% 
-  summarise(sum_abundance=sum(abundance)) %>% 
-  filter(sum_abundance==0) %>% 
-  left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>% 
-  rownames_to_column("genome"), by = "genome" ) %>% arrange(species)
+
 ```
 
+The 35-day-old animal (G121e) showed the greatest species-level differences between catalogues.
 
-```{r FigS1_1c_aldex, warning = FALSE, comments = "", message = FALSE}
+##### Differential Abundance (Aldex2) {-}
+```{r FigS1_1c_aldex, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 structural_zero <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>% 
   rownames_to_column("genome")  %>% 
   pivot_longer(cols = -c(genome), names_to = "microsample", values_to = "abundance") %>% 
@@ -367,16 +351,13 @@ structural_zero <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, taxrank = "sp
   group_by(dataset, genome) %>% 
   summarise(sum_abundance=sum(abundance)) %>% 
   filter(sum_abundance==0) %>% pull(genome)
-  
-  
-sn1_aldex_G121e_counts <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, "species"))) %>% 
-  rownames_to_column("genome") %>% 
+
+sn1_aldex_G121e_counts <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, "species"))) #%>% 
+  #rownames_to_column("genome") %>% 
   #filter(!genome %in%c(structural_zero)) %>% 
-  column_to_rownames("genome")
+  #column_to_rownames("genome")
 sn1_aldex_G121e_pseudo_counts <- round(sn1_aldex_G121e_counts * 1e6)
 sn1_aldex_G121e_conditions <- data.frame(sample_data(tax_glom(sn1_physeq_G121e, "species"))) %>% pull(dataset)
-# Perform the ALDEx2 differential abundance test
-# Use 't' test for two groups; 'glm' for multi-class or covariates
 sn1_aldex_G121e_results <- aldex(sn1_aldex_G121e_pseudo_counts,
   sn1_aldex_G121e_conditions,
   test = "t", 
@@ -385,7 +366,6 @@ sn1_aldex_G121e_results <- aldex(sn1_aldex_G121e_pseudo_counts,
   mc.samples = 256, # number of Monte Carlo instances
   verbose = TRUE
 )
-head(sn1_aldex_G121e_results)
 # - we.ep: expected p-value from Welch's t-test
 # - wi.ep: expected p-value from Wilcoxon test
 # - we.eBH: BH-adjusted p-value (q-value)
@@ -393,15 +373,13 @@ head(sn1_aldex_G121e_results)
 # Filter
 sn1_aldex_G121e_sig <- sn1_aldex_G121e_results[sn1_aldex_G121e_results$we.eBH < 0.05, ]
 sn1_aldex_G121e_effect <- sn1_aldex_G121e_sig[abs(sn1_aldex_G121e_sig$effect) > 0.5, ]
-
 sn1_aldex <-
   sn1_aldex_G121e_effect %>%
   rownames_to_column("genome") %>%
   left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, "species"))) %>% rownames_to_column("genome"), by = "genome")
 
-# Create horizontal barplot
 figs1_1c <- sn1_aldex %>%
-  mutate(structural_zero=ifelse(genome %in% c(structural_zero), "Y", "N")) %>% 
+  mutate(structural_zero=ifelse(genome %in% c(structural_zero), "Present in only 1 group", "Present in both groups")) %>% 
   ggplot(., aes(x = diff.btw, y = reorder(species, effect), fill = abs(effect) > 1)) +
   geom_bar(stat = "identity", show.legend = FALSE) +
   coord_flip() +
@@ -414,229 +392,43 @@ figs1_1c <- sn1_aldex %>%
   theme(axis.text.x = element_text(angle = 40, hjust = 1))
 figs1_1c
 ```
+Differentially abundant species in the 35-day-old animal (G121e) are primarily structural 0.
 
-#### Fig. S1
-```{r FigS1, warning = FALSE, comments = "", message = FALSE}
-figs1 <- cowplot::plot_grid(figs1_1a, figs1_1b,
-  ncol = 1, labels = c("a", "b"),
-  rel_heights = c(1, 1), label_size = 16
-)
-ggsave("figures/FigS1.png", figs1, width = 10, height = 11, dpi = 300)
-```
+## Tissue Lysis And Sequencing Library Preparation (Suppl. Note 3)
 
+### Impact of Lysis Conditions On Microbial Taxonomic Profiling (Suppl. Note 3.2)
 
-```{r ancombc2_G121e, message=FALSE, eval=FALSE}
-set.seed(1234) # set seed for reproducibility
-ancombc_output_sn1_physeq_G121e <- ancombc2(
-  data = sn1_physeq_G121e,
-  assay_name = "counts",
-  tax_level = "species", # change to agglomerate analysis to a higher taxonomic range
-  fix_formula = "dataset",
-  p_adj_method = "holm",
-  pseudo_sens = TRUE,
-  prv_cut = 0,
-  lib_cut = 0,
-  s0_perc = 0.05,
-  group = "dataset",
-  struc_zero = TRUE,
-  neg_lb = FALSE,
-  alpha = 0.05,
-  n_cl = 2,
-  verbose = TRUE,
-  global = FALSE,
-  pairwise = FALSE,
-  dunnet = FALSE,
-  trend = FALSE,
-  iter_control = list(tol = 1e-5, max_iter = 20, verbose = FALSE),
-  em_control = list(tol = 1e-5, max_iter = 100),
-  mdfdr_control = list(fwer_ctrl_method = "holm", B = 100),
-  trend_control = NULL
-)
-
-names(ancombc_output_sn1_physeq_G121e$res)
-any(ancombc_output_sn1_physeq_G121e$res$`passed_ss_datasetMicro-scale` == TRUE &
-  ancombc_output_sn1_physeq_G121e$res$`q_datasetMicro-scale` < 0.05)
-
-ancom <- ancombc_output_sn1_physeq_G121e$res %>%
-  select(
-    genus = taxon,
-    lfc = `lfc_datasetMicro-scale`,
-    qval = `q_datasetMicro-scale`,
-    passed_ss = `passed_ss_datasetMicro-scale`,
-    diff = `diff_datasetMicro-scale`
-  ) %>%
-  filter(qval < 0.05) %>%
-  arrange(qval, lfc) %>%
-  mutate(
-    hjust_label = ifelse(lfc > 0, -0.05, 1.05),
-    q_label = paste0("q=", signif(round(qval, 2), 2)),
-    q_label = ifelse(q_label == "q=0", "q<0.01", q_label)
-  ) %>%
-  ggplot(aes(
-    x = lfc,
-    y = fct_reorder(genus, lfc),
-    fill = passed_ss
-  )) +
-  geom_col() +
-  geom_text(
-    aes(label = q_label, hjust = hjust_label),
-    size = 3.2,
-    color = "black"
-  ) +
-  scale_fill_manual(values = c("darkgrey", "#e35d51")) +
-  geom_hline(yintercept = 0) +
-  custom_ggplot_theme +
-  labs(
-    #title = "c",
-    x = "log2FoldChange",
-    y = "Genus"
-  ) +
-  guides(fill = guide_legend(title = "Eligible for Differential \nAbundance Testing")) +
-  theme(legend.position = "bottom") +
-  coord_cartesian(xlim = c(-1.2, 1.2))
-
-
-```
-
-```{r ancom, warning = FALSE, comments = "", message = FALSE}
-G121e_df <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>%
-  rownames_to_column("genome") %>%
-  melt(id = "genome") %>%
-  setNames(c("genome", "microsample", "count")) %>%
-  left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>%
-    rownames_to_column("genome"), by = "genome") %>%
-  select(species, microsample, count) %>%
-  filter(count > 0) %>%
-  pivot_wider(names_from = species, values_from = count, values_fill = 0) %>% # change here
-  select(where(~ any(. != 0))) %>%
-  mutate(across(-microsample, ~ . / rowSums(across(where(is.numeric))) * 100)) %>%
-  column_to_rownames(var = "microsample")
-G121e_df_obj <- perform_pca(G121e_df)
-G121e_df_metadata <- data.frame(sample_data(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>%
-  rownames_to_column("microsample") %>%
-  filter(microsample %in% c(rownames(G121e_df_obj$df_clr))) %>%
-  rename(
-    `MAGs Catalogue` = dataset,
-    Animal = animal
-  )
-
-
-ancom_species <- ancombc_output_sn1_physeq_G121e$res %>%
-  select(
-    genus = taxon,
-    lfc = `lfc_datasetMicro-scale`,
-    qval = `q_datasetMicro-scale`,
-    passed_ss = `passed_ss_datasetMicro-scale`,
-    diff = `diff_datasetMicro-scale`
-  ) %>%
-  filter(qval < 0.05, passed_ss == TRUE) %>% pull(genus)
-  
-  
-G121e_df_obj$df_clr %>% rownames_to_column("microsample") %>% 
-  pivot_longer(cols=(-microsample), names_to = "species", values_to = "clr") %>%  
-  left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>% rownames_to_column("genome"), by = "species") %>% 
-  #left_join(data.frame(structural_zero) %>% mutate(genome=structural_zero), by= "genome") %>% 
-  mutate(dataset = str_sub(microsample, -5, -1),
-         structural_zero=ifelse(genome %in% c(structural_zero), "Y", "N"),
-         ancom=ifelse(genome %in% c(ancom_species), "Y", "N")) %>% 
-  #filter(structural_zero=="N") %>% 
-  arrange(dataset, clr) %>% 
-  ggplot(aes(x = species, y = clr, fill=dataset)) +
-  geom_boxplot() +
-  geom_jitter(
-    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
-    size = 1.5, alpha = 0.3
-  ) +
-  theme_minimal() +
-  scale_fill_manual(values = c("#79b1a3", "#f58262")) +
-  custom_ggplot_theme +
-  labs(
-    title = "",
-    x = "",
-    y = ""
-  ) +
-  theme(legend.position = "none") + 
-  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
-  facet_grid(structural_zero~ancom, scale="free") #+ coord_flip() #+theme(axis.text.y = element_blank())
-```
-
-#### Supplementary Table 1
-```{r sup_table_1_comparison, warning = FALSE, comments = "", message = FALSE}
-total_microsamples <- length(unique(mivsma_phylo_lg %>% filter(
-  group %in% c("Micro-scale Spatial Metagenomics"),
-  animal %in% c("G121e"),
-  !section %in% c("Colon", "Ileum")
-) %>% pull(microsample)))
-
-mivsma_phylo_lg %>%
-  filter(
-    group %in% c("Micro-scale Spatial Metagenomics"),
-    animal %in% c("G121e"),
-    !section %in% c("Colon", "Ileum"),
-    genus %in% mivsma_35d_micro_unique
-  ) %>%
-  group_by(genus) %>%
-  summarise(
-    # Prevalence = sum(abundance > 0),
-    Prevalence_Total = round(sum(abundance > 0) / total_microsamples, 3),
-    mean_abundance = round(mean(abundance), 3)
-  )
-```
-
-## FISH probes design?
-
-```{r x1, warning = FALSE, comments = "", message = FALSE}
-```
-
-
-
-### Tissue lysis and sequencing library preparation (Suppl. Note 3)
-
-#### Impact of Lysis Conditions on Microbial Taxonomic Profiling (Suppl. Note 3.2)
-
-##### Amalia: Mock Community (Fig. S3.2.1)
+#### Mock Community (Fig. S3.2.1)
 
 ```{r x2, warning = FALSE, comments = "", message = FALSE}
 ```
 
-##### Microsamples (Fig. S3.2.2)
-
-###### Data selection
-
-```{r sn3_2_df, warning = FALSE, comments = "", message = FALSE}
+#### Microsamples (Fig. S3.2.2)
+```{r sn3_2_df, echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 sn3_2_df <- macroquant_metrics_filt_30 %>%
   filter(
     batch %in% c("MSEB0006", "MSEB0010"), # Caeucum (MSEB0006) and Colon (MSEB0010)
     section %in% c("Caecum right", "Colon"),
     cycles %in% c(13, 14, 15),
-    type_binomial %in% c("positive"),
+    type %in% c("positive"),
     richness > 0
   ) %>%
   mutate(
     collection_attempts = as.factor(collection_attempts),
     buffer = as.factor(buffer)
   )
-
-sn3_2_df %>%
-  group_by(section, buffer) %>%
-  summarise(n_samples = n())
-sn3_2_df %>%
-  group_by(section, buffer, collection_attempts) %>%
-  summarise(n_samples = n(), .groups = "keep") %>%
-  pivot_wider(names_from = collection_attempts, values_from = n_samples)
 ```
 
-###### Visual Comparison of Sequencing Performance (Fig. S3.2.2)
+##### Visual Comparison Of Sequencing Performance (Fig. S3.2.2)
 
-```{r FigS3_2_2, warning = FALSE, comments = "", message = FALSE}
+```{r FigS3_2_2,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=8}
 ordered_metrics <- c(
   "total_after_filtering.total_reads",
   "mapmag_prokreads_pct",
   "percent_duplication.rate",
   "richness",
   "neutral",
-  "phylogenetic" # ,
-  # "read_fraction_singlem"
+  "phylogenetic"
 )
 
 figs3_2_2 <- sn3_2_df %>%
@@ -664,7 +456,7 @@ figs3_2_2 <- sn3_2_df %>%
     )
   ) %>%
   ggplot(aes(x = section, y = value, fill = buffer)) +
-  geom_boxplot() +
+  geom_boxplot(alpha = 0.6) +
   facet_wrap(~metric, scales = "free_y", ncol = 3) +
   labs(
     fill = "Lysis",
@@ -676,20 +468,20 @@ figs3_2_2 <- sn3_2_df %>%
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1.5, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#79b1a3", "#f58262", "black")) +
+  scale_fill_manual(values = c("#2A9D8F","#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 
 figs3_2_2
-# ggsave(filename = "figures/FigS3_2_2.pdf", figs3_2_2, width = 8, height = 7)
-# ggsave(filename = "figures/FigS3_2_2.png", figs3_2_2, width = 8, height = 7)
 ```
+No clear performance advantage was observed between methods L06 and L07 in caecum microsamples. 
 
-###### Statistical Comparison of Sequencing Performance
+##### Statistical Comparison Of Sequencing Performance
 **Note:** The fit_and_analyze_model() function needs to be loaded.
 
-###### a. Reads Retained Post Quality Filtering
-```{r sn3_2_a_caecum, warning = FALSE, comments = "", message = FALSE}
+###### a. Reads Retained Post Quality Filtering {-}
+###### Caecum {-}
+```{r sn3_2_a_caecum,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
 sn3_2_a_ca <- fit_and_analyze_model(
   model = "glm",
@@ -698,12 +490,16 @@ sn3_2_a_ca <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Caecum right"))
 )
-sn3_2_a_ca$anova
-# md <- glm(total_after_filtering.total_reads~collection_attempts + buffer, family = "quasipoisson", data = sn3_2_df #%>%  filter(section %in% c("Caecum right")))
-# broom::tidy(Anova(md, test.statistic = "Wald")) # ANOVA with F test
+knitr::kable(
+  sn3_2_a_ca$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-```{r sn3_2_a_colon, warning = FALSE, comments = "", message = FALSE}
+###### Colon {-}
+```{r sn3_2_a_colon,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
 sn3_2_a_co <- fit_and_analyze_model(
   model = "glm",
@@ -712,12 +508,17 @@ sn3_2_a_co <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Colon"))
 )
-sn3_2_a_co$anova
+knitr::kable(
+  sn3_2_a_co$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-###### b. Reads Mapping MAG Catalogue (%)
-
-```{r sn3_2_b_caecum, warning = FALSE, comments = "", message = FALSE}
+###### b. Reads Mapping MAG Catalogue (%) {-}
+###### Caecum {-}
+```{r sn3_2_b_caecum,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 sn3_2_b_ca <- fit_and_analyze_model(
   model = "glm",
@@ -726,11 +527,17 @@ sn3_2_b_ca <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Caecum right"))
 )
-sn3_2_b_ca$anova
+
+knitr::kable(
+  sn3_2_b_ca$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-
-```{r sn3_2_b_colon, warning = FALSE, comments = "", message = FALSE}
+###### Colon {-}
+```{r sn3_2_b_colon,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 sn3_2_b_co <- fit_and_analyze_model(
   model = "glm",
@@ -739,12 +546,18 @@ sn3_2_b_co <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Colon"))
 )
-sn3_2_b_co$anova
+
+knitr::kable(
+  sn3_2_b_co$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-###### c. Reads Duplication Rate (%)
-
-```{r sn3_2_c_caecum, warning = FALSE, comments = "", message = FALSE}
+###### c. Reads Duplication Rate (%) {-}
+###### Caecum {-}
+```{r sn3_2_c_caecum,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 sn3_2_c_ca <- fit_and_analyze_model(
   model = "glm",
@@ -753,10 +566,16 @@ sn3_2_c_ca <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Caecum right"))
 )
-sn3_2_c_ca$anova
-```
 
-```{r sn3_2_c_colon, warning = FALSE, comments = "", message = FALSE}
+knitr::kable(
+  sn3_2_c_ca$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+```
+###### Colon {-}
+```{r sn3_2_c_colon,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 sn3_2_c_co <- fit_and_analyze_model(
   model = "glm",
@@ -765,11 +584,18 @@ sn3_2_c_co <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Colon"))
 )
-sn3_2_c_co$anova
+
+knitr::kable(
+  sn3_2_c_co$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-###### d. Richness
-```{r sn3_2_d_caecum, warning = FALSE, comments = "", message = FALSE}
+###### d. Richness {-}
+###### Caecum {-}
+```{r sn3_2_d_caecum,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
 sn3_2_d_ca <- fit_and_analyze_model(
   model = "glm",
@@ -778,13 +604,16 @@ sn3_2_d_ca <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Caecum right"))
 )
-sn3_2_d_ca$anova
-# md <- glm(total_after_filtering.total_reads~collection_attempts + buffer, family = "quasipoisson", data = sn3_2_df #%>%  filter(section %in% c("Caecum right")))
-# broom::tidy(Anova(md, test.statistic = "Wald")) # ANOVA with F test
+knitr::kable(
+  sn3_2_d_ca$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-
-```{r sn3_2_d_colon, warning = FALSE, comments = "", message = FALSE}
+###### Colon {-}
+```{r sn3_2_d_colon,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
 sn3_2_d_co <- fit_and_analyze_model(
   model = "glm",
@@ -793,12 +622,19 @@ sn3_2_d_co <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Colon"))
 )
-sn3_2_d_co$anova
+
+knitr::kable(
+  sn3_2_d_co$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
 
-###### e. Neutral" = "neutral",
-```{r sn3_2_e_caecum, warning = FALSE, comments = "", message = FALSE}
+###### e. Neutral {-}
+###### Caecum {-}
+```{r sn3_2_e_caecum,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # # Continuous floats (any real number): lm or gaussian, Gamma (continuous positive data, skewed to the right)
 sn3_2_e_ca <- fit_and_analyze_model(
   model = "glm",
@@ -807,11 +643,16 @@ sn3_2_e_ca <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Caecum right"))
 )
-# plot(sn3_2_e_ca$simResidual)
-sn3_2_e_ca$anova
-```
 
-```{r sn3_2_e_colon, warning = FALSE, comments = "", message = FALSE}
+knitr::kable(
+  sn3_2_e_ca$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+```
+###### Colon {-}
+```{r sn3_2_e_colon,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
 sn3_2_e_co <- fit_and_analyze_model(
   model = "glm",
@@ -821,39 +662,16 @@ sn3_2_e_co <- fit_and_analyze_model(
   data = sn3_2_df %>% filter(section %in% c("Colon"))
 )
 # plot(sn3_2_e_co$simResidual)
-sn3_2_e_co$anova
+
+knitr::kable(
+  sn3_2_e_co$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-###### f. Phylogenetic" = "phylogenetic"
-```{r sn3_2_f_caecum, warning = FALSE, comments = "", message = FALSE}
-# # Continuous floats (any real number): lm or gaussian, Gamma (continuous positive data, skewed to the right)
-sn3_2_f_ca <- fit_and_analyze_model(
-  model = "glm",
-  distribution = "gaussian", # DHARMa significant deviation KS
-  response_var = "phylogenetic",
-  explanatory_var = "collection_attempts + buffer",
-  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
-)
-plot(sn3_2_f_ca$simResidual)
-sn3_2_f_ca$anova
-```
-
-```{r sn3_2_f_colon, warning = FALSE, comments = "", message = FALSE}
-# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
-sn3_2_f_co <- fit_and_analyze_model(
-  model = "glm",
-  distribution = "gaussian",
-  response_var = "phylogenetic",
-  explanatory_var = "collection_attempts + buffer",
-  data = sn3_2_df %>% filter(section %in% c("Colon"))
-)
-plot(sn3_2_f_co$simResidual)
-sn3_2_f_co$anova
-```      
-
-###### Detected Taxa
-
-```{r sn3_2_taxa, warning = FALSE, comments = "", message = FALSE}
+```{r sn3_2_taxa,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 sn3_2_taxa <- left_join(
   macroquant_genome_counts_filt_30 %>%
     select(genome, all_of(sn3_2_df$microsample)) %>%
@@ -867,7 +685,6 @@ sn3_2_taxa <- left_join(
     value > 0,
     section %in% c("Colon")
   )
-
 
 sn3_2_unique_L06 <- setdiff(
   sn3_2_taxa %>% filter(buffer %in% c("L06")) %>% distinct(genus),
@@ -885,25 +702,58 @@ sn3_2_unique_genus_df <- tibble(
     rep("L07", length(sn3_2_unique_L07$genus))
   )
 )
-
-cat("Number Unique Genus in L06 =", length(sn3_2_unique_L06$genus), "\n")
-cat("Number Unique Genus in L07 =", length(sn3_2_unique_L07$genus), "\n")
-(length(sn3_2_unique_L07$genus) / sn3_2_taxa %>%
-  distinct(genus) %>%
-  count()) * 100
+cat("Number Unique Genus in:", "\n")
+cat("L06 =", length(sn3_2_unique_L06$genus), "\n")
+cat("L07 =", length(sn3_2_unique_L07$genus), "\n")
 ```      
 
-#### Performance Evaluation Across Intestinal Sections (Suppl. Note 3.3)
+###### f. Phylogenetic {-}
+###### Caecum {-}
+```{r sn3_2_f_caecum,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
+# # Continuous floats (any real number): lm or gaussian, Gamma (continuous positive data, skewed to the right)
+sn3_2_f_ca <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "gaussian", # DHARMa significant deviation KS
+  response_var = "phylogenetic",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+)
+#plot(sn3_2_f_ca$simResidual)
+knitr::kable(
+  sn3_2_f_ca$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+```
 
-###### Data selection 
+###### Colon {-}
+```{r sn3_2_f_colon,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
+# Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
+sn3_2_f_co <- fit_and_analyze_model(
+  model = "glm",
+  distribution = "gaussian",
+  response_var = "phylogenetic",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Colon"))
+)
+#plot(sn3_2_f_co$simResidual)
+knitr::kable(
+  sn3_2_f_co$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+```      
 
-```{r sn3_3_df, warning = FALSE, comments = "", message = FALSE}
+### Performance Evaluation Across Intestinal Sections (Suppl. Note 3.3)
+```{r sn3_3_df,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 sn3_3_df <- macroquant_metrics_filt_30 %>%
   filter(
     batch %in% c("MSEB0006", "MSEB0010"),
     section %in% c("Caecum right", "Ileum", "Colon"),
     # cycles %in% c(13, 14, 15),
-    type_binomial %in% c("positive"),
+    type %in% c("positive"),
     richness > 0
   ) %>%
   mutate(
@@ -911,25 +761,13 @@ sn3_3_df <- macroquant_metrics_filt_30 %>%
     buffer = as.factor(buffer),
     cycles = as.factor(cycles)
   )
-
-sn3_3_df %>%
-  filter(!cycles %in% c("19")) %>%
-  group_by(section, buffer) %>%
-  summarise(n_samples = n())
-
-sn3_3_df %>%
-  filter(!cycles %in% c("19")) %>%
-  group_by(section, buffer, collection_attempts) %>%
-  summarise(n_samples = n(), .groups = "keep") %>%
-  pivot_wider(names_from = collection_attempts, values_from = n_samples)
 ```
-###### Visual Comparison of Sequencing Performance (Fig. S3.3.1)
 
-```{r FigS3_3_1, warning = FALSE, comments = "", message = FALSE}
+#### Visual Comparison Of Sequencing Performance (Fig. S3.3.1)
+```{r FigS3_3_1,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=8}
 ordered_metrics <- c(
   "total_after_filtering.total_reads",
   "lowquality_reads_pct",
-  # "adapter_contamination_pct",
   "host_pct",
   "mapmag_prokreads_pct",
   "read_fraction_singlem",
@@ -940,7 +778,8 @@ figs3_3_1 <- sn3_3_df %>%
   filter(!cycles %in% c("19")) %>%
   mutate(lowquality_reads_pct=lowquality_reads_pct*100,
          host_pct= host_pct*100,
-         mapmag_prokreads_pct=mapmag_prokreads_pct*100) %>% 
+         mapmag_prokreads_pct=mapmag_prokreads_pct*100,
+         read_fraction_singlem=read_fraction_singlem*100) %>% 
   pivot_longer(
     cols = -c(names(mssm_sample_metadata), "cov_filtering"),
     names_to = "metric",
@@ -963,7 +802,7 @@ figs3_3_1 <- sn3_3_df %>%
     )
   ) %>%
   ggplot(aes(x = section, y = value, fill = section)) +
-  geom_boxplot() +
+  geom_boxplot(alpha = 0.6) +
   facet_wrap(~metric, scales = "free_y", ncol = 3) +
   labs(
     fill = "",
@@ -975,7 +814,7 @@ figs3_3_1 <- sn3_3_df %>%
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1.5, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#79b1a3", "#f58262", "#e3c7a0")) +
+  scale_fill_manual(values = c("#2A9D8F","#264653", "#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "none")
 
@@ -983,69 +822,12 @@ figs3_3_1
 # ggsave(filename = "figures/FigS3_3_1.pdf", figs3_3_1, width = 8, height = 7)
 # ggsave(filename = "figures/FigS3_3_1.png", figs3_3_1, width = 8, height = 7)
 ```
+Library-building performance, evaluated using sequencing and diversity metrics, was highest in the caecum, lower in the colon, and poorest in the ileum.
 
-```{r validate_section_conclusion, warning = FALSE, comments = "", message = FALSE}
-macroquant_metrics_filt_30 %>% 
-  filter(#animal == "G121e", 
-         !cycles %in% c(19), section=="Caecum right") %>%
-  ggplot(aes(x = section, y = human_pct*100, fill = batch)) +
-  geom_boxplot(alpha = 0.6) +
-  theme_minimal() +
-  labs(
-    title = "Low-Quality Reads (%) in Colon (G121e)",
-    x = "Section",
-    y = "Low-Quality Reads (%)",
-    fill = "Batch"
-  ) +
-  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
-  geom_jitter(
-    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
-    size = 1.5, alpha = 0.3
-  ) 
+#### Statistical Comparison Of Sequencing Performance
 
-macroquant_metrics_filt_30 %>% 
-  filter(#animal == "G121e", 
-         !cycles %in% c(19), section=="Caecum right") %>%
-  ggplot(aes(x = section, y = lowquality_reads_pct*100, fill = batch)) +
-  geom_boxplot(alpha = 0.6) +
-  theme_minimal() +
-  labs(
-    title = "Low-Quality Reads (%) in Colon (G121e)",
-    x = "Section",
-    y = "Low-Quality Reads (%)",
-    fill = "Batch"
-  ) +
-  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
-  geom_jitter(
-    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
-    size = 1.5, alpha = 0.3
-  ) 
-
-
-macroquant_metrics_filt_30 %>% 
-  filter(animal == "G121e", 
-         type_binomial == "positive", !cycles %in% c(19)) %>%
-  ggplot(aes(x = section, y = mapmag_prokreads_pct, fill = batch)) +
-  geom_boxplot(alpha = 0.6) +
-  theme_minimal() +
-  labs(
-    title = "Low-Quality Reads (%) in Colon (G121e)",
-    x = "Section",
-    y = "Reads Mapping MAG Catalogue (%)",
-    fill = "Batch"
-  ) +
-  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
-  geom_jitter(
-    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
-    size = 1.5, alpha = 0.3
-  ) 
-```
-
-
-###### Statistical Comparison of Sequencing Performance
-
-###### a. Reads Retained Post Quality Filtering
-```{r sn3_3_a, warning = FALSE, comments = "", message = FALSE}
+##### a. Reads Retained Post Quality Filtering {-}
+```{r sn3_3_a,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
 sn3_3_a <- fit_and_analyze_model(
   model = "glm",
@@ -1054,13 +836,25 @@ sn3_3_a <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + section",
   data = sn3_3_df %>% filter(!cycles %in% c("19"))
 )
-# plot(a_sectioncomp$simResidual)
-sn3_3_a$anova
+
+cat("Anova", "\n")
+knitr::kable(
+  sn3_3_a$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+cat("Predicted values from model", "\n")
+knitr::kable(
+  sn3_3_a$model_fit %>% ggpredict(., terms = c("section")),
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-###### b. Low Quality Reads (%)
-
-```{r sn3_3_b, warning = FALSE, comments = "", message = FALSE}
+##### b. Low Quality Reads (%) {-}
+```{r sn3_3_b,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 sn3_3_b <- fit_and_analyze_model(
   model = "glm",
@@ -1069,16 +863,25 @@ sn3_3_b <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + section",
   data = sn3_3_df %>% filter(!cycles %in% c("19"))
 )
-sn3_3_b$anova
 
-sn3_3_b$model_fit %>% plot_model(., type = "pred", terms = c("collection_attempts", "section"))
-sn3_3_b$model_fit %>% plot_model(., type = "pred", terms = c("section"))
-sn3_3_b$model_fit %>% ggpredict(., terms = c("section"))
+cat("Anova", "\n")
+knitr::kable(
+  sn3_3_b$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+cat("Predicted values from model", "\n")
+knitr::kable(
+  sn3_3_b$model_fit %>% ggpredict(., terms = c("section")),
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-###### c. Reads Mapping Eukaryotic Host (%)
-
-```{r sn3_3_c, warning = FALSE, comments = "", message = FALSE}
+##### c. Reads Mapping Eukaryotic Host (%) {-}
+```{r sn3_3_c,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 sn3_3_c <- fit_and_analyze_model(
   model = "glm",
@@ -1087,16 +890,26 @@ sn3_3_c <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + section",
   data = sn3_3_df %>% filter(!cycles %in% c("19"))
 )
-sn3_3_c$anova
-sn3_3_c$model_fit %>% plot_model(., type = "pred", terms = c("collection_attempts", "section"))
-sn3_3_c$model_fit %>% plot_model(., type = "pred", terms = c("section"))
-sn3_3_c$model_fit %>% ggpredict(., terms = c("section"))
+
+cat("Anova", "\n")
+knitr::kable(
+  sn3_3_c$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+cat("Predicted values from model", "\n")
+knitr::kable(
+  sn3_3_c$model_fit %>% ggpredict(., terms = c("section")),
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
 
-###### d. Reads Mapping MAG Catalogue (%)
-
-```{r d_sectioncomp, warning = FALSE, comments = "", message = FALSE}
+##### d. Reads Mapping MAG Catalogue (%) {-}
+```{r d_sectioncomp,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 sn3_3_d <- fit_and_analyze_model(
   model = "glm",
@@ -1105,23 +918,25 @@ sn3_3_d <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + section",
   data = sn3_3_df %>% filter(!cycles %in% c("19"))
 )
-sn3_3_d$anova
-sn3_3_d$model_fit %>% plot_model(., type = "pred", terms = c("collection_attempts", "section"))
-sn3_3_d$model_fit %>% plot_model(., type = "pred", terms = c("section"))
-sn3_3_d$model_fit %>% ggpredict(., terms = c("section"))
+
+cat("Anova", "\n")
+knitr::kable(
+  sn3_3_d$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+cat("Predicted values from model", "\n")
+knitr::kable(
+  sn3_3_d$model_fit %>% ggpredict(., terms = c("section")),
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-###### e. Microbial Fraction Based On Single-Copy Gene Abundance (%)
-
-```{r e_sectioncomp, warning = FALSE, comments = "", message = FALSE}
-chart.Correlation(sn3_3_df %>%
-  filter(section %in% c("Ileum")) %>%
-  select(
-    "read_fraction_singlem",
-    "mapmag_prokreads_pct"
-  ), method = "spearman")
-# correlation
-
+##### e. Microbial Fraction Based On Single-Copy Gene Abundance (%) {-}
+```{r e_sectioncomp,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 sn3_3_e <- fit_and_analyze_model(
   model = "glm",
@@ -1130,14 +945,33 @@ sn3_3_e <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + section",
   data = sn3_3_df %>% filter(!cycles %in% c("19"))
 )
-sn3_3_e$anova
-sn3_3_e$model_fit %>% plot_model(., type = "pred", terms = c("collection_attempts", "section"))
-sn3_3_e$model_fit %>% plot_model(., type = "pred", terms = c("section"))
-sn3_3_e$model_fit %>% ggpredict(., terms = c("section"))
-```
 
-###### Colon: 19 Versus 15 Cycles
-```{r Boxplot_19versus15Cycles, warning = FALSE, comments = "", message = FALSE}
+cat("Anova", "\n")
+knitr::kable(
+  sn3_3_e$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+cat("Predicted values from model", "\n")
+knitr::kable(
+  sn3_3_e$model_fit %>% ggpredict(., terms = c("section")),
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+cat("Correlation", "\n")
+chart.Correlation(sn3_3_df %>%
+  filter(section %in% c("Ileum")) %>%
+  select(
+    "read_fraction_singlem",
+    "mapmag_prokreads_pct"
+  ), method = "spearman")
+```
+Single-copy gene analysis showed a moderate correlation with the proportion of reads mapping to the reference post-filtering. 
+
+#### Colon: 19 Versus 15 Cycles
+```{r Boxplot_19versus15Cycles,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=8}
 ordered_metrics <- c(
   "total_before_filtering.total_reads",
   "total_after_filtering.total_reads",
@@ -1163,26 +997,25 @@ sn_3_3_15vs19 <- sn3_3_df %>%
     )
   ) %>%
   ggplot(aes(x = cycles, y = value, fill = buffer)) +
-  geom_boxplot() +
+  geom_boxplot(alpha = 0.6) +
   facet_wrap(~metric, scales = "free_y", ncol = 2) +
   labs(
     fill = "Lysis Treatment",
     y = "",
     x = "Intestinal section"
   ) +
-  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
   geom_jitter(
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1.5, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#79b1a3", "#f58262")) +
+  scale_fill_manual(values = c("#2A9D8F","#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
-
 sn_3_3_15vs19
 ```
 
-```{r reads_cyclecomp, warning = FALSE, comments = "", message = FALSE}
+##### a. Sequencing Yield (Number Reads) {-}
+```{r reads_cyclecomp,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
 readsbf_cyclecomp <- fit_and_analyze_model(
   model = "glm",
@@ -1191,13 +1024,25 @@ readsbf_cyclecomp <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + cycles",
   data = sn3_3_df %>% filter(section %in% c("Colon"))
 )
-# plot(reads_cyclecomp$simResidual)
-readsbf_cyclecomp$anova
-readsbf_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles"))
+
+cat("Anova", "\n")
+knitr::kable(
+  readsbf_cyclecomp$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+cat("Predicted values from model", "\n")
+knitr::kable(
+  readsbf_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles")),
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-
-```{r readsfilt_cyclecomp, warning = FALSE, comments = "", message = FALSE}
+##### b. Reads Retained Post Quality Filtering {-}
+```{r readsfilt_cyclecomp,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
 readshq_cyclecomp <- fit_and_analyze_model(
   model = "glm",
@@ -1206,12 +1051,25 @@ readshq_cyclecomp <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + cycles",
   data = sn3_3_df %>% filter(section %in% c("Colon"))
 )
-# plot(reads_cyclecomp$simResidual)
-readshq_cyclecomp$anova
-readshq_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles"))
+
+cat("Anova", "\n")
+knitr::kable(
+  readshq_cyclecomp$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+ )
+cat("Predicted values from model", "\n")
+knitr::kable(
+  readshq_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles")),
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-```{r quality_cyclecomp, warning = FALSE, comments = "", message = FALSE}
+##### c. Low Quality Reads (%) {-}
+```{r quality_cyclecomp, echo=FALSE,  warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 quality_cyclecomp <- fit_and_analyze_model(
   model = "glm",
@@ -1220,11 +1078,25 @@ quality_cyclecomp <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + cycles",
   data = sn3_3_df %>% filter(section %in% c("Colon"))
 )
-quality_cyclecomp$anova
-quality_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles"))
+
+cat("Anova", "\n")
+knitr::kable(
+  quality_cyclecomp$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+  )
+cat("Predicted values from model", "\n")
+knitr::kable(
+  quality_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles")),
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
 ```
 
-```{r duplication_cyclecomp, warning = FALSE, comments = "", message = FALSE}
+##### d. Reads Duplication Rate (%) {-}
+```{r duplication_cyclecomp,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion)
 duplication_cyclecomp <- fit_and_analyze_model(
   model = "glm",
@@ -1233,22 +1105,75 @@ duplication_cyclecomp <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + cycles",
   data = sn3_3_df %>% filter(section %in% c("Colon"))
 )
-duplication_cyclecomp$anova
+
+cat("Anova", "\n")
+knitr::kable(
+  duplication_cyclecomp$anova,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+cat("Predicted values from model", "\n")
+knitr::kable(
+  duplication_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles")),
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)
+```
+Efforts to compensate for low biomass in the colon by increasing PCR cycles did not improve the quality of colon results. 
+
+#### Community Composition of Caecum & Colon (Fig. S3.3.2)
+**Note:** The pivot_phylo() function needs to be loaded.
+```{r physeq_section_lg,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
+sn3_3_physeq_lg <- pivot_phylo(
+  phyloseq_obj = subset_samples(
+    physeq_all,
+    batch %in% c("MSEB0006", "MSEB0010") &
+      section %in% c("Caecum right", "Colon") &
+      !cycles %in% c(19) &
+      type == "positive"
+  ),
+  glom = TRUE,
+  tax_transform = TRUE,
+  taxon_level = "order",
+  tr_method = "compositional"
+)
 ```
 
-###### Community Composition of Caecum & Colon (Fig. S3.3.2)
+```{r figs3_3_2,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=9}
+figs3_3_2 <- sn3_3_physeq_lg %>%
+  mutate(section = ifelse(section == "Caecum right", "Caecum", section)) %>%
+  ggplot(
+    aes(x = microsample, y = abundance, fill = order)
+  ) +
+  geom_bar(stat = "identity", colour = "white", linewidth = 0.1) +
+  scale_fill_manual(values = order_colors, drop = FALSE) +
+  labs(
+    x = "Microsamples",
+    y = "Relative abundance",
+    fill = "Order"
+  ) +
+  facet_wrap(~section, scales = "free", ncol = 1) +
+  guides(fill = guide_legend(ncol = 4)) +
+  custom_ggplot_theme +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(legend.position = "bottom")
+figs3_3_2
+```
 
-```{r physeq_section, warning = FALSE, comments = "", message = FALSE}
+In the 35-day-old animal, the bacterial communities of the caecum and colon were dominated by the same four orders: Lachnospirales, Oscillospirales, and Lactobacillales, with minor contributions from Christensenellales and Erysipelotrichales.
+
+##### Differential Abundance (Aldex2) {-}
+```{r physeq_section,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 sn3_3_physeq <- subset_samples(
   physeq_all,
   section %in% c("Caecum right", "Colon") &
     !cycles %in% c(19) &
     animal %in% c("G121e") &
-    type_binomial == "positive"
+    type == "positive"
 )
-
 sn3_3_physeq <- prune_taxa(taxa_sums(sn3_3_physeq) > 0, sn3_3_physeq)
-# sn3_3_physeq <- filter_taxa(sn3_3_physeq, function(x) sum(x > 0) > (0.05 * length(x)), TRUE)
 sn3_3_aldex_G121e_counts <- data.frame(otu_table(sn3_3_physeq))
 sn3_3_aldex_G121e_pseudo_counts <- round(sn3_3_aldex_G121e_counts * 1e6)
 sn3_3_aldex_G121e_conditions <- data.frame(sample_data(sn3_3_physeq)) %>% pull(section)
@@ -1262,7 +1187,6 @@ sn3_3_aldex_G121e_results <- aldex(sn3_3_aldex_G121e_pseudo_counts,
   mc.samples = 256, # number of Monte Carlo instances
   verbose = TRUE
 )
-head(sn3_3_aldex_G121e_results)
 # - we.ep: expected p-value from Welch's t-test
 # - wi.ep: expected p-value from Wilcoxon test
 # - we.eBH: BH-adjusted p-value (q-value)
@@ -1288,52 +1212,10 @@ sn3_3_aldex %>%
   scale_fill_manual(values = c("TRUE" = "#e35d51", "FALSE" = "darkgrey")) +
   theme_minimal(base_size = 14)
 ```
+No species were found to be differentially abundant.
 
-
-**Note:** The pivot_phylo() function needs to be loaded.
-```{r physeq_section_lg, warning = FALSE, comments = "", message = FALSE}
-sn3_3_physeq_lg <- pivot_phylo(
-  phyloseq_obj = subset_samples(
-    physeq_all,
-    batch %in% c("MSEB0006", "MSEB0010") &
-      section %in% c("Caecum right", "Colon") &
-      !cycles %in% c(19) &
-      type_binomial == "positive"
-  ),
-  glom = TRUE,
-  tax_transform = TRUE,
-  taxon_level = "order",
-  tr_method = "compositional"
-)
-```
-
-```{r figs3_3_2, warning = FALSE, comments = "", message = FALSE}
-figs3_3_2 <- sn3_3_physeq_lg %>%
-  mutate(section = ifelse(section == "Caecum right", "Caecum", section)) %>%
-  ggplot(
-    aes(x = microsample, y = abundance, fill = order)
-  ) +
-  geom_bar(stat = "identity", colour = "white", linewidth = 0.1) +
-  scale_fill_manual(values = order_colors, drop = FALSE) +
-  labs(
-    x = "Microsamples",
-    y = "Relative abundance",
-    fill = "Order"
-  ) +
-  facet_wrap(~section, scales = "free", ncol = 1) +
-  guides(fill = guide_legend(ncol = 4)) +
-  custom_ggplot_theme +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
-  theme(legend.position = "bottom")
-
-figs3_3_2
-# ggsave(filename = "figures/FigS3_3_2.pdf", figs3_3_2, width = 8, height = 7)
-# ggsave(filename = "figures/FigS3_3_2.png", figs3_3_2, width = 8, height = 7)
-```
-
-
-###### Confocal microscopy of DAPI-stained microsections 
-```{r sn3_3_dapi_df, warning = FALSE, comments = "", message = FALSE}
+#### Confocal Microscopy Of DAPI-stained Microsections (Fig. S3.3.3a)
+```{r sn3_3_dapi_df,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 sn3_3_dapi_df <- dapi_df %>%
   group_by(Animal, Sequence, Age, Section) %>%
   summarise(
@@ -1349,8 +1231,7 @@ sn3_3_dapi_df <- dapi_df %>%
     q3 = quantile(Bacterial_count, 0.75), # Third quartile
     .groups = "drop"
   )
-
-dapi_df %>%
+summary <- dapi_df %>%
   group_by(Age, Section) %>%
   summarise(
     n = n(),
@@ -1364,9 +1245,7 @@ dapi_df %>%
   )
 ```
 
-####### Visual Comparison (Fig. S3.3.3a)
-
-```{r figs3_3_3a, warning = FALSE, comments = "", message = FALSE}
+```{r figs3_3_3a,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=9}
 figs3_3_3a <- ggplot(sn3_3_dapi_df, aes(x = Distance_from_one_side_mn, y = median, color = Section)) +
   geom_line(linewidth = 1) + # Mean line
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = Section),
@@ -1378,21 +1257,19 @@ figs3_3_3a <- ggplot(sn3_3_dapi_df, aes(x = Distance_from_one_side_mn, y = media
     y = "Bacterial Counts (Median)"
   ) +
   facet_wrap(~Age, nrow = 2, scale = "free_x") +
-  scale_fill_manual(values = c("#79b1a3", "#f58262", "#e3c7a0"), drop = FALSE) +
-  scale_color_manual(values = c("#79b1a3", "#f58262", "#e3c7a0"), drop = FALSE) +
+  scale_fill_manual(values = c("#2A9D8F","#264653", "#E76F51"), drop = FALSE) +
+  scale_color_manual(values = c("#2A9D8F","#264653", "#E76F51"), drop = FALSE) +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
-
 figs3_3_3a
-# ggsave(filename = "figures/FigS3_3_3a.pdf", figs3_3_3a, width = 8, height = 7)
-# ggsave(filename = "figures/FigS3_3_3a.png", figs3_3_3a, width = 8, height = 7)
 ```
 
+Quantification of bacterial cells within a 5,000 μm² area using QuPath provides visual confirmation that differences in bacterial density across intestinal regions (caecum, colon, and ileum) were the primary factor influencing MSSM performance.
 
-### Design considerations: Controls (Suppl. Note 3.4)
+## Design Considerations: Controls (Suppl. Note 3.4)
 
-###### Visual Comparison of Sequencing Performance (Fig. S3.4.1)
-```{r FigS3_4_1, warning = FALSE, comments = "", message = FALSE}
+### Visual Comparison Of Sequencing Performance (Fig. S3.4.1)
+```{r FigS3_4_1,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=11}
 ordered_metrics <- c(
   "total_before_filtering.total_reads",
   "lowquality_reads_pct",
@@ -1425,13 +1302,13 @@ figs3_4_1 <- macroquant_metrics_filt_30 %>%
       "e. Read Counts for Bacterial Quantification " = "raw_total_sequences_mag",
       "f. Reads Mapping MAG Catalogue (%)" = "mapmag_prokreads_pct"
     ),
-    type_binomial = recode(type_binomial,
+    type = recode(type,
       "positive" = "Microsample",
       "negative" = "Negative"
     )
   ) %>%
-  ggplot(aes(x = batch, y = value, fill = type_binomial)) +
-  geom_boxplot() +
+  ggplot(aes(x = batch, y = value, fill = type)) +
+  geom_boxplot(alpha = 0.6) +
   facet_wrap(~metric, scales = "free_y", ncol = 1) +
   labs(
     fill = "",
@@ -1443,7 +1320,7 @@ figs3_4_1 <- macroquant_metrics_filt_30 %>%
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#f58262", "#79b1a3")) +
+  scale_fill_manual(values = c("#2A9D8F","#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 
@@ -1452,42 +1329,42 @@ figs3_4_1
 # ggsave(filename = "figures/FigS3_4_1.png", figs3_4_1, width = 8, height = 11)
 ```
 
+Although controls yielded sequencing data, they consistently exhibited poorer quality metrics.
 
-#### Amalia: Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA)
+### Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA)
 
-###### FigS3_4_2
+#### FigS3_4_2
 
-```{r FigS3_4_2, warning = FALSE, comments = "", message = FALSE}
+```{r FigS3_4_2,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 ```
 
-###### FigS3_4_3
+#### FigS3_4_3
 
-```{r FigS3_4_3, warning = FALSE, comments = "", message = FALSE}
+```{r FigS3_4_3,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 ```
 
 
-###### Visual Comparison of Coverage Cutoff Filtering (Fig. S3.4.4)
-
-```{r FigS3_4_4, warning = FALSE, comments = "", message = FALSE}
-figs3_4_4 <- macroquant_metrics_filt_30 %>%
+#### Coverage Cutoff Filtering (Fig. S3.4.3)
+```{r FigS3_4_3,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
+figs3_4_3 <- macroquant_metrics_filt_30 %>%
   mutate(
     batch = gsub("MSEB00", "B", batch),
-    type_binomial = recode(type_binomial,
+    type = recode(type,
       "positive" = "Positive",
       "negative" = "Negative"
     )
   ) %>%
-  # group_by(type_binomial, cov_filtering) %>%
-  group_by(batch, type_binomial, cov_filtering) %>%
+  # group_by(type, cov_filtering) %>%
+  group_by(batch, type, cov_filtering) %>%
   summarise(n_samples = n()) %>%
   ggplot(aes(fill = cov_filtering, x = batch, y = n_samples)) +
-  geom_bar(position = "fill", stat = "identity") + # Stacked 100% bar
+  geom_bar(position = "fill", stat = "identity", alpha = 0.6) + # Stacked 100% bar
   geom_text(aes(label = n_samples),
     position = position_fill(vjust = 0.5),
     color = "black", size = 6
   ) +
-  facet_wrap(~type_binomial) +
-  scale_fill_manual(values = c("#f58262", "#79b1a3")) +
+  facet_wrap(~type) +
+  scale_fill_manual(values = c("#E76F51", "#2A9D8F")) +
   labs(
     fill = "",
     y = "",
@@ -1495,14 +1372,12 @@ figs3_4_4 <- macroquant_metrics_filt_30 %>%
   ) +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
-
-figs3_4_4
-# ggsave(filename = "figures/FigS3_4_4.pdf", figs3_4_4, width = 8, height = 6)
-# ggsave(filename = "figures/FigS3_4_4.png", figs3_4_4, width = 8, height = 6)
+figs3_4_3
 ```
+A total of 83.1% of controls retaining no data 
 
-
-```{r sn3_4_physeq_lg, warning = FALSE, comments = "", message = FALSE}
+#### Composition
+```{r figs3_4_5,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=8}
 sn3_4_physeq_lg <- pivot_phylo(
   phyloseq_obj = physeq_all,
   glom = TRUE,
@@ -1510,25 +1385,9 @@ sn3_4_physeq_lg <- pivot_phylo(
   taxon_level = "genus",
   tr_method = "compositional"
 )
-sn3_4_physeq_lg %>%
-  group_by(type_binomial) %>%
-  summarise(n_unique_microsamples = n_distinct(microsample))
-# negative	19
-# positive	501
-sn3_4_physeq_lg %>%
-  group_by(genus, type_binomial) %>%
-  summarise(
-    n_samples = n(),
-    mean_ra = mean(abundance)
-  ) %>%
-  filter(genus %in% c(sn3_4_physeq_lg %>%
-    filter(type_binomial %in% c("negative")) %>% pull(genus)))
-```
 
-
-```{r figs3_4_5, warning = FALSE, comments = "", message = FALSE}
 figs3_4_5 <- sn3_4_physeq_lg %>%
-  filter(type_binomial %in% c("negative")) %>%
+  filter(type %in% c("negative")) %>%
   ggplot(
     aes(x = microsample, y = abundance, fill = genus)
   ) +
@@ -1543,74 +1402,60 @@ figs3_4_5 <- sn3_4_physeq_lg %>%
   guides(fill = guide_legend(ncol = 4)) +
   custom_ggplot_theme +
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom") +
+  scale_fill_manual(values = c(colorRampPalette(palette_color)(24)))
 figs3_4_5
-# ggsave(filename = "figures/FigS3_4_5.pdf", figs3_4_5, width = 8, height = 7)
-# ggsave(filename = "figures/FigS3_4_5.png", figs3_4_5, width = 8, height = 7)
+```
+Elevated levels of Streptococcus were observed in negative reactions.
+
+## Design Considerations: Microsample Area
+
+```{r x2, echo=FALSE,  warning = FALSE, comments = "", message = FALSE}
 ```
 
-### Amalia: Design considerations: Microsample Sizes
-
-```{r x2, warning = FALSE, comments = "", message = FALSE}
+```{r x3,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 ```
 
-#### Amalia: MSSM spatial resolution evaluation (Fig. 3)
-```{r x3, warning = FALSE, comments = "", message = FALSE}
-```
-
-### Resource optimisation and throughput (Suppl. Note 3.5)
-```{r sn3_5_df, warning = FALSE, comments = "", message = FALSE}
+## Resource Optimisation and Throughput (Suppl. Note 3.5)
+```{r sn3_5_df,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 sn3_5_df <- macroquant_metrics_filt_30 %>%
   filter(
     batch %in% c("MSEB0009", "MSEB0014", "MSEB0015"),
-    type_binomial %in% c("positive"),
+    type %in% c("positive"),
     size %in% c("5000"),
     !between(as.numeric(sub("M", "", microsample)), 300651, 300665)
   ) %>%
   mutate(
     protocol = ifelse(protocol %in% c("ULV2_Full"), "100%", "50%"),
     comparison = ifelse(batch %in% c("MSEB0009"), "Cost", "Throughput"),
-    lib_method = ifelse(batch %in% c("MSEB0015"), "Fluent (1 plate set-up)", "Manual"),
+    lib_method = ifelse(batch %in% c("MSEB0015"), "Automation (1 plate set-up)", "Manual"),
     comparison_grid = ifelse(comparison == "Cost", protocol, lib_method)
   ) %>%
   mutate(
     comparison = as.factor(comparison),
     comparison_grid = as.factor(comparison_grid)
   ) # %>% count(comparison, batch)
- table(sn3_5_df$comparison_grid)
+
 ```
 
-```{r sn3_5_total_pct, warning = FALSE, comments = "", message = FALSE}
-sn3_5_df_t <- sn3_5_df %>%
-  group_by(comparison_grid) %>%
-  # summarise(mean=mean(total_after_filtering.total_reads))
-  summarise(
-    total_reads = sum(total_before_filtering.total_reads),
-    low_quality = sum(total_before_filtering.total_reads - total_after_filtering.total_reads),
-    mapping_host = sum(reads_mapped_chicken),
-    mapping_human = sum(reads_mapped_human),
-    mapping_pig = sum(reads_mapped_pig),
-    mapping_bacteria = sum(reads_mapped_mag),
-    unmapped_bacteria = sum(reads_unmapped_mag)
-  ) %>%
-  mutate(other = total_reads - (low_quality + mapping_host + mapping_human + mapping_pig + mapping_bacteria + unmapped_bacteria)) %>%
-  mutate(across(-c(comparison_grid, total_reads),
-    ~ round((. / total_reads) * 100, 1),
-    .names = "{.col}_pct"
-  )) %>%
-  select(comparison_grid, ends_with("_pct")) %>%
-  t() %>%
-  as.data.frame()
-colnames(sn3_5_df_t) <- sn3_5_df_t[1, ]
-sn3_5_df_t <- sn3_5_df_t[-1, ] # remove the first row
-sn3_5_df_t
-```
+### Summary Statistic
 
-```{r sn3_5_median_pct, warning = FALSE, comments = "", message = FALSE}
+```{r sn3_5_median_pct,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 sn3_5_df_t <- sn3_5_df %>%
-  mutate(other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
-  + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag)) %>%
-  select(microsample, comparison_grid, total_before_filtering.total_reads, total_low_quality_reads, reads_mapped_chicken, reads_mapped_human, reads_mapped_pig, reads_mapped_mag, reads_unmapped_mag, other) %>%
+  mutate(
+    other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
+  + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag),
+  low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads) %>%
+  select(
+    microsample, 
+    comparison_grid, 
+    total_before_filtering.total_reads, 
+    low_quality_reads, 
+    reads_mapped_chicken, 
+    reads_mapped_human, 
+    reads_mapped_pig, 
+    reads_mapped_mag, 
+    reads_unmapped_mag, other) %>%
   mutate(across(-c(microsample, comparison_grid, total_before_filtering.total_reads),
     ~ round((. / total_before_filtering.total_reads) * 100, 1),
     .names = "{.col}_pct"
@@ -1618,7 +1463,7 @@ sn3_5_df_t <- sn3_5_df %>%
   select(microsample, comparison_grid, ends_with("_pct")) %>%
   group_by(comparison_grid) %>%
   summarise(
-    low_quality_md = median(total_low_quality_reads_pct),
+    low_quality_reads_md = median(low_quality_reads_pct),
     mapping_host_md = median(reads_mapped_chicken_pct),
     mapping_human_md = median(reads_mapped_human_pct),
     mapping_pig_md = median(reads_mapped_pig_pct),
@@ -1629,16 +1474,23 @@ sn3_5_df_t <- sn3_5_df %>%
   select(comparison_grid, ends_with("_md")) %>%
   t() %>%
   as.data.frame()
+
 colnames(sn3_5_df_t) <- sn3_5_df_t[1, ]
 sn3_5_df_t <- sn3_5_df_t[-1, ] # remove the first row
-sn3_5_df_t
+
+knitr::kable(
+  sn3_5_df_t,
+  digits = 3,           
+  booktabs = TRUE,      
+  align = "lccc"        
+)  
 ```
 
-
-```{r FigS3_5_1a, warning = FALSE, comments = "", message = FALSE}
+#### Visual Comparison Of Sequencing Performance (Fig. S3.5.1a)
+```{r FigS3_5_1a,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 ordered_metrics <- c(
   # "total_before_filtering.total_reads",
-  "total_low_quality_reads",
+  "low_quality_reads",
   "reads_mapped_chicken",
   "reads_mapped_human",
   "reads_mapped_pig",
@@ -1649,7 +1501,8 @@ ordered_metrics <- c(
 
 figs3_5_1a <- sn3_5_df %>%
   mutate(other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
-  + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag)) %>%
+  + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag),
+  low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads) %>%
   pivot_longer(
     cols = -c(names(mssm_sample_metadata), comparison, lib_method, comparison_grid, cov_filtering),
     names_to = "metric",
@@ -1659,10 +1512,7 @@ figs3_5_1a <- sn3_5_df %>%
   mutate(microsample = as.factor(microsample)) %>%
   ggplot(aes(x = microsample, y = value, fill = metric)) +
   geom_bar(position = "fill", stat = "identity") +
-  scale_fill_manual(values = c(
-    "#346254", "#4a6ab7", "#8c1c47",
-    "#9c8464", "#c49d4b", "#462410", "lightblue"
-  )) +
+  scale_fill_manual(values = c(colorRampPalette(supplementary_color)(6))) +
   labs(x = "Microsample", y = "", fill = "Read type") +
   facet_nested(. ~ comparison + comparison_grid, scales = "free", space = "free", switch = "y") +
   theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
@@ -1670,25 +1520,24 @@ figs3_5_1a <- sn3_5_df %>%
   theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
   theme(legend.position = "bottom") +
   guides(fill = guide_legend(title = "Proportion \nSequencing \nReads"))
-
 figs3_5_1a
-# ggsave(filename = "figures/FigS3_5_1a.pdf", figs3_5_1a, width = 8, height = 6)
-# ggsave(filename = "figures/FigS3_5_1a.png", figs3_5_1a, width = 8, height = 6)
+
+
 ```
 
-```{r sn3_5_dreamprep_df , warning = FALSE, comments = "", message = FALSE}
-# Prepare data: extract plate and filter
+
+#### Visual Comparison Of Library Preparation Efficiency (Fig. S3.5.1b)
+
+```{r sn3_5_dreamprep_df ,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 sn3_5_dreamprep_df_f <- sn3_5_dreamprep_df %>% 
-  #group_by(Range, type, concentration) %>% 
-  #summarise(mean=mean(nmole_L))
   mutate(plate = str_extract(sample, "^Plate \\d+")) %>%
   filter(
     !Range %in% c("35 bp to 100 bp"),
     concentration %in% c("0.1"),
     type %in% c("Positive")
-  ) %>% # remove rows with that level
+  ) %>% 
   mutate(
-    Range = droplevels(Range),
+    #Range = droplevels(Range),
     plate = case_when(
       grepl("Plate 1", plate, ignore.case = TRUE) ~ "Single-Plate",
       grepl("Plate 2", plate, ignore.case = TRUE) ~ "Dual-Plate A",
@@ -1705,29 +1554,19 @@ sn3_5_dreamprep_df_f <- sn3_5_dreamprep_df %>%
   )
 ```
 
-
-```{r FigS3_5_1b, warning = FALSE, comments = "", message = FALSE}
-sn3_5_dreamprep_df_f %>% 
-  filter(!nmole_L==0) %>% 
-  group_by(Range, type, concentration) %>% 
-  summarise(mean=mean(nmole_L))
-
+```{r FigS3_5_1b,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 comparisons <- list(c("Single-Plate", "Dual-Plate A"), c("Dual-Plate A", "Dual-Plate B"), c("Single-Plate", "Dual-Plate B"))
-
 figs3_5_1b <- sn3_5_dreamprep_df_f %>%
-  #filter(concentration == "DNA Input 0.01 ng/μL") %>% 
   ggplot(aes(x = plate, y = nmole_L, fill = plate)) +
-  geom_boxplot(position = position_dodge(width = 0.75)) +
-  geom_boxplot() +
+  geom_boxplot(position = position_dodge(width = 0.75),alpha = 0.6) +
   geom_point(position = position_jitterdodge(0.2)) +
   stat_compare_means(
     comparisons = comparisons,
     method = "wilcox.test",
-    label = "p.signif", # <-- show stars, not p =
+    label = "p.signif", 
     p.adjust.method = "BH",
     size = 4,
     vjust = 0.2,
-    # step.increase = 0.02,   # Reduces vertical distance between labels
     tip.length = 0.01
   ) +
   # scale_y_continuous(trans="log10") +
@@ -1740,20 +1579,29 @@ figs3_5_1b <- sn3_5_dreamprep_df_f %>%
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1.5, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#79b1a3", "#f58262", "#e3c7a0")) +
+  scale_fill_manual(values = c("#2A9D8F","#264653", "#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "none")
-
 figs3_5_1b
 ```
 
-```{r FigS3_5_1, warning = FALSE, comments = "", message = FALSE}
+
+```{r save_figures, echo=FALSE, warning = FALSE, comments = "", message = FALSE}
+figs1 <- cowplot::plot_grid(figs1_1a, figs1_1b,
+  ncol = 1, labels = c("a", "b"),
+  rel_heights = c(1, 1), label_size = 16
+)
+ggsave("figures/FigS1.png", figs1, width = 10, height = 11, dpi = 300)
+ggsave(filename = "figures/FigS3_2_2.png", figs3_2_2, width = 8, height = 7)
+ggsave(filename = "figures/FigS3_3_1.png", figs3_3_1, width = 8, height = 7)
+ggsave(filename = "figures/FigS3_3_2.png", figs3_3_2, width = 8, height = 7)
+ggsave(filename = "figures/FigS3_3_3a.png", figs3_3_3a, width = 8, height = 7)
+ggsave(filename = "figures/FigS3_4_1.png", figs3_4_1, width = 8, height = 11)
+ggsave(filename = "figures/FigS3_4_3.png", figs3_4_3, width = 8, height = 6)
+
 figs3_5_1 <- cowplot::plot_grid(figs3_5_1a, figs3_5_1b,
   ncol = 1, labels = c("a", "b"),
   label_size = 16
 )
-figs3_5_1
 ggsave("figures/FigS3_5_1.png", figs3_5_1, width = 10, height = 13, dpi = 300)
-# ggsave("figures/FigS3_5_1.pdf", figs3_5_1, width = 10, height = 13)
 ```
-

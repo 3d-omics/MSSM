@@ -19,3 +19,6 @@ bookdown::pdf_book:
   citation_package: natbib
   keep_tex: yes
 bookdown::epub_book: default
+output: 
+  bookdown::html_document2:
+    table_caption: false

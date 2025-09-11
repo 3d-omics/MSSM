@@ -1,180 +1,80 @@
 # Loading and Tidying Data
-**Note:** This step requires access to the raw data files located at xxxx. If you prefer to skip this step, you can proceed to the next section, making sure to load the R object that contains the necessary files for the subsequent analysis in xxx.
+**Note:** This step requires the raw data files available on Zenodo (see links below) and requires setting eval = TRUE in the code chunks below.
+If you prefer to skip this step, you can continue to the next sections by ensuring that the R object containing the necessary data is loaded from resources/working_data_object.Rdata.
+
+## Load data from Zenodo
+```{r data_zenodo, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+# 3D'omics data source - Micro-scale spatial metagenomics
+dir.create("resources/zenodo", recursive = TRUE, showWarnings = FALSE)
+url <- "https://zenodo.org/api/records/17091770/files-archive"
+download.file(url, "resources/zenodo.zip", mode = "wb")
+unzip("resources/zenodo.zip", exdir = "resources/zenodo", junkpaths = TRUE)
+file.remove("resources/zenodo.zip")
+
+# Poultry salmonella experiment (micro-scale)
+dir.create("resources/zenodo/microscale_catalogue", recursive = TRUE, showWarnings = FALSE)
+urls <- c(
+  "https://zenodo.org/records/17091749/files/checkm2.quality_report.tsv.gz?download=1",
+  "https://zenodo.org/records/17091749/files/gtdbtk.backbone.bac120.classify.tree?download=1",
+  "https://zenodo.org/records/17091749/files/dram.annotations.tsv.gz?download=1",
+  "https://zenodo.org/records/17091749/files/gtdbtk.summary.tsv.gz?download=1"
+)
+filenames <- basename(sub("\\?.*", "", urls))
+destfiles <- file.path("resources/zenodo/microscale_catalogue", filenames)
+mapply(download.file, urls, destfiles, MoreArgs = list(mode = "wb"), method = "curl") 
+
+# 3D'omics reference genome catalogue - Poultry salmonella experiment
+dir.create("resources/zenodo/macroscale_catalogue", recursive = TRUE, showWarnings = FALSE)
+urls <- c(
+  "https://zenodo.org/records/17091731/files/checkm2.quality_report.tsv.gz?download=1",
+  "https://zenodo.org/records/17091731/files/dram.annotations.tsv.gz?download=1",
+  "https://zenodo.org/records/17091731/files/gtdbtk.backbone.bac120.classify.tree?download=1",
+  "https://zenodo.org/records/17091731/files/gtdbtk.summary.tsv.gz?download=1"
+)
+filenames <- basename(sub("\\?.*", "", urls))
+destfiles <- file.path("resources/zenodo/macroscale_catalogue", filenames)
+mapply(download.file, urls, destfiles, MoreArgs = list(mode = "wb"), method = "curl") 
+```
 
 ## Import Sample metadata
-```{r sample_metadata_mssm, eval=FALSE}
-mssm_sample_metadata <- airtable("4-MSE-Info", "appKakM1bnKSekwuW") %>%  #get base ID from Airtable browser URL
-  read_airtable(., fields = c(
-    "ID", "LabBatch_text", "IntestinalSection", "SampleType",
-    "Xcoord", "Ycoord", "SizeApprox", "cryosection_text", "buffer_text", "Collection_method_text",
-    "Collection_Success", "Collection_attempts", "UsedCycles", "animal_temp", "Protocol_text",
-    "adapter_type_text", "nmole_L_100_200_bp", "nmole_L_200_1000_bp"
-  ), id_to_col = TRUE) %>% 
-  filter(
-    LabBatch_text %in% c(
-      #"MSEB0001", "MSEB0002", "MSEB0003", "MSEB0004", "MSEB0005",
-      "MSEB0006", "MSEB0009", "MSEB0010", "MSEB0011", "MSEB0012",
-      "MSEB0014", "MSEB0015"
-    ),
-    !SampleType %in% c("ControlHuman")
-  ) %>%
-  rename(
-    batch = LabBatch_text, microsample = ID, section = IntestinalSection, 
-    type = SampleType, cryosection = cryosection_text, 
-    buffer = buffer_text, collection_method = Collection_method_text,
-    collection = Collection_Success, collection_attempts = Collection_attempts,
-    cycles = UsedCycles, animal = animal_temp, size = SizeApprox, 
-    protocol = Protocol_text, adapter = adapter_type_text
-  ) %>%
-  select(
-    microsample, section, type, batch, cryosection, buffer, Xcoord, Ycoord, 
-    size, collection_method, collection, collection_attempts, cycles, animal, 
-    protocol, adapter, nmole_L_100_200_bp, nmole_L_200_1000_bp
-  ) %>%
-  mutate(
-    type_binomial = ifelse(type == "Positive", "positive", "negative"),
-    buffer = case_when(
-      buffer == "B01" ~ "L01",
-      buffer == "B02" ~ "L02",
-      buffer == "B03" ~ "L03",
-      buffer == "B04" ~ "L04",
-      buffer == "B09" ~ "L05",
-      buffer == "B11" ~ "L06",
-      buffer == "B12" ~ "L07",
-      buffer == "B13" ~ "L08",
-      TRUE ~ buffer
-    )
-  ) %>%
-  unnest(c(section, Xcoord, Ycoord, size, collection, cycles, nmole_L_100_200_bp, nmole_L_200_1000_bp)) %>%
-  arrange(microsample)
-#write.table(mssm_sample_metadata, "data/data_preparation/mssm_sample_metadata.tsv")
-#mssm_sample_metadata <- read.table("data/data_preparation/mssm_sample_metadata.tsv")
+```{r sample_metadata_mssm, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+mssm_sample_metadata <- read_tsv("resources/zenodo/mssm_sample_metadata.tsv", show_col_types = FALSE)
 ```
 
 ## Sequencing Data Quality 
 ### Read Quality: Pre- vs Post-Filtering (fastp)
 **Note:** The parse_fastp() function in index needs to be loaded.
-```{r read_quality, eval=FALSE}
-mssm_json_data <- fromJSON("data/data_preparation/multiqc_data.json")  #Download file from ERDA
-mssm_fastp <- parse_fastp(mssm_json_data) %>%
-  rename_with(~ gsub("^(summary|filtering_result|adapter_cutting|polyx_trimming)\\.", "", .)) %>%
-  select(
-    sample_id,
-    before_filtering.total_reads,
-    after_filtering.total_reads,
-    before_filtering.total_bases,
-    after_filtering.total_bases,
-    before_filtering.gc_content,
-    after_filtering.gc_content,
-    low_quality_reads,
-    adapter_trimmed_reads,
-    adapter_trimmed_bases,
-    duplication.rate
-  ) %>%
-  mutate(microsample = str_remove(sample_id, "\\.lib\\d+$")) %>%
-  filter(grepl("^M", microsample)) %>%
-  group_by(microsample) %>%
-  summarise(
-    across(contains("reads"), sum, .names = "total_{.col}"),
-    across(contains("bases"), sum, .names = "total_{.col}"),
-    across(ends_with("content"), mean, .names = "percent_{.col}"),
-    across(ends_with("rate"), mean, .names = "percent_{.col}")
-  )
+```{r read_quality, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+mssm_fastp <- read_tsv("resources/zenodo/mssm_fastp.tsv", show_col_types = FALSE)
 ```
 
 
 ### Contamination Assessment: Host, Human, and Environmental Reads
-```{r mapping_eukaryots_references, eval=FALSE}
-mssm_euk_mapping <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_bowtie2_multiqc_report_data/multiqc_samtools_stats.txt") %>%
-  mutate(
-    reference = case_when(
-      grepl("GRCh38", Sample, ignore.case = TRUE) ~ "human",
-      grepl("GRCg7b", Sample, ignore.case = TRUE) ~ "chicken",
-      grepl("Sscrofa11.1", Sample, ignore.case = TRUE) ~ "pig",
-      TRUE ~ NA_character_
-    ),
-    microsample = str_extract(Sample, "M\\d+")
-  ) %>%
-  filter(
-    !is.na(reference), # Remove rows where reference is NA
-    grepl("^M", microsample)
-  ) %>%
-  select(Sample, microsample, reference, raw_total_sequences, reads_mapped, reads_unmapped) %>%
-  group_by(microsample, reference) %>%
-  summarise(
-    raw_total_sequences = sum(raw_total_sequences, na.rm = TRUE),
-    reads_mapped = sum(reads_mapped, na.rm = TRUE),
-    reads_unmapped = sum(reads_unmapped, na.rm = TRUE)
-  ) %>%
-  pivot_wider(names_from = reference, values_from = c(raw_total_sequences, reads_mapped, reads_unmapped))
+```{r mapping_eukaryots_references, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+mssm_euk_mapping <- read_tsv("resources/zenodo/mssm_euk_mapping.tsv", show_col_types = FALSE)  
 ```
 
 ### Genome-Centric Mapping Statistics: Macroscale MAG Catalogue
-```{r mapping_macro_catalogue, eval=FALSE}
-# download.file("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify.zip", "data/data_preparation/quantify.zip", mode = "wb")
-mssm_mag_mapping <- read.table(unz("data/data_preparation/quantify.zip", "multiqc_samtools_stats.txt"), header = T, sep = "\t", quote = "\"") %>%
-  mutate(microsample = str_extract(Sample, "M\\d+")) %>%
-  filter(grepl("^M", microsample)) %>%
-  select(Sample, microsample, raw_total_sequences, reads_mapped, reads_unmapped) %>%
-  group_by(microsample) %>%
-  summarise(
-    raw_total_sequences_mag = sum(raw_total_sequences, na.rm = TRUE),
-    reads_mapped_mag = sum(reads_mapped, na.rm = TRUE),
-    reads_unmapped_mag = sum(reads_unmapped, na.rm = TRUE)
-  )
+```{r mapping_macro_catalogue, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+mssm_mag_mapping<- read_tsv("resources/zenodo/mssm_mag_mapping.tsv", show_col_types = FALSE)  
 ```
 
 ### Read-Centric Mapping Statistics: Kraken (genomes) and SingleM (single-copy marker genes)
-```{r mapping_singlem, eval=FALSE}
-mssm_singlem <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess/singlem/microbial_fraction.tsv") %>%
-  mutate(microsample = str_extract(sample, "M\\d+")) %>%
-  filter(grepl("^M", microsample)) %>%
-  select(-c(warning, sample)) %>%
-  group_by(microsample) %>%
-  summarise(
-    read_fraction_singlem = (mean(read_fraction, na.rm = TRUE)) / 100 #,
-    # bacterial_archaeal_bases_singlem = sum(bacterial_archaeal_bases, na.rm = TRUE),
-    # average_bacterial_archaeal_genome_size_singlem = mean(average_bacterial_archaeal_genome_size, na.rm = TRUE)
-  )
+```{r mapping_singlem, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+mssm_singlem <- read_tsv("resources/zenodo/mssm_singlem.tsv", show_col_types = FALSE)  
 ```
 
-```{r mapping_kraken, eval=FALSE}
-mssm_kraken <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_kraken2_multiqc_report_data/multiqc_kraken.txt") %>%
-  mutate(microsample = str_extract(Sample, "M\\d+")) %>%
-  filter(grepl("^M", microsample)) %>%
-  select(Sample, microsample, D) %>%
-  separate(D, into = c("Eukaryota", "Bacteria", "Archaea", "Viruses"), sep = ", ", remove = TRUE) %>%
-  mutate(across(!all_of("microsample"), ~ parse_number(.))) %>%
-  group_by(microsample) %>%
-  summarise(
-    kr_Eukaryota = sum(Eukaryota, na.rm = TRUE),
-    kr_Bacteria = sum(Bacteria, na.rm = TRUE),
-    kr_Archaea = sum(Archaea, na.rm = TRUE),
-    kr_Viruses = sum(Viruses, na.rm = TRUE),
-  ) %>%
-  mutate(
-    total_kraken = kr_Eukaryota + kr_Bacteria + kr_Archaea + kr_Viruses,
-    bacteria_pct_kraken = kr_Bacteria / total_kraken,
-    eukaryota_pct_kraken = kr_Eukaryota / total_kraken
-  )
+```{r mapping_kraken, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+mssm_kraken <- read_tsv("resources/zenodo/mssm_kraken.tsv", show_col_types = FALSE)  
 ```
 
 ### Redundancy & Coverage Estimation: Nonpareil
-```{r estimates_nonpareil, eval=FALSE}
-mssm_nonpareil <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/preprocess_nonpareil_multiqc_report_data/nonpareil-table.txt") %>%
-  mutate(microsample = str_extract(Sample, "M\\d+")) %>%
-  filter(grepl("^M", microsample)) %>%
-  select(microsample, Redundancy, Coverage, Diversity) %>%
-  group_by(microsample) %>%
-  summarise(
-    redundancy_nonpareil = (mean(Redundancy, na.rm = TRUE)) / 100,
-    coverage_nonpareil = (mean(Coverage, na.rm = TRUE)) / 100,
-    diversity_nonpareil = mean(Diversity, na.rm = TRUE)
-  )
+```{r estimates_nonpareil, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+mssm_nonpareil <- read_tsv("resources/zenodo/mssm_nonpareil.tsv", show_col_types = FALSE)  
 ```
 
 ### Combined Quality Statistics
-```{r data_quality_df, eval=FALSE}
+```{r data_quality_df, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 mssm_quality <- reduce(
   list(
     mssm_sample_metadata,
@@ -198,43 +98,29 @@ mssm_quality <- reduce(
     mapmag_rawreads_pct = (reads_mapped_mag / total_before_filtering.total_reads),
     mapmag_filteredreads_pct = (reads_mapped_mag / total_after_filtering.total_reads),
     mapmag_prokreads_pct = (reads_mapped_mag / raw_total_sequences_mag)
-  ) %>%
-  filter(microsample %in% c(mssm_sample_metadata$microsample))
-
-
+  ) 
 ```
 
 ## Input Preparation For Metagenomic Analysis
 
 ### Abundance Estimation Using Macro-scale MAGs Catalogue 95 ANI
 
-#### Import Genome Counts
+#### Import Genome Counts & Coverage
 
-```{r mag_readcount_macroquant, eval=FALSE}
-macroquant_read_counts <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify/coverm/genome.count.REF0015-g_mg_hybrid-0.95.tsv.gz", show_col_types = FALSE) %>%
-  rename(genome = 1) %>%
-  pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
-  mutate(sample = substr(data, 1, 7)) %>%
-  group_by(genome, sample) %>%
-  summarise(counts = sum(counts), .groups = "drop") %>%
-  pivot_wider(names_from = "sample", values_from = "counts") 
+```{r mag_readcount_macroquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+macroquant_read_counts <- read_tsv("resources/zenodo/macroquant_read_counts.tsv", show_col_types = FALSE)  
 ```
 
-```{r mag_coveredbases_macroquant, eval=FALSE}
-macroquant_covered_bases <- read_tsv("https://sid.erda.dk/share_redirect/aTWbNfAf1o/results/quantify/coverm/genome.covered_bases.REF0015-g_mg_hybrid-0.95.tsv.gz", show_col_types = FALSE) %>%
-  rename(genome = 1) %>%
-  pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
-  mutate(sample = substr(data, 1, 7)) %>%
-  group_by(genome, sample) %>%
-  summarise(counts = sum(counts), .groups = "drop") %>%
-  pivot_wider(names_from = "sample", values_from = "counts")
+```{r mag_coveredbases_macroquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+macroquant_covered_bases <- read_tsv("resources/zenodo/macroquant_covered_bases.tsv", show_col_types = FALSE)  
 ```
 
 #### Macro-scale MAGs Catalogue
-##### Taxonomy
+
+##### Taxonomy {-}
 This is the raw taxonomy table generated by GTDBtk, which is simplified for downstream analyses.
-```{r mag_taxonomy_macro, eval=FALSE}
-macromag_taxonomy <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/gtdbtk.summary.tsv.gz", show_col_types = FALSE) %>%
+```{r mag_taxonomy_macro, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+macroscale_catalogue_taxonomy <- read_tsv("resources/zenodo/macroscale_catalogue/gtdbtk.summary.tsv.gz", show_col_types = FALSE) %>%
   rename(genome = user_genome) %>%
   mutate(genome = str_replace_all(genome, "\\.fa", "")) %>%
   separate(classification, c("domain", "phylum", "class", "order", "family", "genus", "species"), sep = ";") %>%
@@ -247,9 +133,7 @@ macromag_taxonomy <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF
     family = sub("^f__", "", family),
     genus = sub("^g__", "", genus),
     species = sub("^s__", "", species)
-  ) %>%
-  arrange(match(genome, macroquant_read_counts$genome)) %>%
-  filter(genome %in% macroquant_read_counts$genome) %>%
+  ) %>% 
   mutate(
     species = if_else(
       is.na(species) | species == "",
@@ -271,11 +155,15 @@ macromag_taxonomy <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF
       genus
     )
   )
+
+macromag_taxonomy <- macroscale_catalogue_taxonomy %>% 
+  arrange(match(genome, macroquant_read_counts$genome)) %>%
+  filter(genome %in% macroquant_read_counts$genome) 
 ```
 
-##### Quality
-```{r mag_quality_macro, eval=FALSE}
-macromag_quality <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/checkm2.quality_report.tsv.gz", show_col_types = FALSE) %>%
+##### Quality {-}
+```{r mag_quality_macro, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+macroscale_catalogue_quality <- read_tsv("resources/zenodo/macroscale_catalogue/checkm2.quality_report.tsv.gz", show_col_types = FALSE) %>%
   # rename first column
   rename(genome = 1) %>%
   # remove .fa from the end of each genome name
@@ -301,73 +189,47 @@ macromag_quality <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0
   mutate(length_ratio = length / median(length, na.rm = TRUE))
 
 macromag_genomemetadata <- macromag_taxonomy %>%
-  left_join(macromag_quality, by = join_by(genome == genome)) %>% # join quality
+  left_join(macroscale_catalogue_quality, by = join_by(genome == genome)) %>% # join quality
   arrange(match(genome, macroquant_read_counts$genome)) %>%
   filter(genome %in% macroquant_read_counts$genome)
 
 ```
 
-##### Functional Annotation
+##### Functional Annotation {-}
 
-```{r mag_annotation_macro, eval=FALSE}
-# macromag_annotations <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/dram.annotations.tsv.gz", show_col_types = FALSE) %>%
-macromag_annotations <- read_tsv("data/data_preparation/annotations.tsv", show_col_types = FALSE) %>%
+```{r mag_annotation_macro, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+macromag_annotations <- read_tsv("resources/zenodo/macroscale_catalogue/dram.annotations.tsv.gz", show_col_types = FALSE) %>%
   rename(gene = 1, genome = 2) %>%
   filter(genome %in% macroquant_read_counts$genome)
 macromag_gifts <- distill(macromag_annotations, GIFT_db, genomecol = 2, annotcol = c(9, 10, 19))
 GIFT_db_df <- GIFT_db
 ```
 
-##### Phylogenetic Tree
+##### Phylogenetic Tree {-}
 
-```{r mag_tree_macro, eval=FALSE}
-macromag_tree <- read.tree("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/gtdbtk.backbone.bac120.classify.tree")
+```{r mag_tree_macro, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+# upload from zenodo
+macromag_tree <- read.tree("resources/zenodo/macroscale_catalogue/gtdbtk.backbone.bac120.classify.tree")
 macromag_tree$tip.label <- str_replace_all(macromag_tree$tip.label, "'", "") # remove single quotes in MAG names
 macromag_tree <- keep.tip(macromag_tree, tip = macroquant_read_counts$genome) # keep only MAG tips
 ```
 
-#### Coverage Filtering & Genome Count Normalization
+#### Coverage Filtering & Count Normalization
 
-##### Coverage filtering
+##### Coverage filtering {-}
 **Note:** Genomes that have less than 30% of their length covered by reads are turned into zeros to account for the random allocation of reads across genomes due to mapping heuristics. 
-```{r coverage_fitering_macroquant, eval=FALSE}
+```{r coverage_fitering_macroquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 macroquant_coverage <- macroquant_covered_bases %>% # calculate coverage values by dividing the number of covered bases by the length of each genome
   mutate(across(where(is.numeric), ~ . / macromag_genomemetadata$length))
-
-macroquant_read_counts_filtered <- list()
-macroquant_summary_filtered <- list()
-# Define thresholds
-coverage_thresholds <- c(0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05)
-# Loop over thresholds
-for (threshold in coverage_thresholds) {
-  df <- macroquant_coverage %>%
-    mutate(across(where(is.numeric), ~ ifelse(. > threshold, 1, 0))) %>%
-    mutate(across(-1, ~ . * macroquant_read_counts[[cur_column()]]))
-  summary <- df %>%
-    summarise(across(where(is.numeric), \(x) sum(x, na.rm = TRUE))) %>%
-    pivot_longer(
-      cols = where(is.numeric), # columns to pivot (all numeric here)
-      names_to = "microsample", # new column for former column names
-      values_to = paste0("read_count_", threshold * 100) # new column for values
-    )
-  name <- paste0("filt_", threshold * 100)
-  macroquant_read_counts_filtered[[name]] <- df
-  macroquant_summary_filtered[[name]] <- summary
-}
-macroquant_merged_summary <- reduce(macroquant_summary_filtered, left_join, by = "microsample")
-
 min_coverage <- 0.3
 macroquant_read_counts_filt_30 <- macroquant_coverage %>%
   mutate(across(where(is.numeric), ~ ifelse(. > min_coverage, 1, 0))) %>%
   mutate(across(-1, ~ . * macroquant_read_counts[[cur_column()]]))
-
-all(macroquant_read_counts_filtered$filt_30 == macroquant_read_counts_filt_30)
-
 ```
 
-##### Generate genome count table
+##### Generate genome count table {-}
 After filtering the low-coverage reads, read counts are transformed into genome counts using genome-length and read-length information.
-```{r genome_counts_macroquant, eval=FALSE}
+```{r genome_counts_macroquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 readlength <- 150 # change if sequencing read length is different
 macroquant_genome_counts_filt_30 <- macroquant_read_counts_filt_30 %>%
   mutate(across(where(is.numeric), ~ . / (macromag_genomemetadata$length / readlength))) 
@@ -375,61 +237,36 @@ macroquant_genome_counts  <- macroquant_read_counts %>%
   mutate(across(where(is.numeric), ~ . / (macromag_genomemetadata$length / readlength))) 
 ```
 
-#### Alpha Diversity
+#### Alpha Diversity Metrics
 **Note:** The calculate_alpha_diversity() function needs to be loaded.
-```{r alpha_diversities_macroquant, eval=FALSE}
+```{r alpha_diversities_macroquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 # Calculate alpha diversity for filtered genome counts data
 macroquant_metrics_filt_30 <- calculate_alpha_diversity(
   input_data = macroquant_genome_counts_filt_30,
   metadata_name = mssm_quality,
   dataset_name = "filt_30",
   tree_name = macromag_tree
-) %>% filter(!microsample %in% c("Undeter"))
+) 
 ``` 
-
-```{r nMOL, eval=FALSE}
-# Calculate alpha diversity for filtered genome counts data
-macroquant_metrics_filt_30 %>% 
-  group_by(type_binomial, cov_filtering, size) %>% 
-  summarise(nmole_median=median(nmole_L_200_1000_bp,na.rm = TRUE),
-            nmole_IQR1=quantile(nmole_L_200_1000_bp, probs = c(0.25), na.rm = TRUE),
-            nmole_IQR2=quantile(nmole_L_200_1000_bp, probs = c(0.75), na.rm = TRUE),
-            nmole_min=min(nmole_L_200_1000_bp, na.rm = TRUE),
-            nmole_max=max(nmole_L_200_1000_bp, na.rm = TRUE))
-
-```
 
 
 ### Abundance Estimation Using Micro-scale MAGs Catalogue
 
-#### Import Genome Counts
+#### Import Genome Counts & Coverage
 
-```{r mag_readcount_microquant, eval=FALSE}
-microquant_read_counts <- read_tsv("https://sid.erda.dk/share_redirect/dn35KSggCd/genome.count.REF0025-MSEB0011-0.95.tsv.gz", show_col_types = FALSE) %>%
-  rename(genome = 1) %>%
-  pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
-  mutate(sample = str_extract(data, "M\\d+")) %>%  # Extract the sample name
-  group_by(genome, sample) %>%
-  summarise(counts = sum(counts), .groups = "drop") %>%
-  pivot_wider(names_from = "sample", values_from = "counts")
-
+```{r mag_readcount_microquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+microquant_read_counts <- read_tsv("resources/zenodo/microquant_read_counts.tsv", show_col_types = FALSE)  
 ```
 
-```{r mag_coveredbases_microquant, eval=FALSE}
-microquant_covered_bases <- read_tsv("https://sid.erda.dk/share_redirect/dn35KSggCd/genome.covered_bases.REF0025-MSEB0011-0.95.tsv.gz", show_col_types = FALSE) %>%
-  rename(genome = 1) %>%
-  pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
-  mutate(sample = str_extract(data, "M\\d+")) %>%
-  group_by(genome, sample) %>%
-  summarise(counts = sum(counts), .groups = "drop") %>%
-  pivot_wider(names_from = "sample", values_from = "counts")
+```{r mag_coveredbases_microquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+microquant_covered_bases <- read_tsv("resources/zenodo/microquant_covered_bases.tsv", show_col_types = FALSE)  
 ```
 
 #### Micro-scale MAGs Catalogue
-##### Taxonomy
+##### Taxonomy {-}
 This is the raw taxonomy table generated by GTDBtk, which is simplified for downstream analyses.
-```{r mag_taxonomy_micro, eval=FALSE}
-micromag_taxonomy <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0025-MSEB0011/gtdbtk.summary.tsv", show_col_types = FALSE) %>%
+```{r mag_taxonomy_micro, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+micromag_taxonomy <- read_tsv("resources/zenodo/microscale_catalogue/gtdbtk.summary.tsv.gz", show_col_types = FALSE) %>%
   rename(genome = user_genome) %>%
   mutate(genome = str_replace_all(genome, "\\.fa", "")) %>%
   separate(classification, c("domain", "phylum", "class", "order", "family", "genus", "species"), sep = ";") %>%
@@ -466,13 +303,11 @@ micromag_taxonomy <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF
       genus
     )
   ) 
-
-
 ```
 
-##### Quality
-```{r mag_quality_micro, eval=FALSE}
-micromag_quality <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0025-MSEB0011/checkm2.quality_report.tsv", show_col_types = FALSE) %>%
+##### Quality {-}
+```{r mag_quality_micro, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+micromag_quality <- read_tsv("resources/zenodo/microscale_catalogue/checkm2.quality_report.tsv.gz", show_col_types = FALSE) %>%
   # rename first column
   rename(genome = 1) %>% 
   # remove .fa from the end of each genome name
@@ -497,70 +332,33 @@ micromag_genomemetadata <- micromag_taxonomy %>%
   left_join(micromag_quality, by = join_by(genome == genome)) %>% # join quality
   arrange(match(genome, microquant_read_counts$genome)) %>% 
   filter(genome %in% microquant_read_counts$genome)
-
-
 ```
 
-##### Functional Annotation
+##### Phylogenetic Tree {-}
 
-```{r mag_annotation_micro, eval=FALSE}
-#micromag_annotations <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0025-MSEB0011/dram.annotations.tsv.gz", show_col_types = FALSE) %>%
-#micromag_annotations <- read_tsv("data/data_preparation/micro_annotations.tsv.xz", show_col_types = FALSE) %>%
-#  rename(gene = 1, genome = 2)  %>%
-#  filter(genome %in% microquant_read_counts$genome)
-#micromag_gifts <- distill(micromag_annotations, GIFT_db, genomecol = 2, annotcol = c(9, 10, 19))
-```
-
-##### Phylogenetic Tree
-
-```{r mag_tree_micro, eval=FALSE}
-micromag_tree <- read.tree("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0025-MSEB0011/gtdbtk.backbone.bac120.classify.tree")
+```{r mag_tree_micro, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+# upload from zenodo
+micromag_tree <- read.tree("resources/zenodo/microscale_catalogue/gtdbtk.backbone.bac120.classify.tree")
 micromag_tree$tip.label <- str_replace_all(micromag_tree$tip.label, "'", "") # remove single quotes in MAG names
 micromag_tree <- keep.tip(micromag_tree, tip = microquant_read_counts$genome) # keep only MAG tips
 ```
 
-#### Coverage Filtering & Genome Count Normalization
+#### Coverage Filtering & Count Normalization
 
-##### Coverage filtering
+##### Coverage filtering {-}
 **Note:** Genomes that have less than 30% of their length covered by reads are turned into zeros to account for the random allocation of reads across genomes due to mapping heuristics. 
-```{r coverage_fitering_microquant, eval=FALSE}
+```{r coverage_fitering_microquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 microquant_coverage<- microquant_covered_bases %>% # calculate coverage values by dividing the number of covered bases by the length of each genome
   mutate(across(where(is.numeric), ~ . / micromag_genomemetadata$length))
-
-microquant_read_counts_filtered <- list()
-microquant_summary_filtered <- list()
-# Define thresholds
-coverage_thresholds <- c(0.4, 0.35, 0.3, 0.25, 0.2, 0.15, 0.1, 0.05)
-# Loop over thresholds
-for (threshold in coverage_thresholds) {
-  df <- microquant_coverage%>%
-    mutate(across(where(is.numeric), ~ ifelse(. > threshold, 1, 0))) %>%
-    mutate(across(-1, ~ . * microquant_read_counts[[cur_column()]]))
-  summary <- df %>%
-    summarise(across(where(is.numeric), \(x) sum(x, na.rm = TRUE)))%>%
-    pivot_longer(
-      cols = where(is.numeric), # columns to pivot (all numeric here)
-      names_to = "microsample", # new column for former column names
-      values_to = paste0("read_count_", threshold * 100) # new column for values
-    )
-  name <- paste0("filt_", threshold * 100)
-  microquant_read_counts_filtered[[name]] <- df
-  microquant_summary_filtered[[name]] <- summary
-}
-microquant_merged_summary <- reduce(microquant_summary_filtered, left_join, by = "microsample")
-
 min_coverage <- 0.3
 microquant_read_counts_filt_30 <- microquant_coverage %>%
   mutate(across(where(is.numeric), ~ ifelse(. > min_coverage, 1, 0))) %>%
   mutate(across(-1, ~ . * microquant_read_counts[[cur_column()]]))
-
-all(microquant_read_counts_filtered$filt_30 == microquant_read_counts_filt_30)
-
 ```
 
-##### Generate genome count table
+##### Generate genome count table {-}
 After filtering the low-coverage reads, read counts are transformed into genome counts using genome-length and read-length information.
-```{r genome_counts_microquant, eval=FALSE}
+```{r genome_counts_microquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 readlength <- 150 # change if sequencing read length is different
 microquant_genome_counts_filt_30 <- microquant_read_counts_filt_30 %>%
   mutate(across(where(is.numeric), ~ . / (micromag_genomemetadata$length / readlength)))
@@ -568,96 +366,40 @@ microquant_genome_counts <- microquant_read_counts %>%
   mutate(across(where(is.numeric), ~ . / (micromag_genomemetadata$length / readlength)))
 ```
 
-#### Alpha Diversity
+#### Alpha Diversity Metrics
 **Note:** The `calculate_alpha_diversity()` function needs to be loaded.
 
-```{r alpha_diversities_microquant, eval=FALSE}
+```{r alpha_diversities_microquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 # Calculate alpha diversity for filtered genome counts data
 microquant_metrics_filt_30 <- calculate_alpha_diversity(
   input_data = microquant_read_counts_filt_30,
   metadata_name = mssm_quality,
   dataset_name = "filt_30",
   tree_name = micromag_tree
-) %>% filter(!microsample %in% c("Undeter"))
-
+) 
 ``` 
 
 ### Abundance Estimation Using Macro-scale MAGs Catalogue 98 ANI
-##### Mapping Data
-```{r load_98ANI, eval=FALSE}
+
+##### Mapping and Catalogue Data
+```{r load_98ANI, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 # Read count
-macroquant_read_counts_98 <- read_tsv("data/data_preparation/genome.count.REF0015-g_mg_hybrid-0.98.tsv", show_col_types = FALSE) %>%
-  rename(genome = 1) %>%
-  pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
-  mutate(sample = str_extract(data, "M\\d+")) %>%
-  group_by(genome, sample) %>%
-  summarise(counts = sum(counts), .groups = "drop") %>%
-  pivot_wider(names_from = "sample", values_from = "counts")
+macroquant_read_counts_98 <- read_tsv("resources/zenodo/macroquant_read_counts_98.tsv", show_col_types = FALSE)  
 # Covered bases
-macroquant_covered_bases_98 <- read_tsv("data/data_preparation/genome.covered_bases.REF0015-g_mg_hybrid-0.98.tsv", show_col_types = FALSE) %>%
-  rename(genome = 1) %>%
-  pivot_longer(!genome, names_to = "data", values_to = "counts") %>%
-  mutate(sample = str_extract(data, "M\\d+")) %>%
-  group_by(genome, sample) %>%
-  summarise(counts = sum(counts), .groups = "drop") %>%
-  pivot_wider(names_from = "sample", values_from = "counts")
+macroquant_covered_bases_98 <- read_tsv("resources/zenodo/macroquant_covered_bases_98.tsv", show_col_types = FALSE)  
 # Taxonomy
-macromag_taxonomy_98 <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/gtdbtk.summary.tsv.gz", show_col_types = FALSE) %>%
-  rename(genome = user_genome) %>%
-  mutate(genome = str_replace_all(genome, "\\.fa", "")) %>%
-  separate(classification, c("domain", "phylum", "class", "order", "family", "genus", "species"), sep = ";") %>%
-  select(genome, domain, phylum, class, order, family, genus, species) %>%
+macromag_taxonomy_98 <- macroscale_catalogue_taxonomy %>%
   arrange(match(genome, macroquant_read_counts_98$genome)) %>%
-  filter(genome %in% macroquant_covered_bases_98$genome) %>%
-  select(genome, domain, phylum, class, order, family, genus, species) %>%
-  mutate(
-    domain = sub("^d__", "", domain), # Remove prefix
-    phylum = sub("^p__", "", phylum),
-    class = sub("^c__", "", class),
-    order = sub("^o__", "", order),
-    family = sub("^f__", "", family),
-    genus = sub("^g__", "", genus),
-    species = sub("^s__", "", species)
-  ) %>%
-  mutate(
-    species = if_else(
-      is.na(species) | species == "",
-      paste0("unclassified_", genus),
-      species
-    )
-  ) %>%
-  mutate(
-    species = if_else(
-      is.na(species) | species == "unclassified_",
-      paste0("unclassified_", family),
-      species
-    )
-  ) %>%
-  mutate(
-    genus = if_else(
-      is.na(genus) | genus == "",
-      paste0("unclassified_", family),
-      genus
-    )
-  )
-
-# Genome quality
-macromag_quality_98 <- read_tsv("https://sid.erda.dk/share_redirect/BTwCSjaWz2/REF0015-g_mg_hybrid/checkm2.quality_report.tsv.gz", show_col_types = FALSE) %>%
-  rename(genome = 1) %>%
-  mutate(genome = str_replace_all(genome, "\\.fa", "")) %>%
-  arrange(match(genome, macroquant_read_counts_98$genome)) %>%
-  select(genome, Completeness, Contamination, Coding_Density, Genome_Size, Contig_N50) %>%
-  mutate(circul = ifelse(Genome_Size == Contig_N50, "Y", "N")) %>%
-  rename(completeness = Completeness, contamination = Contamination, coding_density = Coding_Density, length = Genome_Size) %>%
-  filter(genome %in% macroquant_covered_bases_98$genome)
-
+  filter(genome %in% macroquant_covered_bases_98$genome) 
 # Genome Metadata
 macromag_genomemetadata_98 <- macromag_taxonomy_98 %>%
-  left_join(macromag_quality_98, by = join_by(genome == genome)) # join quality
+  left_join(macroscale_catalogue_quality, by = join_by(genome == genome)) %>% # join quality
+  arrange(match(genome, macroquant_read_counts_98$genome)) %>% 
+  filter(genome %in% macroquant_read_counts_98$genome)
 ```
 
 ##### Filter and Normalise
-```{r filter_98ANI, eval=FALSE}
+```{r filter_98ANI, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 macroquant_coverage_98 <- macroquant_covered_bases_98 %>%
   mutate(across(where(is.numeric), ~ . / macromag_genomemetadata_98$length))
 min_coverage_98 <- 0.3
@@ -674,10 +416,8 @@ macroquant_genome_counts_98 <- macroquant_read_counts_98 %>%
 
 ## Macro-scale Metagenomics (MACRO)
 ### Merge Genome Count to MSSM
-```{r genome_count_combined, eval=FALSE}
-macro_genome_count_macro_filt_30 <- read_tsv("data/data_preparation/conventional_REF0015-g_mg_hybrid.0.95_genome_count_filt.tsv") %>%
-  filter(rowSums(select(., -genome)) != 0)
-
+```{r genome_count_combined, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+macro_genome_count_macro_filt_30 <- read_tsv("resources/zenodo/macro_genome_count_macro_filt_30.tsv", show_col_types = FALSE)  
 if (all(macro_genome_count_macro_filt_30$genome %in% macromag_genomemetadata$genome)) {
   mssmmacroquant_vs_macro_genome_count_30 <- full_join(macroquant_genome_counts_filt_30 %>% select(genome, mssm_sample_metadata$microsample), macro_genome_count_macro_filt_30, by = "genome") %>%
     select(where(~ !all(. == 0))) %>%
@@ -687,13 +427,12 @@ if (all(macro_genome_count_macro_filt_30$genome %in% macromag_genomemetadata$gen
 } else {
   message("Not all genomes in MACRO are present in MSSM")
 }
-
 ```
 
 ### Merge Metadata to MSSM
-```{r sample_metadata_combined, eval=FALSE}
+```{r sample_metadata_combined, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 mssmmacroquant_vs_macro_sample_metadata <- macroquant_metrics_filt_30 %>%
-  select(microsample, section, batch, cryosection, buffer, animal, cycles, type_binomial, 
+  select(microsample, section, batch, cryosection, buffer, animal, cycles, type, 
          total_before_filtering.total_reads, total_after_filtering.total_reads, richness) %>%
   filter(microsample %in% names(mssmmacroquant_vs_macro_genome_count_30)) %>%
   bind_rows(
@@ -716,12 +455,12 @@ mssmmacroquant_vs_macro_sample_metadata <- macroquant_metrics_filt_30 %>%
       batch = NA, cryosection = NA, buffer = NA  # Same here
     )
   ) %>%
-  mutate(group = ifelse(section == "right caecum digesta", "Macro-scale Metagenomics", "Micro-scale Spatial Metagenomics")) %>% 
+  mutate(group = ifelse(section == "right caecum digesta", "Macro-scale Metagenomics", "Micro-scale Spatial Metagenomics")) %>%
   column_to_rownames("microsample")
 ```
 
 ### Combined Phyloseq Object
-```{r phyloseq, eval=FALSE}
+```{r phyloseq, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 mssmmacroquant_vs_macro_taxonomy <- macromag_taxonomy %>% filter(genome %in% c(rownames(mssmmacroquant_vs_macro_genome_count_30))) %>% column_to_rownames("genome")
 
 physeq_all <- phyloseq(
@@ -742,72 +481,54 @@ physeq_genus_relabund <- transform_sample_counts(physeq_genus, function(x) x / s
 ```
 
 
-### Amalia: Mock Community (BAC)
-### Amalia: Fluorescence In Situ hybridization (FISH)
+## Mock Community (BAC)
 
-### Confocal microscopy of DAPI-stained microsections
-
-```{r DAP_quantification_df, eval=FALSE}
-dapi_df <- read_csv("data/data_preparation/data_DAPI_bact_quant_selected.csv", show_col_types = FALSE) %>%
-  separate(Organ_source, into = c("Age_1", "Section"), sep = " ") %>% 
-  group_by(Cryosection) %>% # Group by the column(s) containing duplicates
-  mutate(Sequence = row_number()) %>%
-  ungroup()  %>%
-  mutate(
-    Age = ifelse(Age_1 == "old", "35-day-old Animal", "14-day-old Animal"),
-    Animal = str_sub(Cryosection, 1, 6),
-    merge_variable=paste(Animal, Sequence, sep = "_"),
-    #Distance_from_one_side=ifelse(Distance_from_one_side == 0, 1, Distance_from_one_side)
-  ) %>%
-  filter(
-    case_when(
-      Age == "14-day-old Animal" ~ Distance_from_one_side < 2500,  
-      Age == "35-day-old Animal" ~ Distance_from_one_side < 4000,  
-      TRUE ~ TRUE))  %>% 
-  mutate(Section = recode(Section,
-      "caecum" = "Caecum",
-      "colon" = "Colon",
-      "ileum" = "Ileum"
-    ))
+### Import Sample Metadata
+```{r sample_metadata_mock, warning=FALSE, comments="", message=FALSE, eval = FALSE}
+sample_metadata_mock <- read_tsv("resources/zenodo/sample_metadata_mock.tsv", show_col_types = FALSE)
 ```
+
+### Import Genome Metadata
+```{r genome_metadata_mock, warning=FALSE, comments="", message=FALSE, eval = FALSE}
+genome_metadata_mock <- tibble(genome=c("SR","XR","MO","PA"),
+                       species=c("Stenotrophomonas rhizophila","Xanthomonas retroflexus","Microbacterium oxydans","Paenibacillus amylolyticus"),
+                       length=c(4216903,4655568,3989887,7273724),
+                       gram=c("negative","negative","positive","positive"))
+```
+
+### Import Genome Counts & Coverage
+
+```{r load_count_mock, message=FALSE, warning = FALSE, comments = "", eval = FALSE}
+read_counts_mock <- read_tsv("resources/zenodo/read_counts_mock.tsv", show_col_types = FALSE)
+```
+
+```{r load_hits_mock, message=FALSE, warning = FALSE, comments = "", eval = FALSE}
+genome_covered_bases_mock<- read_tsv("resources/zenodo/genome_covered_bases_mock.tsv", show_col_types = FALSE)
+```
+
+## Fluorescence In Situ hybridization (FISH)
+#### Confocal microscopy of DAPI-stained microsections
+```{r DAP_quantification_df, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+dapi_df <- read_tsv("resources/zenodo/dapi_df.tsv", show_col_types = FALSE)  
+```
+
+### Abundance Estimation using FISH
+
 
 ## Fragment Analyzer
 
-```{r frag_anal_df, eval=FALSE}
-sn3_5_dreamprep_df <- read_csv("data/data_preparation/CSV_2vs1plate_2FAplates.csv",
-  col_types = cols_only(
-    "Sample ID" = col_character(),
-    "Range" = col_character(),
-    "ng/uL" = col_double(),
-    "% Total" = col_double(),
-    "nmole/L" = col_double(),
-    "Avg. Size" = col_double(),
-    "Plate" = col_character(),
-    "Type" = col_character(),
-    "Concentration" = col_character()
-  )
-) %>%
-  rename(
-    sample = "Sample ID",
-    plate = "Plate", type = "Type", concentration = "Concentration",
-    ng_uL = "ng/uL", nmole_L = "nmole/L",
-    percentage_total = "% Total",
-    size = "Avg. Size"
-  ) %>%
-  mutate(Range = factor(Range, levels = c("35 bp to 100 bp", "100 bp to 200 bp", "200 bp to 1000 bp")))
-
+```{r frag_anal_df, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+sn3_5_dreamprep_df <- read_tsv("resources/zenodo/sn3_5_dreamprep_df.tsv", show_col_types = FALSE)  
 ```
 
 ## SNP level microdiversity (Lorikeet)
 
-```{r lorikeet_df, eval=FALSE}
-ani_files <- list.files("data/data_preparation/", pattern = "_population_ani.tsv$", full.names = TRUE)
-# Return a named list of cleaned ANI matrices
+```{r lorikeet_df, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+ani_files <- list.files("resources/zenodo/", pattern = "_population_ani.tsv$", full.names = TRUE)
+
 ani_list <- purrr::map(ani_files, function(file_path) {
-  # Extract bin ID
   bin_id <- stringr::str_extract(basename(file_path), "GPB_bin_\\d+")
 
-  # Extract sample labels
   labels <- tibble(raw = readLines(file_path)) %>%
     filter(str_starts(raw, "##sample")) %>%
     mutate(
@@ -816,7 +537,6 @@ ani_list <- purrr::map(ani_files, function(file_path) {
     ) %>%
     select(ID, SAMPLE)
 
-  # Read and clean ANI matrix
   ani <- readr::read_tsv(file_path, comment = "#", show_col_types = FALSE) %>%
     left_join(labels, by = c("SampleID" = "ID")) %>%
     select(-SampleID) %>%
@@ -830,42 +550,13 @@ ani_list <- purrr::map(ani_files, function(file_path) {
 })
 # Set bin IDs as list names
 names(ani_list) <- stringr::str_extract(basename(ani_files), "GPB_bin_\\d+")
-
 ```
 
 
 ## Wrap working objects
 In the last step, the objects that are needed for downstream analyses are stored in an R object.
-
-```{r wrap_objects, eval=FALSE}
-#save.image(file = "data/data_preparation/25_06_27data.Rdata")
-#save.image(file = "data/data_preparation/25_07_01data.Rdata")
-save.image(file = "data/data_preparation/25_07_11_data.Rdata")
-save(
-  mssm_sample_metadata,
-  macromag_genomemetadata,
-  micromag_genomemetadata,
-  macromag_taxonomy,
-  micromag_taxonomy,
-  macromag_gifts,
-  macromag_tree,
-  micromag_tree,
-  macroquant_metrics_filt_30,
-  microquant_metrics_filt_30,
-  macroquant_genome_counts_filt_30,
-  microquant_genome_counts_filt_30,
-  macroquant_read_counts_filt_30,
-  microquant_read_counts_filt_30,
-  physeq_all,
-  physeq_genus,
-  physeq_genus_relabund,
-  dapi_df, 
-  sn3_5_dreamprep_df,
-  macroquant_counts_filt_30_98,
-  macromag_genomemetadata_98,
-  ani_list,
-  GIFT_db_df,
-  file = "data/data_preparation/25_07_11_selected_data.Rdata"
-)
+```{r wrap_objects, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+save.image(file = "resources/working_data_object.Rdata")
 ```
+
 
