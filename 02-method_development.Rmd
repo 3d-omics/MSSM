@@ -1,4 +1,4 @@
-# MSSM Method Development
+# Method Development
 
 ```{r load_data_development, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
 load("resources/working_data_object.Rdata") # load the data from 1-data_preparation
@@ -127,7 +127,7 @@ sn1_cor_result <- cor.test(sn1_read_df$micro, sn1_read_df$macro, method = "spear
 rho <- sn1_cor_result$estimate
 pval <- sn1_cor_result$p.value
 n <- length(sn1_read_df$micro)
-#cat(sprintf("Correlation Spearman's ρ = %.2f, p = %.3f, n = %d", rho, pval, n), "\n")
+# cat(sprintf("Correlation Spearman's ρ = %.2f, p = %.3f, n = %d", rho, pval, n), "\n")
 
 sn1_read_count <- sn1_read_df %>%
   ggplot(aes(x = macro, y = micro)) +
@@ -143,8 +143,8 @@ sn1_read_count <- sn1_read_df %>%
     y = "Mapped Reads \nMicro-scale Catalogue"
   )
 
-print_median_iqr(sn1_read_df$macro/ 1000000, "Macro-scale genome catalogue: ")
-print_median_iqr(sn1_read_df$micro/ 1000000, "Micro-scale genome catalogue: ")
+print_median_iqr(sn1_read_df$macro / 1000000, "Macro-scale genome catalogue: ")
+print_median_iqr(sn1_read_df$micro / 1000000, "Micro-scale genome catalogue: ")
 sn1_read_count
 ```
 Read mapping results were strongly correlated across the two catalogues. 
@@ -194,7 +194,7 @@ figs1_1a <- sn1_alpha_df_lg %>%
     size = 1.5, alpha = 0.3
   ) +
   theme_minimal() +
-  scale_fill_manual(values = c("#2A9D8F","#E76F51")) +
+  scale_fill_manual(values = c("#2A9D8F", "#E76F51")) +
   custom_ggplot_theme +
   labs(
     # title = "a",
@@ -226,7 +226,8 @@ knitr::kable(
     sn1_alpha_df_wd$`Micro-scale_neutral`,
     sn1_alpha_df_wd$`Macro-scale_neutral`,
     paired = TRUE, na.action = na.omit
-  ) %>% broom::tidy(), digits = 3
+  ) %>% broom::tidy(),
+  digits = 3
 )
 ```
 
@@ -298,6 +299,7 @@ sn1_betacount_df <- data.frame(otu_table(sn1_physeq_species)) %>%
 ```
 
 ##### Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA) {-}
+**Note:** The perform_pca() function needs to be loaded.
 
 ```{r FigS1_1b, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
 cat("Zero replacement determined", "\n")
@@ -319,7 +321,7 @@ figs1_1b <- ggplot() +
     aes(x = PC1, y = PC2, group = microsample, color = `MAGs Catalogue`, shape = Animal),
     size = 3, alpha = 0.5
   ) +
-  scale_color_manual(values = c("#2A9D8F","#E76F51")) +
+  scale_color_manual(values = c("#2A9D8F", "#E76F51")) +
   geom_path(
     data = sn1_scores,
     aes(x = PC1, y = PC2, group = sample_id),
@@ -337,30 +339,30 @@ figs1_1b <- ggplot() +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 figs1_1b
-
 ```
 
 The 35-day-old animal (G121e) showed the greatest species-level differences between catalogues.
 
 ##### Differential Abundance (Aldex2) {-}
 ```{r FigS1_1c_aldex, echo = FALSE, warning = FALSE, comments = "", message = FALSE}
-structural_zero <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>% 
-  rownames_to_column("genome")  %>% 
-  pivot_longer(cols = -c(genome), names_to = "microsample", values_to = "abundance") %>% 
-  mutate(dataset = str_sub(microsample, -5, -1)) %>% 
-  group_by(dataset, genome) %>% 
-  summarise(sum_abundance=sum(abundance)) %>% 
-  filter(sum_abundance==0) %>% pull(genome)
+structural_zero <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, taxrank = "species"))) %>%
+  rownames_to_column("genome") %>%
+  pivot_longer(cols = -c(genome), names_to = "microsample", values_to = "abundance") %>%
+  mutate(dataset = str_sub(microsample, -5, -1)) %>%
+  group_by(dataset, genome) %>%
+  summarise(sum_abundance = sum(abundance)) %>%
+  filter(sum_abundance == 0) %>%
+  pull(genome)
 
-sn1_aldex_G121e_counts <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, "species"))) #%>% 
-  #rownames_to_column("genome") %>% 
-  #filter(!genome %in%c(structural_zero)) %>% 
-  #column_to_rownames("genome")
+sn1_aldex_G121e_counts <- data.frame(otu_table(tax_glom(sn1_physeq_G121e, "species"))) # %>%
+# rownames_to_column("genome") %>%
+# filter(!genome %in%c(structural_zero)) %>%
+# column_to_rownames("genome")
 sn1_aldex_G121e_pseudo_counts <- round(sn1_aldex_G121e_counts * 1e6)
 sn1_aldex_G121e_conditions <- data.frame(sample_data(tax_glom(sn1_physeq_G121e, "species"))) %>% pull(dataset)
 sn1_aldex_G121e_results <- aldex(sn1_aldex_G121e_pseudo_counts,
   sn1_aldex_G121e_conditions,
-  test = "t", 
+  test = "t",
   effect = TRUE, # include effect sizes
   denom = "all", # normalization denominator
   mc.samples = 256, # number of Monte Carlo instances
@@ -379,7 +381,7 @@ sn1_aldex <-
   left_join(data.frame(tax_table(tax_glom(sn1_physeq_G121e, "species"))) %>% rownames_to_column("genome"), by = "genome")
 
 figs1_1c <- sn1_aldex %>%
-  mutate(structural_zero=ifelse(genome %in% c(structural_zero), "Present in only 1 group", "Present in both groups")) %>% 
+  mutate(structural_zero = ifelse(genome %in% c(structural_zero), "Present in only 1 group", "Present in both groups")) %>%
   ggplot(., aes(x = diff.btw, y = reorder(species, effect), fill = abs(effect) > 1)) +
   geom_bar(stat = "identity", show.legend = FALSE) +
   coord_flip() +
@@ -388,7 +390,8 @@ figs1_1c <- sn1_aldex %>%
     y = "Species"
   ) +
   scale_fill_manual(values = c("TRUE" = "#e35d51", "FALSE" = "darkgrey")) +
-  custom_ggplot_theme + facet_wrap(~structural_zero, scale="free") + 
+  custom_ggplot_theme +
+  facet_wrap(~structural_zero, scale = "free") +
   theme(axis.text.x = element_text(angle = 40, hjust = 1))
 figs1_1c
 ```
@@ -432,8 +435,10 @@ ordered_metrics <- c(
 )
 
 figs3_2_2 <- sn3_2_df %>%
-  mutate(mapmag_prokreads_pct=mapmag_prokreads_pct*100,
-         percent_duplication.rate=percent_duplication.rate*100) %>% 
+  mutate(
+    mapmag_prokreads_pct = mapmag_prokreads_pct * 100,
+    percent_duplication.rate = percent_duplication.rate * 100
+  ) %>%
   pivot_longer(
     cols = -c(names(mssm_sample_metadata), "cov_filtering"),
     names_to = "metric",
@@ -468,13 +473,13 @@ figs3_2_2 <- sn3_2_df %>%
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1.5, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#2A9D8F","#E76F51")) +
+  scale_fill_manual(values = c("#2A9D8F", "#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 
 figs3_2_2
 ```
-No clear performance advantage was observed between methods L06 and L07 in caecum microsamples. 
+No clear performance advantage was observed between methods L06 and L07 in caecum microsamples. Although L06 was initially selected, a subsequent experiment suggested that L07 may offer enhanced lysis performance in colon microsamples. 
 
 ##### Statistical Comparison Of Sequencing Performance
 **Note:** The fit_and_analyze_model() function needs to be loaded.
@@ -492,9 +497,9 @@ sn3_2_a_ca <- fit_and_analyze_model(
 )
 knitr::kable(
   sn3_2_a_ca$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -510,9 +515,9 @@ sn3_2_a_co <- fit_and_analyze_model(
 )
 knitr::kable(
   sn3_2_a_co$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -530,9 +535,9 @@ sn3_2_b_ca <- fit_and_analyze_model(
 
 knitr::kable(
   sn3_2_b_ca$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -549,9 +554,9 @@ sn3_2_b_co <- fit_and_analyze_model(
 
 knitr::kable(
   sn3_2_b_co$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -569,9 +574,9 @@ sn3_2_c_ca <- fit_and_analyze_model(
 
 knitr::kable(
   sn3_2_c_ca$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 ###### Colon {-}
@@ -587,10 +592,21 @@ sn3_2_c_co <- fit_and_analyze_model(
 
 knitr::kable(
   sn3_2_c_co$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
+
+cat("Predicted values from model", "\n")
+
+knitr::kable(
+  sn3_2_c_co$model_fit %>% ggpredict(., terms = c("buffer")),
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
+)
+
+
 ```
 
 ###### d. Richness {-}
@@ -606,9 +622,9 @@ sn3_2_d_ca <- fit_and_analyze_model(
 )
 knitr::kable(
   sn3_2_d_ca$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -625,9 +641,9 @@ sn3_2_d_co <- fit_and_analyze_model(
 
 knitr::kable(
   sn3_2_d_co$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -646,10 +662,26 @@ sn3_2_e_ca <- fit_and_analyze_model(
 
 knitr::kable(
   sn3_2_e_ca$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
+
+sn3_2_e_ca <- fit_and_analyze_model(
+  model = "lm",
+  response_var = "neutral",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+)
+
+knitr::kable(
+  sn3_2_e_ca$anova,
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
+)
+
+
 ```
 ###### Colon {-}
 ```{r sn3_2_e_colon,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
@@ -665,9 +697,24 @@ sn3_2_e_co <- fit_and_analyze_model(
 
 knitr::kable(
   sn3_2_e_co$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
+)
+
+sn3_2_e_co <- fit_and_analyze_model(
+  model = "lm",
+  response_var = "neutral",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Colon"))
+)
+# plot(sn3_2_e_co$simResidual)
+
+knitr::kable(
+  sn3_2_e_co$anova,
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -718,12 +765,26 @@ sn3_2_f_ca <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Caecum right"))
 )
-#plot(sn3_2_f_ca$simResidual)
+# plot(sn3_2_f_ca$simResidual)
 knitr::kable(
   sn3_2_f_ca$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
+)
+
+sn3_2_f_ca <- fit_and_analyze_model(
+  model = "lm",
+  response_var = "phylogenetic",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+)
+# plot(sn3_2_f_ca$simResidual)
+knitr::kable(
+  sn3_2_f_ca$anova,
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -737,12 +798,26 @@ sn3_2_f_co <- fit_and_analyze_model(
   explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Colon"))
 )
-#plot(sn3_2_f_co$simResidual)
+# plot(sn3_2_f_co$simResidual)
 knitr::kable(
   sn3_2_f_co$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
+)
+
+sn3_2_f_co <- fit_and_analyze_model(
+  model = "lm",
+  response_var = "phylogenetic",
+  explanatory_var = "collection_attempts + buffer",
+  data = sn3_2_df %>% filter(section %in% c("Colon"))
+)
+# plot(sn3_2_f_co$simResidual)
+knitr::kable(
+  sn3_2_f_co$anova,
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```      
 
@@ -764,6 +839,8 @@ sn3_3_df <- macroquant_metrics_filt_30 %>%
 ```
 
 #### Visual Comparison Of Sequencing Performance (Fig. S3.3.1)
+**Note:** The fit_and_analyze_model() function needs to be loaded.
+
 ```{r FigS3_3_1,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=8}
 ordered_metrics <- c(
   "total_after_filtering.total_reads",
@@ -776,10 +853,12 @@ ordered_metrics <- c(
 
 figs3_3_1 <- sn3_3_df %>%
   filter(!cycles %in% c("19")) %>%
-  mutate(lowquality_reads_pct=lowquality_reads_pct*100,
-         host_pct= host_pct*100,
-         mapmag_prokreads_pct=mapmag_prokreads_pct*100,
-         read_fraction_singlem=read_fraction_singlem*100) %>% 
+  mutate(
+    lowquality_reads_pct = lowquality_reads_pct * 100,
+    host_pct = host_pct * 100,
+    mapmag_prokreads_pct = mapmag_prokreads_pct * 100,
+    read_fraction_singlem = read_fraction_singlem * 100
+  ) %>%
   pivot_longer(
     cols = -c(names(mssm_sample_metadata), "cov_filtering"),
     names_to = "metric",
@@ -814,7 +893,7 @@ figs3_3_1 <- sn3_3_df %>%
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1.5, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#2A9D8F","#264653", "#E76F51")) +
+  scale_fill_manual(values = c("#2A9D8F", "#264653", "#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "none")
 
@@ -840,16 +919,16 @@ sn3_3_a <- fit_and_analyze_model(
 cat("Anova", "\n")
 knitr::kable(
   sn3_3_a$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 cat("Predicted values from model", "\n")
 knitr::kable(
   sn3_3_a$model_fit %>% ggpredict(., terms = c("section")),
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -867,16 +946,16 @@ sn3_3_b <- fit_and_analyze_model(
 cat("Anova", "\n")
 knitr::kable(
   sn3_3_b$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 cat("Predicted values from model", "\n")
 knitr::kable(
   sn3_3_b$model_fit %>% ggpredict(., terms = c("section")),
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -894,16 +973,16 @@ sn3_3_c <- fit_and_analyze_model(
 cat("Anova", "\n")
 knitr::kable(
   sn3_3_c$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 cat("Predicted values from model", "\n")
 knitr::kable(
   sn3_3_c$model_fit %>% ggpredict(., terms = c("section")),
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -922,16 +1001,16 @@ sn3_3_d <- fit_and_analyze_model(
 cat("Anova", "\n")
 knitr::kable(
   sn3_3_d$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 cat("Predicted values from model", "\n")
 knitr::kable(
   sn3_3_d$model_fit %>% ggpredict(., terms = c("section")),
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -949,16 +1028,16 @@ sn3_3_e <- fit_and_analyze_model(
 cat("Anova", "\n")
 knitr::kable(
   sn3_3_e$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 cat("Predicted values from model", "\n")
 knitr::kable(
   sn3_3_e$model_fit %>% ggpredict(., terms = c("section")),
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 cat("Correlation", "\n")
 chart.Correlation(sn3_3_df %>%
@@ -1008,7 +1087,7 @@ sn_3_3_15vs19 <- sn3_3_df %>%
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1.5, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#2A9D8F","#E76F51")) +
+  scale_fill_manual(values = c("#2A9D8F", "#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 sn_3_3_15vs19
@@ -1028,16 +1107,16 @@ readsbf_cyclecomp <- fit_and_analyze_model(
 cat("Anova", "\n")
 knitr::kable(
   readsbf_cyclecomp$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 cat("Predicted values from model", "\n")
 knitr::kable(
   readsbf_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles")),
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -1055,16 +1134,16 @@ readshq_cyclecomp <- fit_and_analyze_model(
 cat("Anova", "\n")
 knitr::kable(
   readshq_cyclecomp$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
- )
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
+)
 cat("Predicted values from model", "\n")
 knitr::kable(
   readshq_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles")),
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -1082,16 +1161,16 @@ quality_cyclecomp <- fit_and_analyze_model(
 cat("Anova", "\n")
 knitr::kable(
   quality_cyclecomp$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
-  )
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
+)
 cat("Predicted values from model", "\n")
 knitr::kable(
   quality_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles")),
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 
@@ -1109,16 +1188,16 @@ duplication_cyclecomp <- fit_and_analyze_model(
 cat("Anova", "\n")
 knitr::kable(
   duplication_cyclecomp$anova,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 cat("Predicted values from model", "\n")
 knitr::kable(
   duplication_cyclecomp$model_fit %>% ggpredict(., terms = c("cycles")),
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
 )
 ```
 Efforts to compensate for low biomass in the colon by increasing PCR cycles did not improve the quality of colon results. 
@@ -1257,8 +1336,8 @@ figs3_3_3a <- ggplot(sn3_3_dapi_df, aes(x = Distance_from_one_side_mn, y = media
     y = "Bacterial Counts (Median)"
   ) +
   facet_wrap(~Age, nrow = 2, scale = "free_x") +
-  scale_fill_manual(values = c("#2A9D8F","#264653", "#E76F51"), drop = FALSE) +
-  scale_color_manual(values = c("#2A9D8F","#264653", "#E76F51"), drop = FALSE) +
+  scale_fill_manual(values = c("#2A9D8F", "#264653", "#E76F51"), drop = FALSE) +
+  scale_color_manual(values = c("#2A9D8F", "#264653", "#E76F51"), drop = FALSE) +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 figs3_3_3a
@@ -1281,11 +1360,13 @@ ordered_metrics <- c(
 
 figs3_4_1 <- macroquant_metrics_filt_30 %>%
   filter(!section %in% c("Ileum")) %>%
-  mutate(batch = gsub("MSEB00", "B", batch),
-         lowquality_reads_pct=lowquality_reads_pct*100,
-         adapter_contamination_pct= adapter_contamination_pct*100,
-         human_pct=human_pct*100,
-         mapmag_prokreads_pct=mapmag_prokreads_pct*100) %>%
+  mutate(
+    batch = gsub("MSEB00", "B", batch),
+    lowquality_reads_pct = lowquality_reads_pct * 100,
+    adapter_contamination_pct = adapter_contamination_pct * 100,
+    human_pct = human_pct * 100,
+    mapmag_prokreads_pct = mapmag_prokreads_pct * 100
+  ) %>%
   pivot_longer(
     cols = -c(names(mssm_sample_metadata), "cov_filtering"),
     names_to = "metric",
@@ -1320,7 +1401,7 @@ figs3_4_1 <- macroquant_metrics_filt_30 %>%
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#2A9D8F","#E76F51")) +
+  scale_fill_manual(values = c("#2A9D8F", "#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 
@@ -1332,15 +1413,11 @@ figs3_4_1
 Although controls yielded sequencing data, they consistently exhibited poorer quality metrics.
 
 ### Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA)
+**Note:** The perform_pca() function needs to be loaded.
 
 #### FigS3_4_2
 
 ```{r FigS3_4_2,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
-```
-
-#### FigS3_4_3
-
-```{r FigS3_4_3,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 ```
 
 
@@ -1435,7 +1512,6 @@ sn3_5_df <- macroquant_metrics_filt_30 %>%
     comparison = as.factor(comparison),
     comparison_grid = as.factor(comparison_grid)
   ) # %>% count(comparison, batch)
-
 ```
 
 ### Summary Statistic
@@ -1444,18 +1520,20 @@ sn3_5_df <- macroquant_metrics_filt_30 %>%
 sn3_5_df_t <- sn3_5_df %>%
   mutate(
     other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
-  + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag),
-  low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads) %>%
+    + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag),
+    low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads
+  ) %>%
   select(
-    microsample, 
-    comparison_grid, 
-    total_before_filtering.total_reads, 
-    low_quality_reads, 
-    reads_mapped_chicken, 
-    reads_mapped_human, 
-    reads_mapped_pig, 
-    reads_mapped_mag, 
-    reads_unmapped_mag, other) %>%
+    microsample,
+    comparison_grid,
+    total_before_filtering.total_reads,
+    low_quality_reads,
+    reads_mapped_chicken,
+    reads_mapped_human,
+    reads_mapped_pig,
+    reads_mapped_mag,
+    reads_unmapped_mag, other
+  ) %>%
   mutate(across(-c(microsample, comparison_grid, total_before_filtering.total_reads),
     ~ round((. / total_before_filtering.total_reads) * 100, 1),
     .names = "{.col}_pct"
@@ -1480,10 +1558,10 @@ sn3_5_df_t <- sn3_5_df_t[-1, ] # remove the first row
 
 knitr::kable(
   sn3_5_df_t,
-  digits = 3,           
-  booktabs = TRUE,      
-  align = "lccc"        
-)  
+  digits = 3,
+  booktabs = TRUE,
+  align = "lccc"
+)
 ```
 
 #### Visual Comparison Of Sequencing Performance (Fig. S3.5.1a)
@@ -1500,9 +1578,11 @@ ordered_metrics <- c(
 )
 
 figs3_5_1a <- sn3_5_df %>%
-  mutate(other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
-  + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag),
-  low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads) %>%
+  mutate(
+    other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
+    + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag),
+    low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads
+  ) %>%
   pivot_longer(
     cols = -c(names(mssm_sample_metadata), comparison, lib_method, comparison_grid, cov_filtering),
     names_to = "metric",
@@ -1521,23 +1601,21 @@ figs3_5_1a <- sn3_5_df %>%
   theme(legend.position = "bottom") +
   guides(fill = guide_legend(title = "Proportion \nSequencing \nReads"))
 figs3_5_1a
-
-
 ```
 
 
 #### Visual Comparison Of Library Preparation Efficiency (Fig. S3.5.1b)
 
 ```{r sn3_5_dreamprep_df ,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
-sn3_5_dreamprep_df_f <- sn3_5_dreamprep_df %>% 
+sn3_5_dreamprep_df_f <- sn3_5_dreamprep_df %>%
   mutate(plate = str_extract(sample, "^Plate \\d+")) %>%
   filter(
     !Range %in% c("35 bp to 100 bp"),
     concentration %in% c("0.1"),
     type %in% c("Positive")
-  ) %>% 
+  ) %>%
   mutate(
-    #Range = droplevels(Range),
+    # Range = droplevels(Range),
     plate = case_when(
       grepl("Plate 1", plate, ignore.case = TRUE) ~ "Single-Plate",
       grepl("Plate 2", plate, ignore.case = TRUE) ~ "Dual-Plate A",
@@ -1558,12 +1636,12 @@ sn3_5_dreamprep_df_f <- sn3_5_dreamprep_df %>%
 comparisons <- list(c("Single-Plate", "Dual-Plate A"), c("Dual-Plate A", "Dual-Plate B"), c("Single-Plate", "Dual-Plate B"))
 figs3_5_1b <- sn3_5_dreamprep_df_f %>%
   ggplot(aes(x = plate, y = nmole_L, fill = plate)) +
-  geom_boxplot(position = position_dodge(width = 0.75),alpha = 0.6) +
+  geom_boxplot(position = position_dodge(width = 0.75), alpha = 0.6) +
   geom_point(position = position_jitterdodge(0.2)) +
   stat_compare_means(
     comparisons = comparisons,
     method = "wilcox.test",
-    label = "p.signif", 
+    label = "p.signif",
     p.adjust.method = "BH",
     size = 4,
     vjust = 0.2,
@@ -1579,7 +1657,7 @@ figs3_5_1b <- sn3_5_dreamprep_df_f %>%
     position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
     size = 1.5, alpha = 0.3
   ) +
-  scale_fill_manual(values = c("#2A9D8F","#264653", "#E76F51")) +
+  scale_fill_manual(values = c("#2A9D8F", "#264653", "#E76F51")) +
   custom_ggplot_theme +
   theme(legend.position = "none")
 figs3_5_1b

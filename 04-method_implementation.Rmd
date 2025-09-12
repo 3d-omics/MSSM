@@ -1,0 +1,707 @@
+# Method Implementation
+```{r load_data_implementation, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+load("resources/working_data_object.Rdata") # load the data from 1-data_preparation
+```
+
+## Investigate Spatial Patter
+### Data selection
+```{r data_spatial, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+metadata <- macroquant_metrics_filt_30 %>%
+  filter(
+    type %in% c("positive"),
+    cov_filtering %in% c("Retained By Filtering"),
+    !section %in% "Ileum",
+    !is.na(Xcoord),
+    !is.na(Ycoord),
+    !animal %in% "G103b"
+  )
+comm_data <- macroquant_genome_counts_filt_30 %>%
+  select(genome, metadata$microsample) %>%
+  t() %>%
+  data.frame() %>%
+  row_to_names(row_number = 1) %>%
+  mutate(across(everything(), as.numeric))
+comm_ca <- comm_data[metadata$section == "Caecum right", ]
+comm_ca <- comm_ca[, colSums(comm_ca) > 0]
+comm_co <- comm_data[metadata$section == "Colon", ]
+comm_co <- comm_co[, colSums(comm_co) > 0]
+metadata_ca <- metadata[metadata$section == "Caecum right", ]
+metadata_co <- metadata[metadata$section == "Colon", ]
+cat("Number microsamples for each cryosection", "\n")
+knitr::kable(table(metadata$section, metadata$cryosection))%>%
+  kableExtra::kable_styling(font_size = 15)  # smaller font size
+```
+
+### Centered Log-Ratio (CLR) Transformation
+
+```{r data_spatial_clr, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+cat("Zero replacement determined", "\n")
+comm_ca_zeroRepl <- cmultRepl(comm_ca, method = "GBM", output = "prop", z.warning = 0.95)
+comm_co_zeroRepl <- cmultRepl(comm_co, method = "GBM", output = "prop", z.warning = 0.95)
+
+metadata_ca_clr <- metadata_ca[metadata_ca$microsample %in% rownames(comm_ca_zeroRepl), ]
+metadata_co_clr <- metadata_co[metadata_co$microsample %in% rownames(comm_co_zeroRepl), ]
+
+clr_transform <- function(x) {
+  log(x) - mean(log(x), na.rm = TRUE)
+}
+comm_ca_clr <- data.frame(t(apply(comm_ca_zeroRepl, 1, clr_transform)))
+comm_co_clr <- data.frame(t(apply(comm_co_zeroRepl, 1, clr_transform)))
+```
+
+### Diversity partitioning
+
+```{r diversity_partitioning, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+## Diversity partitioning in caecum and colon
+ca_adipart <- adipart(as.matrix(comm_ca > 0) * 1, as.matrix(metadata_ca[, c("microsample", "cryosection")]),
+  index = "richness", weights = "unif", relative = FALSE, nsimul = 999, method = "r2dtable"
+)
+
+co_adipart <- adipart(as.matrix(comm_co > 0) * 1, as.matrix(metadata_co[, c("microsample", "cryosection")]),
+  index = "richness", weights = "unif", relative = FALSE, nsimul = 999, method = "r2dtable"
+)
+
+ca <- cbind(
+  c(ca_adipart$oecosimu$mean[1], ca_adipart$statistic[1]),
+  c(ca_adipart$oecosimu$mean[3], ca_adipart$statistic[3]),
+  c(ca_adipart$oecosimu$mean[2], ca_adipart$statistic[2])
+)
+rownames(ca) <- c("observed", "expected")
+colnames(ca) <- c("alpha", "beta", "gamma")
+
+co <- cbind(
+  c(co_adipart$oecosimu$mean[1], co_adipart$statistic[1]),
+  c(co_adipart$oecosimu$mean[3], co_adipart$statistic[3]),
+  c(co_adipart$oecosimu$mean[2], co_adipart$statistic[2])
+)
+rownames(co) <- c("observed", "expected")
+colnames(co) <- c("alpha", "beta", "gamma")
+
+#png("figures/Fig_S4_1.png", width = 1600, height = 800, res = 200)
+par(mfrow = c(1, 2))  # 1 row, 2 columns
+bp <- barplot(ca,
+  beside = TRUE,
+  col = c("black", "white"),
+  ylim = c(0, 110)
+)
+text(x = apply(bp, 2, mean), y = apply(ca, 2, max) + 4, labels = "***")
+title(main = "Caecum", font.main = 4)
+bp <- barplot(co,
+  beside = TRUE,
+  col = c("black", "white"),
+  ylim = c(0, 110)
+)
+text(x = apply(bp, 2, mean), y = apply(co, 2, max) + 4, labels = "***")
+title(main = "Colon", font.main = 4)
+par(mfrow = c(1, 1))  # reset layout
+#dev.off()
+
+```
+
+### Explore Spatial Pattern
+**Note:** The spatial_cryosections() function needs to be loaded.
+
+#### Ceacum Cryosection (G121eI104C)
+```{r cryosection_ca, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+metadata %>% 
+  filter(cryosection %in% c("G121eI104C")) %>% 
+  ggplot(aes(
+    x = Xcoord,
+    y = Ycoord,
+  )) +
+  geom_point() +
+  coord_fixed() +
+  theme_minimal()
+
+results_ca <- spatial_cryosections(
+  cryosection_list = "G121eI104C",
+  metadata_df = metadata_ca_clr,
+  comm_clr = comm_ca_clr
+)
+```
+
+##### Mantel Test {-}
+```{r caecum_spatial_mantel, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+results_ca$mantel_results$G121eI104C
+# results_ca$mantel_results$G121eI104C$statistic
+# results_ca$mantel_results$G121eI104C$signif
+# p < 0.05 → Statistically significant correlation between two distance matrices
+# p > 0.05 → No significant correlation between two distance matrices
+```
+
+
+##### Mantel Correlogram {-}
+```{r caecum_spatial_mantelcor, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+results_ca$mantelcor_results
+```
+
+```{r caecum_spatial_mantelcor_plot, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+mantel_ca_grob <- ggplot(
+  data.frame(results_ca$mantelcor_results$G121eI104C$mantel.res) %>%
+    mutate(sign_label = ifelse(`Pr.corrected.` <= 0.05, "Significant", "Not significant")) %>%
+    filter(!is.na(Mantel.cor)),
+  aes(x = class.index, y = Mantel.cor)
+) +
+  geom_point(aes(fill = sign_label), shape = 23, size = 3) +
+  geom_line() +
+  scale_fill_manual(values = c("Significant" = "black", "Not significant" = "white")) +
+  labs(
+    title = "G121eI104C",
+    x = "Distance Class Index",
+    y = "Mantel Correlation",
+    color = "Significance"
+  ) +
+  geom_hline(yintercept = 0, color = "red") +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
+mantel_ca_grob
+```
+
+#####  Distance Decay {-}
+```{r caecum_spatial_decay, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+aovperm(lmperm(comm_dist ~ spat_dist, data = results_ca$decay_dfs$G121eI104C), np = 10000)
+# p < 0.05 → Significant correlation: Spatial distance influences microbial composition.
+# p > 0.05 → No significant relationship: Microbial communities do not change with distance.
+```
+
+```{r caecum_spatial_decay_plot, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+results_ca$distance_decay_plots$G121eI104C
+```
+
+#### Colon Cryosection (G121eO301A)
+```{r cryosection_c0, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+metadata %>% 
+  filter(cryosection %in% c("G121eO301A")) %>% 
+  ggplot(aes(
+    x = Xcoord,
+    y = Ycoord,
+  )) +
+  geom_point() +
+  coord_fixed() +
+  theme_minimal()
+
+results_co <- spatial_cryosections(
+  cryosection_list = "G121eO301A",
+  metadata_df = metadata_co_clr,
+  comm_clr = comm_co_clr
+)
+```
+
+##### Mantel Test {-}
+```{r colon_spatial_mantel, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+results_co$mantel_results$G121eO301A
+# p < 0.05 → Statistically significant correlation between two distance matrices
+# p > 0.05 → No significant correlation between two distance matrices
+```
+
+##### Mantel Correlogram {-}
+
+```{r colon_spatial_mantelcor, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+results_co$mantelcor_results
+```
+
+```{r colon_spatial_mantelcor_plot, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+mantel_co_grob <- ggplot(
+  data.frame(results_co$mantelcor_results$G121eO301A$mantel.res) %>%
+    mutate(sign_label = ifelse(`Pr.corrected.` <= 0.05, "Significant", "Not significant")) %>%
+    filter(!is.na(Mantel.cor)),
+  aes(x = class.index, y = Mantel.cor)
+) +
+  geom_point(aes(fill = sign_label), shape = 23, size = 3) +
+  geom_line() +
+  scale_fill_manual(values = c("Significant" = "black", "Not significant" = "white")) +
+  labs(
+    title = "G121eO301A",
+    x = "Distance Class Index",
+    y = "Mantel Correlation",
+    color = "Significance"
+  ) +
+  geom_hline(yintercept = 0, color = "red") +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
+mantel_co_grob
+```
+
+#####  Distance Decay {-}
+
+```{r colon_spatial_decay, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+# summary(lmPerm::lmp(comm_dist ~ spat_dist, data = results_co$decay_dfs$G121eO301A))
+aovperm(lmperm(comm_dist ~ spat_dist, data = results_co$decay_dfs$G121eO301A), np = 10000)
+# Performs an ANOVA to check if spat_dist significantly explains variation in comm_dist.
+# p < 0.05 → Significant correlation: Spatial distance influences microbial composition.
+# p > 0.05 → No significant relationship: Microbial communities do not change with distance.
+```
+
+```{r colon_spatial_decay_plot, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+results_co$distance_decay_plots$G121eO301A
+```
+
+
+##### RLQ-rlqESLTP Analysis {-}
+
+```{r prepare_data_rlqESLTP, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+comm_co_G121eO301A <- comm_co %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "microsample") %>%
+  bind_cols(metadata_co) %>%
+  filter(cryosection == "G121eO301A") %>%
+  select(contains("bin_"))
+metadata_co_G121eO301A <- metadata_co %>%
+  filter(cryosection == "G121eO301A")
+
+comp <- decostand(comm_co_G121eO301A, MARGIN = 1, method = "hellinger") # Standardize composition by rows
+colnames(comp) <- gsub("\\.", ":", names(comp))
+env <- data.frame(
+  log_seq_counts = log(metadata_co_G121eO301A$total_after_filtering.total_reads),
+  div = rowSums(comp > 0)
+) # Environmental matrix
+
+genome_gifts <- macromag_gifts[rownames(macromag_gifts) %in% colnames(comp), ]
+genome_funct <- genome_gifts %>%
+  data.frame() %>%
+  rownames_to_column(var = "id") %>% # Preserve row names as a column
+  pivot_longer(-id, names_to = "column", values_to = "value") %>% # Reshape to long format
+  mutate(group = substr(column, 1, 3)) %>% # Extract the first 3 characters of column names
+  group_by(id, group) %>% # Group by row (id) and prefix
+  summarise(mean_value = mean(value, na.rm = TRUE), .groups = "drop") %>% # Calculate rowMeans for each group
+  pivot_wider(names_from = group, values_from = mean_value) %>% # Reshape back to wide format
+  column_to_rownames(var = "id")
+genome_funct <- genome_funct[, -c(19:21)]
+
+phy <- macromag_tree # Phylogenetic tree constructed with Phylomatic V3 + Phylocom
+
+phy <- drop.tip(phy, setdiff(phy$tip.label, rownames(genome_funct)))
+spa <- metadata_co_G121eO301A[, c("Xcoord", "Ycoord")] # Matrix of X Y spatial coordinates
+comp <- comp[, match(phy$tip.label, colnames(comp))]
+genome_funct <- genome_funct[match(phy$tip.label, rownames(genome_funct)), ]
+
+mean(phy$tip.label == colnames(comp))
+
+# Change the phylogenetic tree (an object of the class "phylo") into an object of the class "phylog", used by ade4
+phylog <- newick2phylog(write.tree(phy)) # => "phylog" class
+colnames(comp) <- gsub(":", "_", colnames(comp))
+rownames(genome_funct) <- gsub(":", "_", rownames(genome_funct))
+```
+
+###### Correspondence analysis of the composition matrix {-}
+
+```{r correspondence_rlqESLTP, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+coacomp <- dudi.coa(comp, scan = FALSE, nf = 108)
+```
+
+###### Gabriel graph {-}
+
+```{r gabriel_graph, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+# Create the Gabriel graph
+nb1 <- graph2nb(gabrielneigh(as.matrix(spa)), sym = T)
+
+# Spatial autocorrelation in diversity and sequence count distribution
+sp.correlogram(nb1, log(env$div), order = 8, method = "I")
+sp.correlogram(nb1, env$log_seq_counts, order = 8, method = "I")
+
+lw1 <- nb2listw(nb1) # gives a neighbours list with spatial weights (i.e. matrix W)
+```
+
+```{r gabriel_graph_plot, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+nb1.neigh <- nb2neig(nb1)
+vecspa <- scores.neig(nb1.neigh)
+pcaspa <- dudi.pca(vecspa, coacomp$lw, scan = FALSE, nf = ncol(vecspa))
+```
+
+###### PCA analysis of the env matrix {-}
+
+```{r env_pca, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+pcaenv <- dudi.pca(env, row.w = coacomp$lw, scannf = FALSE, nf = 2)
+```
+
+###### Trait-based distances {-}
+
+```{r distances_traits, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+# Distance matrices for traits separately
+listdis <- ldist.ktab(ktab.list.df(list(genome_funct)), c("Q"), scan = FALSE)
+# choose 1
+
+# Distance matrix for traits together
+disT <- dist.ktab(ktab.list.df(list(genome_funct)), c("Q"), scan = FALSE)
+# choose 1
+pcotraits <- dudi.pco(disT, coacomp$cw, full = TRUE)
+```
+
+###### Phylogeny-based distances {-}
+
+```{r distances_phylogeny, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+pcophy <- dudi.pco(as.dist(as.matrix(phylog$Wdist)[names(comp), names(comp)]), coacomp$cw, full = TRUE)
+
+## 11. Tests for phylogenetic signals in traits
+## *******************************************
+# Function rtest.decdiv() in appendix S5, Pavoine et al., 2011. [1]
+# All traits together
+phystot <- rtest.decdiv(phylog, rep(1, 108), as.dist(as.matrix(disT)[names(phylog$leaves), names(phylog$leaves)]),
+  nrep = 99, vranking = "droot", optiontest = "less", ties.method = "average", option = 3
+)
+
+trait_names <- c("D01","D02","D03","D05","D06","D07","D08","D09","B01","B02","B03","B06","B07","B08","B09","B10")
+phy_names   <- names(phylog$leaves)
+
+set.seed(1234)
+
+pval_tbl <- map_dfr(trait_names, function(nm) {
+  mat <- as.matrix(listdis[[nm]])
+
+  # keep only taxa present in both; order like the tree
+  idx <- phy_names[phy_names %in% rownames(mat)]
+  if (length(idx) < 2L) {
+    return(tibble(trait = nm, n_taxa = length(idx), pvalue = NA_real_))
+  }
+
+  mat2 <- mat[idx, idx, drop = FALSE]
+
+  pv <- tryCatch(
+    rtest.decdiv(
+      phylog,
+      rep(1, ncol(comp)),
+      as.dist(mat2),
+      nrep = 99,
+      vranking = "droot",
+      optiontest = "less",
+      ties.method = "average",
+      option = 3
+    )$pvalue,
+    error = function(e) NA_real_
+  )
+  tibble(trait = nm, pvalue = pv)
+}) %>%
+  mutate(pvalue = signif(pvalue, 3)) %>%
+  arrange(pvalue)
+
+considered_traits <- pval_tbl %>% 
+  filter(pvalue<0.05) %>% 
+  pull(trait)
+
+## Update the PCOA of traits to remove traits without phylogenetic signal
+# Distance matrix for traits together
+disT <- dist.ktab(ktab.list.df(list(genome_funct[, considered_traits])), c("Q"), scan = FALSE)
+# choose 1
+pcotraits <- dudi.pco(disT, coacomp$cw, full = TRUE)
+```
+
+###### Extended RLQ analysis {-}
+
+```{r extended_rlq, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+rlqmix <- rlqESLTP(pcaenv, pcaspa, coacomp, pcotraits, pcophy, scan = F, nf = 2)
+```
+
+```{r extended_rlq_barplot, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+barplot(rlqmix$eig)
+```
+
+```{r extended_rlq_table, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+rlqmix$eig %>%
+  tibble(eigenvalue = .) %>%
+  mutate(
+    axis = paste0("RLQ", row_number()),
+    prop_var = eigenvalue / sum(eigenvalue),
+    cum_prop_var = cumsum(prop_var)
+  ) %>%
+  select(axis, eigenvalue, prop_var, cum_prop_var) %>%
+  slice_head(n = 5)
+```
+
+```{r extended_rlq_axis1_1, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+plot(rlqmix, xy = spa, ax = 1, wh = "S")
+plot(rlqmix, phy = phylog, ax = 1, wh = "P")
+plot(rlqmix, traits = genome_funct[, considered_traits], ax = 1, type = "Q", wh = "T")
+plot(rlqmix, env = pcaenv$tab, ax = 1, type = "Q", wh = "E")
+```
+
+```{r extended_rlq_axis1_positive_genomes, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+rlqmix$lQ %>% 
+  rownames_to_column(var="genome") %>%
+  left_join(macromag_taxonomy %>%  mutate(genome=sub(":", "_", genome)),by="genome") %>% 
+  arrange(-AxcQ1) %>% 
+  select(genome,AxcQ1,family,species) %>% 
+  head(n=10)
+```
+
+```{r extended_rlq_axis1_negative_genomes, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+rlqmix$lQ %>% 
+  rownames_to_column(var="genome") %>%
+  left_join(macromag_taxonomy %>%  mutate(genome=sub(":", "_", genome)),by="genome") %>% 
+  arrange(AxcQ1) %>% 
+  select(genome,AxcQ1,family,species) %>% 
+  head(n=10)
+```
+
+## Subspecies Segregation and Spatial Structuring
+
+### Pangenome: Genes Presence/Absence 
+```{r pangenome_lawsonibacte_Fig6_a, echo = FALSE,  warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=9}
+wide_data <- left_join(genepa_pg, duplication_pg, by = "gene") %>%
+  left_join(partition_pg, by = "gene") %>%
+  pivot_longer(!c(gene, is_single_copy_marker, `Family Partition`), names_to = "Genome", values_to = "Presence/Absence") %>%
+  mutate(`Presence/Absence` = as.character(`Presence/Absence`)) %>%
+  mutate(`Presence/Absence` = case_when(
+    `Presence/Absence` == "1" & is_single_copy_marker == "FALSE" ~ "2",
+    TRUE ~ `Presence/Absence`
+  )) %>%
+  mutate(`Presence/Absence` = as.numeric(`Presence/Absence`)) %>%
+  select(gene, Genome, `Presence/Absence`) %>%
+  pivot_wider(names_from = Genome, values_from = `Presence/Absence`, values_fill = 0)
+mat <- as.matrix(wide_data[, -1])
+rownames(mat) <- wide_data$gene
+gene_anno <- left_join(genepa_pg, duplication_pg, by = "gene") %>%
+  left_join(partition_pg, by = "gene") %>%
+  pivot_longer(!c(gene, is_single_copy_marker, `Family Partition`), names_to = "Genome", values_to = "Presence/Absence") %>%
+  distinct(gene, `Family Partition`) %>%
+  arrange(`Family Partition`) %>%
+  column_to_rownames("gene")
+mat <- mat[rownames(gene_anno), ]
+
+ann_colors <- list(
+  `Family Partition` = c(
+    "cloud" = "#2A9D8F",
+    "shell" = "#264653",
+    "persistent" = "#E76F51"
+  )
+)
+
+fig6_a <- pheatmap(mat,
+  color = c("0" = "grey93", "1" = "gray32", "2" = "#7570b3"), # Named colors
+  annotation_row = gene_anno,
+  annotation_colors = ann_colors,
+  cluster_cols = TRUE,
+  cluster_rows = FALSE,
+  show_rownames = FALSE,
+  legend_breaks = c(0, 1, 2),
+  legend_labels = c("Absence", "Presence", "Multicopy")
+)
+fig6_a
+```
+
+### Distribution Lawsonibacter Strains
+```{r Fig6_b, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+macroquant_lawsonibacter <- macroquant_counts_filt_30_98 %>%
+  filter(genome %in% c(macromag_genomemetadata_98 %>%
+    filter(genus == "Lawsonibacter") %>%
+    pull(genome))) %>%
+  pivot_longer(-genome, names_to = "microsample", values_to = "abundance") %>%
+  left_join(macroquant_metrics_filt_30 %>%
+    select(microsample, batch, cryosection, animal, Xcoord, Ycoord), by = "microsample") %>%
+  filter(
+    abundance > 0,
+    !is.na(Xcoord),
+    !is.na(Ycoord)
+  ) %>%
+  left_join(macromag_genomemetadata_98, by = "genome")
+
+lawsonibacter_pie_df <- macroquant_lawsonibacter %>%
+  filter(
+    cryosection %in% c("G121eI103A", "G103bI301A"),
+    # circul %in% c("Y")
+  ) %>% 
+  group_by(microsample) %>%
+  mutate(
+    abundance = abundance / sum(abundance) # normalize counts to proportions
+  ) %>%
+  arrange(microsample, genome) %>%
+  mutate(
+    start = cumsum(lag(abundance, default = 0)) * 2 * pi,
+    end = cumsum(abundance) * 2 * pi,
+    r0 = 0,
+    r = 75
+  )
+
+lawsonibacter_piecharts <- split(lawsonibacter_pie_df, lawsonibacter_pie_df$cryosection) %>%
+  map(~ {
+    ggplot(.x) +
+      geom_arc_bar(
+        aes(
+          x0 = Xcoord, y0 = Ycoord, r0 = r0, r = r,
+          start = start, end = end, fill = genome
+        ),
+        color = "black", linewidth = 0.1
+      ) +
+      coord_fixed() +
+      ggtitle(unique(.x$cryosection)) +
+      theme(legend.position = "none") +
+      custom_ggplot_theme +
+      scale_fill_manual(values = lawsonibacter_colors, drop = FALSE)
+  })
+
+lawsonibacter_piecharts$G103bI301A
+lawsonibacter_piecharts$G121eI103A
+```
+
+### Test Spatial Distribution Lawsonibacter subspecies
+**Note:** The lawsonibacter_mantel_analysis() function needs to be loaded.
+
+#### 35 Days Animal (G121e)
+##### Presence/Absence {-}
+
+```{r lawsonibacter_mantel_G121e_cryo_pa, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+lawsonibacter_G121e <- lawsonibacter_mantel_analysis(
+  data = macroquant_lawsonibacter %>% filter(cryosection %in% c("G121eI103A")),
+  circul_selection = "N"
+)
+lawsonibacter_G121e$correlogram_pa
+```
+##### Abundance {-}
+
+```{r lawsonibacter_mantel_G121e_cryo, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+lawsonibacter_G121e$correlogram_clr
+```
+
+
+#### 14 Days Animal (G103b)
+##### Presence/Absence {-}
+
+```{r lawsonibacter_mantel_G103b_pa, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+lawsonibacter_G103b <- lawsonibacter_mantel_analysis(
+  data = macroquant_lawsonibacter %>% filter(cryosection %in% c("G103bI301A")),
+  circul_selection = "N"
+)
+lawsonibacter_G103b$correlogram_pa
+```
+
+##### Abundance {-}
+```{r lawsonibacter_mantel_G103b, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+lawsonibacter_G103b$correlogram_clr
+```
+
+
+## SNP level microdiversity (Lorikeet)
+```{r lawsonibacter_popANI, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+lawsonibacter_popANI <- map_dfr(names(ani_list), function(bin_id) {
+  ani_mat <- ani_list[[bin_id]]
+  ani_mat %>%
+    as.data.frame() %>%
+    rownames_to_column("microsample_1") %>%
+    pivot_longer(-microsample_1, names_to = "microsample_2", values_to = "popANI") %>%
+    filter(microsample_1 != microsample_2) %>% # Exclude self-comparisons
+    mutate(
+      bin = bin_id,
+      # Create unordered pair identifier
+      sample_pair = pmap_chr(list(microsample_1, microsample_2), ~ paste(sort(c(..1, ..2)), collapse = "_"))
+    ) %>%
+    distinct(bin, sample_pair, .keep_all = TRUE) %>% # Keep only one of each unordered pair
+    select(-sample_pair)
+})
+lawsonibacter_popANI_meta <- macroquant_metrics_filt_30 %>%
+  filter(
+    cryosection %in% c("G121eI103A", "G103bI301A"),
+    type %in% c("positive"),
+    cov_filtering %in% c("Retained By Filtering"),
+    !is.na(Xcoord),
+    !is.na(Ycoord)
+    ) %>%
+  select(cryosection, microsample, animal, Xcoord, Ycoord)
+```
+
+### Distribution popANI by Group (Fig6_d and SupFig7_a) 
+```{r Fig6_d, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+boxplot_popANI <- lawsonibacter_popANI %>%
+  filter(
+    !is.nan(popANI),
+    !is.na(popANI),
+    microsample_1 %in% c(lawsonibacter_popANI_meta$microsample),
+    microsample_2 %in% c(lawsonibacter_popANI_meta$microsample)#,
+    # bin %in% c("GPB_bin_000044") or bin %in% c("GPB_bin_000047","GPB_bin_000063")
+  ) %>%
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_1" = "microsample")) %>%
+  rename(animal_microsample_1 = animal) %>%
+  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_2" = "microsample")) %>%
+  rename(animal_microsample_2 = animal) %>%
+  mutate(group = ifelse(animal_microsample_1 == animal_microsample_2, animal_microsample_1, "G121e-G103b")) %>%
+  ggplot(aes(x = group, y = popANI, fill = group)) +
+  geom_boxplot(aes(group = group), outlier.shape = NA) +
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 0.3, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#79b1a3", "#e35d51", "#ffcc62")) +
+  custom_ggplot_theme +
+  stat_compare_means(
+    method = "wilcox.test",
+    comparisons = list(
+      c("G121e", "G103b"),
+      c("G121e", "G121e-G103b"),
+      c("G103b", "G121e-G103b")
+    ),
+    label = "p.signif",
+    p.adjust.method = "BH",
+    hide.ns = TRUE
+  ) +
+  labs(
+    # title = "a",
+    x = "",
+    #y = "popANI GPB_bin_000044"
+  ) +
+  theme(legend.position = "none") +
+  scale_x_discrete(labels = c(
+    "G103b" = "Within Animal \nG103b", "G121e" = "Within Animal \nG121e",
+    "G121e-G103b" = "Between Animals"
+  )) +
+  # Hide last tick label by replacing it with blank
+  scale_y_continuous(labels = function(x) {
+    lbls <- as.character(x)
+    lbls[length(lbls)] <- "" # blank out last label
+    lbls
+  })+ facet_wrap(~bin) +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1))
+boxplot_popANI
+```
+
+### Heatmap popANI GPB_bin_000044 (Fig6_c) 
+```{r Fig6_c, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+popani_044 <- ani_list$GPB_bin_000044[rownames(ani_list$GPB_bin_000044) %in% lawsonibacter_popANI_meta$microsample, ] %>%
+  select(lawsonibacter_popANI_meta$microsample)
+
+metadata_044 <- macroquant_metrics_filt_30 %>%
+  filter(microsample %in% colnames(popani_044)) %>%
+  select(microsample, animal) %>%
+  column_to_rownames(var = "microsample") %>%
+  rename(    Animal = animal
+  )
+
+annotation_colors <- list(
+  Animal = c(
+    "G121e" = "darkgrey",
+    "G103b" = "#E9C46A"
+  ) 
+)
+
+fig6_c <- pheatmap(
+  popani_044,
+  cluster_rows = TRUE,
+  cluster_cols = TRUE,
+  clustering_method = "ward",
+  display_numbers = FALSE,
+  legend = TRUE,
+  show_rownames = FALSE,
+  show_colnames = FALSE,
+  color = colorRampPalette(c("black", "#fbffe0"))(100),
+  annotation_col = metadata_044,
+  annotation_row = metadata_044,
+  annotation_colors = annotation_colors,
+)
+fig6_c
+```
+
+### Spatial Pattern Microdiversity
+
+```{r mantel_cor_bins, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+bins_id <- c("GPB_bin_000044","GPB_bin_000047","GPB_bin_000063")  
+ids_35day <- lawsonibacter_popANI_meta %>%
+  filter(cryosection %in% c("G121eI103A")) %>%
+  pull(microsample)
+
+results_list <- list()
+for (bin in bins_id) {
+  cat("Running analysis for", bin, "\n")
+  res <- ani_spatial_analysis(bin, ani_list, ids_35day, lawsonibacter_popANI_meta)
+  results_list[[bin]] <- res
+}
+results_list$GPB_bin_000063$mantel
+```
+
+

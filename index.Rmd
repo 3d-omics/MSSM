@@ -194,7 +194,7 @@ ggplot(data.frame(x = 0, y = 0), aes(x, y)) +
 ## Load Functions
 The functions defined below are used throughout other sections of this analysis and must be loaded before running those parts.
 ```{r functions, warning = FALSE, comments = "", message = FALSE}
-source("resources/scripts/MSSM_functions_pre.R")
+source("resources/scripts/MSSM_functions.R")
 source("resources/scripts/JEC_1743_sm_apps5.R")
 ```
 
