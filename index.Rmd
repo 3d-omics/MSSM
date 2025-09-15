@@ -59,7 +59,7 @@ if (!require("pacman")) install.packages("pacman")
 # If the package is not installed, installs from CRAN
 pacman::p_load(
   tidyverse, rairtable, jsonlite, ape,
-  ggpubr, broom, reshape2, zCompositions, ANCOMBC,
+  ggpubr, broom, reshape2, zCompositions,
   ALDEx2, car, DHARMa, sjPlot, ggeffects,
   ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork,
   grid, pheatmap, janitor, spdep, adespatial, adegraphics,
@@ -118,7 +118,11 @@ order_colors <- c(
   UBA1381 = "#be5643",
   Bacteroidales = "#e3c7a0",
   Enterobacterales = "#ffcc62",
-  Verrucomicrobiales = "#823f1d"
+  Verrucomicrobiales = "#823f1d",
+  Mycobacteriales = "#79b1b6",
+  Propionibacteriales = "darkseagreen3", 
+  Azospirillales = "lightyellow",
+  Eubacteriales = "maroon"
 )
 
 barplot(

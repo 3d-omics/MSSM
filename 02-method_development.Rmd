@@ -20,17 +20,89 @@ print_median_iqr(micromag_genomemetadata$contamination, "Contamination:")
 
 ### Macro vs Micro MAGs: Completeness And Abundance (Fig. 2a)
 
-```{r fig_2a, warning = FALSE, comments = "", message = FALSE}
+```{r fig_2a, echo = FALSE, warning = FALSE, comments = "", message = FALSE, fig.height=5, fig.width=7}
+# Load the genome metadata for macro- and micro- MAG catalogues
+genome_biplot_data <- macromag_genomemetadata %>%
+  select(genome,completeness, contamination, length) %>%
+  mutate(dataset = "Macro-scale")  
+
+genome_biplot_micro_data <- micromag_genomemetadata %>%
+  select(genome, completeness, contamination, length) %>%
+  mutate(dataset = "Micro-scale")  
+
+# Combine the dfs
+combined_data <- bind_rows(genome_biplot_data, genome_biplot_micro_data)
+
+# Plot the combined data
+combined_plot <- ggplot(combined_data, aes(x = completeness, y = contamination, size = length, fill = dataset)) +
+  scale_fill_manual(values = c("#E8BD50", "#B92D65")) +  
+  geom_point(shape = 21, color = "black", alpha = 0.5) +
+  xlim(c(70, 100)) +
+  ylim(c(8, 0)) +
+  labs(y = "Contamination %", x = "Completeness %", color = "MAG catalogue", size = "Genome length") +
+  theme_classic() +
+  theme(legend.position = "none")
+
+# Plot contamination boxplot
+genome_contamination <- combined_data %>%
+            ggplot(aes(y=contamination, x=dataset, fill=dataset)) +
+                    ylim(c(8,0)) +
+                    geom_boxplot() +
+                    theme_void() +
+                    scale_fill_manual(values = c("#E8BD50", "#B92D65")) + 
+                    guides(fill = "none") +  
+                    theme(
+                        axis.title.x = element_blank(),
+                        axis.title.y = element_blank(),
+                        axis.text.y=element_blank(),
+                        axis.ticks.y=element_blank(),
+                        axis.text.x=element_blank(),
+                        axis.ticks.x=element_blank(),
+                        plot.margin = unit(c(0, 0, 0.40, 0),"inches")) 
+
+# Plot completeness boxplot
+genome_completeness <- combined_data %>%
+        ggplot(aes(x=completeness, y=dataset, fill = dataset)) +
+                xlim(c(70,100)) +
+                geom_boxplot() +
+                theme_void() +
+                scale_fill_manual(values = c("#E8BD50", "#B92D65")) +
+                guides(fill = "none") +  
+                theme(
+                    axis.title.x = element_blank(),
+                    axis.title.y = element_blank(),
+                    axis.text.y=element_blank(),
+                    axis.ticks.y=element_blank(),
+                    axis.text.x=element_blank(),
+                    axis.ticks.x=element_blank(),
+                    plot.margin = unit(c(0, 0, 0, 0.50),"inches")) 
+
+# Align margins
+genome_biplot <- combined_plot + theme(plot.margin = margin(5, 5, 5, 5))
+genome_completeness <- genome_completeness + theme(plot.margin = margin(0, 5, 0, 5))
+genome_contamination <- genome_contamination + theme(plot.margin = margin(5, 0, 5, 0))
+
+# Compose layout
+top_row <- genome_completeness + plot_spacer() + plot_layout(widths = c(15, 2))
+bottom_row <- genome_biplot + genome_contamination + plot_layout(widths = c(15, 2))
+fig2a <- (top_row / bottom_row + plot_layout(heights = c(5, 15))) + plot_layout(guides = "collect") &
+  theme(legend.position = "bottom", legend.box = "vertical") 
+
+fig2a
 ```
 
 ### Macro MAGs Overview (Fig. 2b)
 
-```{r fig_2b, warning = FALSE, comments = "", message = FALSE}
+```{r fig_2b, echo = FALSE, warning = FALSE, comments = "", message = FALSE, fig.height=12, fig.width=7}
+fig2b <- MAG_tree_plot(genome_metadata = macromag_genomemetadata, tree = macromag_tree)
+fig2b
 ```
 
 ### Micro MAGs Overview (Suppl. Fig. 1)
 
-```{r suppl_fig_1, warning = FALSE, comments = "", message = FALSE}
+```{r suppl_fig_1, echo = FALSE, warning = FALSE, comments = "", message = FALSE, fig.height=12, fig.width=7}
+figs1 <- MAG_tree_plot(genome_metadata = micromag_genomemetadata, tree = micromag_tree)
+figs1
 ```
 
 ### Comparative Analysis Of Genome Catalogues (Suppl. Note 1)
@@ -397,13 +469,187 @@ figs1_1c
 ```
 Differentially abundant species in the 35-day-old animal (G121e) are primarily structural 0.
 
+## Collection attempts vs. success (Suppl.Fig. 4)
+```{r plot_collection_attempts, echo = FALSE, warning=FALSE, comments="", message=FALSE, fig.height=5, fig.width=7}
+collection_success_df <- macroquant_metrics_filt_30 %>%
+  filter(batch == "MSEB0006" | 
+          batch == "MSEB0009" |
+          batch == "MSEB0010" | 
+          batch == "MSEB0011" |
+          batch == "MSEB0012" |
+          batch == "MSEB0014" | 
+          batch == "MSEB0015") %>%
+  filter(type == "positive") %>%
+  filter(collection_attempts > 0)
+  
+ collection_attempts_plot <- collection_success_df %>%
+  mutate(collection_attempts = factor(collection_attempts, levels = c(4, 3, 2, 1))) %>%
+  ggplot(aes(y = batch,  fill = collection_attempts)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("#685d79","#ac6d83","#d9727f","#fcbb6d")) +    
+  theme_minimal() +
+  custom_ggplot_theme +
+  labs(x = "Collection attempts",y = "Batch" ,fill = "Number of collection attempts") +
+  theme(legend.position = "bottom") 
+
+collection_success_plot <- collection_success_df %>%
+  mutate(collection = factor(collection, levels = c("Fail", "Success"))) %>% 
+  ggplot(aes(y = batch,  fill = collection)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("#d9727f", "#fcbb6d")) +
+  theme_minimal() +
+  custom_ggplot_theme +
+  labs(x = "Visual confirmation" ,y =  "Batch",fill = "Result of LMD collection") +
+  theme(legend.position = "bottom")  
+
+figs4 <- collection_attempts_plot + collection_success_plot + 
+  plot_layout(axes = "collect", guides = "collect") &
+  theme(legend.position = "bottom", legend.box = "vertical")
+figs4
+```
+
+### Collection success at different microsample areas
+```{r plot_collection_attempts_LMD_area, echo = FALSE, warning=FALSE, comments="", message=FALSE, fig.height=3, fig.width=5}
+collection_success_plot_size <- collection_success_df %>%
+  mutate(size = factor(size, levels = c(500, 1500, 2500, 5000, 25000, 50000))) %>%
+  filter(batch == "MSEB0014") %>%
+  mutate(collection = factor(collection, levels = c("Fail", "Success"))) %>% 
+  ggplot(aes(y = size,  fill = collection)) +
+  geom_bar(position = "fill") +
+  scale_fill_manual(values = c("#d9727f", "#fcbb6d")) +
+  theme_minimal() +
+  custom_ggplot_theme +
+  labs(x = "Visual confirmation" ,y =  "Batch MSEB0014",fill = "Result of LMD collection") +
+  theme(legend.position = "bottom")  
+collection_success_plot_size
+```
+
+```{r plot_collection_attempts, echo = FALSE, warning=FALSE, comments="", message=FALSE, fig.height=5, fig.width=7}
+collection_success_df %>%
+  select(microsample, collection_attempts) %>%
+  count(collection_attempts) %>%
+  mutate(percent = 100 * n / sum(n)) %>%
+  knitr::kable()
+```
+
 ## Tissue Lysis And Sequencing Library Preparation (Suppl. Note 3)
 
 ### Impact of Lysis Conditions On Microbial Taxonomic Profiling (Suppl. Note 3.2)
 
 #### Mock Community (Fig. S3.2.1)
 
-```{r x2, warning = FALSE, comments = "", message = FALSE}
+```{r mock_RMSE_calculation, warning = FALSE, comments = "", message = FALSE}
+# Select samples & close composition
+mock_wide <- tidy_plot_genome_counts_filt_30_mock_closed %>%
+  filter(culture == "MX") %>%
+  select(genome, microsample, count) %>%
+  pivot_wider(names_from = genome,values_from = count,values_fill = 0) %>%
+  select(where(~ any(. != 0)) | where(is.character) | where(is.factor)) %>%   
+  column_to_rownames(var = "microsample") %>%
+  mutate(across(where(is.numeric), ~ . / rowSums(across(where(is.numeric))) * 100))
+
+# Transform genome counts to CLR relative abundance values
+mock_wide_CLR <- as.data.frame(t(apply(mock_wide, 1, clr_transform))) 
+
+# Pivot df to tidy for plotting
+mock_wide_CLR_tidy <- mock_wide_CLR %>%
+  # Convert row names into a column
+  rownames_to_column(var = "microsample") %>%  
+  # Convert all other columns (microbes) into long format
+  pivot_longer(cols = -microsample,  
+               names_to = "genome", 
+               values_to = "relabun") %>%
+  left_join(genome_metadata_mock, by = join_by(genome == genome)) %>% 
+  left_join(sample_metadata_mock, by = join_by(microsample == sample)) %>%
+  select(-LabBatch_text, -culture) %>%
+  # Set expected CLR value for all genomes
+  mutate(expected = 0) %>% # not really needed, obviously, but for consistency
+  mutate(error = relabun - expected) 
+  
+mock_RMSE_df <- mock_wide_CLR_tidy %>%
+  group_by(genome, buffer) %>% 
+  summarise(
+    # Root Mean Squared Error across samples for each taxon for each buffer
+    RMSE = sqrt(mean(error^2, na.rm = TRUE)),
+    span = (max(relabun, na.rm = TRUE) - min(relabun, na.rm = TRUE)), 
+    .groups = "drop"
+  ) 
+
+mock_RMSE_df %>%
+  group_by(buffer) %>%
+  summarise(median_RMSE = median(RMSE, na.rm = TRUE))
+```
+
+```{r FigS3_2_1, warning=FALSE, comments="", message=FALSE, eval=FALSE, fig.height=9, fig.width=7}
+custom_ggplot_theme_mock <- custom_ggplot_theme +
+  theme(plot.margin = unit(c(0, 0, 0, 0), "pt"))
+
+# Composition of the mock community plot
+figs3_2_1_a <- tidy_plot_genome_counts_filt_30_mock_closed %>%
+  filter(culture == "MX") %>%
+  ggplot(aes(x = microsample, y = count, fill = species, group = species)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#E76F51")) +
+  labs(x = NULL, y = "Relative abundance", fill = "Bacteria") +
+  facet_nested(. ~ buffer, scales = "free", space = "free", switch = "y") +
+  theme_minimal() +
+  custom_ggplot_theme +
+  theme(axis.text.x = element_blank()) +
+  theme(legend.position = "bottom") +
+  theme(panel.spacing = unit(0.5, "lines"))
+
+# CLR values (relative abundance) of each taxon vs expected relative abundance (CLR=0)
+figs3_2_1_b <- mock_wide_CLR_tidy %>%
+  ggplot(aes(x = buffer, y = relabun)) +
+  geom_boxplot(
+    width = 0.3, alpha = 0.5, size = 0.3,
+    outlier.shape = NA, position = position_dodge(width = 0.9)
+  ) +
+  geom_jitter(aes(fill = genome, group = buffer),
+    size = 2, alpha = 1.0, shape = 21,
+    color = "black",
+    stroke = 0.3,
+    position = position_jitterdodge(jitter.width = 0.6, dodge.width = 0.9)
+  ) +
+  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#E76F51")) +
+  labs(x = NULL, y = "CLR") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", label = "expected error", linewidth = 0.5) +
+  theme_minimal() +
+  custom_ggplot_theme_mock +
+  theme(legend.position = "none") +
+  guides(fill = "none")
+
+# RMSE of CLR relative abundance vs expected CLR
+figs3_2_1_c <- ggplot(mock_RMSE_df, aes(x = buffer, y = RMSE)) + # y = mean_RMSE
+  geom_boxplot(
+    width = 0.3, size = 0.3,
+    outlier.shape = NA, fill = "grey", alpha = 0.5
+  ) +
+  geom_jitter(aes(fill = genome),
+    size = 2,
+    shape = 21,
+    color = "black",
+    stroke = 0.5,
+    width = 0.1, alpha = 1.0
+  ) +
+  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#E76F51")) +
+  labs(x = NULL, y = " RMSE") +
+  # scale_y_continuous(
+  #   limits = c(-0, 10),
+  #   breaks = seq(0, 10, by = 0.1)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", label = "expected error", linewidth = 0.5) +
+  theme_minimal() +
+  custom_ggplot_theme +
+  theme(legend.position = "none") +
+  guides(fill = "none") 
+
+# Combined plot
+figs3_2_1 <- figs3_2_1_a / figs3_2_1_b / figs3_2_1_c +
+  plot_annotation(tag_levels = 'a') +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom", legend.box = "vertical") 
+
+figs3_2_1
 ```
 
 #### Microsamples (Fig. S3.2.2)
@@ -1382,12 +1628,65 @@ figs3_4_1
 
 Although controls yielded sequencing data, they consistently exhibited poorer quality metrics.
 
+### After coverage-filtering sample retention
+```{r neg_retained_filt, echo=FALSE, warning=FALSE, comments="", message=FALSE}
+macroquant_genome_counts_tidy %>%
+  filter( batch == "MSEB0006" | batch == "MSEB0009" | batch == "MSEB0011" | batch == "MSEB0014" | batch == "MSEB0015" | batch == "MSEB0010" | batch == "MSEB0012") %>% #
+  filter(section != "Ileum") %>%
+  filter(type != "ControlHuman") %>%
+  select(microsample, type, cov_filtering) %>%
+  group_by(type) %>%
+  count(cov_filtering) %>%
+  mutate(percent = 100 * n / sum(n)) %>%
+  knitr::kable()
+```
+
 ### Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA)
 **Note:** The perform_pca() function needs to be loaded.
 
 #### FigS3_4_2
+```{r FigS3_4_2,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.height = 6, fig.width=7.5}
+neg_vs_pos_wide <- macroquant_genome_counts_tidy %>%
+  filter( batch == "MSEB0006" | batch == "MSEB0009" | batch == "MSEB0011" | batch == "MSEB0014" | batch == "MSEB0015" | batch == "MSEB0010" | batch == "MSEB0012") %>% #
+  filter(section != "Ileum") %>%
+  filter(type != "ControlHuman") %>%
+  # arrange samples: first negatives, then positives (for ALDEx2).
+  arrange(type) %>% 
+  select(genome, microsample, count) %>%
+  pivot_wider(
+    names_from = genome,   
+    values_from = count,   
+    values_fill = 0
+  ) %>%
+  select(where(~ any(. != 0))) %>%
+  mutate(across(-microsample, ~ . / rowSums(across(where(is.numeric))) * 100 )) %>%
+  column_to_rownames(var = "microsample")
 
-```{r FigS3_4_2,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
+# Remove taxa in few samples, and samples with few taxa
+neg_vs_pos_wide <- remove_samples_or_taxa(df = neg_vs_pos_wide,
+                                     min_samples_per_taxon = 50,
+                                     min_taxa_per_sample = 25)
+# Remove taxa with less than 0.1% rel. abun. in all samples
+neg_vs_pos_wide <- neg_vs_pos_wide %>% select(where(~ any(. >= 0.1)))
+
+neg_pos_PCA <- perform_pca(neg_vs_pos_wide, z_delete = TRUE)
+
+figs3_4_2 <- plot_pca(neg_pos_PCA$pca_result,
+  samples_color_metadata = "type",
+  samples_shape_metadata = "cov_filtering",
+  samples_color_value = c("#c1558b", "#3cb2bd"),
+  loadings_color_metadata = "order",
+  loadings_color_value = order_colors,
+  loadings_taxon_level = "species",
+  sample_metadata = macroquant_metrics_filt_30,
+  genome_metadata = macromag_genomemetadata,
+  order_colors,
+  custom_ggplot_theme,
+  loadings_number = 20
+) +
+  theme(plot.margin = unit(c(0, 0, 1, 0), "cm"))
+
+figs3_4_2
 ```
 
 
@@ -1465,11 +1764,143 @@ Elevated levels of Streptococcus were observed in negative reactions.
 
 ## Design Considerations: Microsample Area
 
-```{r x2, echo=FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r Fig3_prep, echo=FALSE,  warning = FALSE, comments = "", message = FALSE}
+custom_ggplot_theme_LMD_size <- custom_ggplot_theme +
+  theme(
+        legend.text = element_text(size = 7),
+        legend.title = element_text(size = 7),
+        axis.text = element_text(size = 5),
+        axis.title = element_text(size = 7, face = "bold"),
+        strip.text = element_text(size = 7, face = "bold", color = "black"),
+        plot.title = element_text(size = 7, face = "bold", color = "black"),
+        plot.margin = unit(c(0, 0, 0, 0), "cm"))
+
+size_colors <- c("500" = '#ffdf9e', "1500" = '#ffc273', "2500" = '#e56969', "5000" = '#c1558b', "25000" = '#8a49a1',"50000" = '#4f5bd5')
+
+# Make a-diversity df tidy for plotting
+macroquant_metrics_filt_30_tidy <- macroquant_metrics_filt_30 %>%
+  pivot_longer(
+    cols = c(richness, neutral, phylogenetic), 
+    names_to = "metric",                      
+    values_to = "value") %>%
+  mutate(metric = factor(metric, levels = c("richness", "neutral", "phylogenetic")),
+         size = factor(size, levels = c(500, 1500, 2500, 5000, 25000, 50000)))
 ```
 
-```{r x3,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
+### Fig. 3b
+```{r Fig3b,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.height = 4, fig.width = 6}
+# Plot a-diversity metrics for different microsample sizes
+fig3b <- macroquant_metrics_filt_30_tidy %>%
+  filter(batch == "MSEB0014") %>%
+  filter(value > 1) %>% # to filter the samples with richness = 0, i.e. expShannon = 1
+  filter(type == "positive") %>%
+  ggplot(aes(x = size, y = value, fill = mapmag_filteredreads_pct*100)) +
+    geom_boxplot(outlier.shape = NA, size = 0.3) +
+    geom_jitter(shape = 21, color = "black", 
+                width = 0.2, alpha = 1, 
+                size = 2, stroke = 0.2) +
+    scale_fill_gradient(low = "#c90076", high = "#3598bf", 
+                         name = "Mapped MAG %", limits = c(0, 100)) +
+    facet_nested(metric ~ size, scales = "free", space = "fixed", 
+                 strip = strip_themed(
+                  background_x = elem_list_rect(
+                  fill = size_colors,
+                  colour = "white",
+                  size = 0.8))) + 
+    ylim(0, NA) +
+    theme_minimal() +
+    custom_ggplot_theme_LMD_size +
+    theme(axis.text.x = element_blank()) 
+fig3b
 ```
+
+```{r Fig3_mapped_mag_median, echo=FALSE,  warning = FALSE, comments = "", message = FALSE}
+# Mapped MAG median
+macroquant_metrics_filt_30_tidy %>%
+  filter(batch == "MSEB0014") %>%
+  filter(metric == "richness") %>%
+  filter(value > 1) %>%  # remove richness = 0 samples
+  filter(type == "positive") %>%
+  group_by(size) %>%
+  summarise(
+    median_pct = median(mapmag_filteredreads_pct * 100, na.rm = TRUE),
+    IQR_pct    = IQR(mapmag_filteredreads_pct * 100, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  knitr::kable()
+```
+### Fig. 3c
+```{r Fig3c, warning = FALSE, echo=FALSE, comments = "", message = FALSE, fig.height = 3.6, fig.width = 5}
+# Select data for PCA and make wide df 
+LMD_size_df_wide <- macroquant_genome_counts_filt_30_tidy %>%
+  filter(batch == "MSEB0014") %>%
+  filter(type == "positive") %>%
+  select(genome, microsample, count,) %>% #  size
+  pivot_wider(names_from = genome,values_from = count,values_fill = 0) %>%
+  select(where(~ any(. != 0)) | where(is.character) | where(is.factor)) %>%  
+  mutate(across(-c(microsample), ~ . / rowSums(across(where(is.numeric))) * 100 )) %>%
+  column_to_rownames(var = "microsample")
+
+# Remove samples with few taxa and taxa in few samples
+LMD_size_df_wide <- remove_samples_or_taxa(df = LMD_size_df_wide, 
+                                           min_samples_per_taxon = 6,
+                                           min_taxa_per_sample = 14)
+# Perform & plot PCA
+LMD_size_pca <- perform_pca(LMD_size_df_wide, z_delete = TRUE)
+
+fig3c <- plot_pca(LMD_size_pca$pca_result,
+         samples_color_metadata = "size", 
+         samples_color_value = size_colors, 
+         samples_shape_metadata = "animal",
+         loadings_color_metadata = "order", 
+         loadings_color_value = order_colors, 
+         loadings_taxon_level = "species",
+         sample_metadata = macroquant_metrics_filt_30, 
+         genome_metadata = macromag_genomemetadata, 
+         order_colors= order_colors, 
+         custom_ggplot_theme = custom_ggplot_theme_LMD_size,
+         loadings_number = 8)
+ 
+fig3c
+```
+### Fig. 3d
+```{r Fig3d, echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.height = 6, fig.width = 6}
+# Relative abundance at genus level
+LMD_size_rel_abun <- macroquant_genome_counts_filt_30_tidy %>%
+  filter(batch == "MSEB0014") %>%
+  filter(type == 'positive') %>%
+  group_by(microsample, order, genus) %>%
+  mutate(relabun = sum(count)) %>%
+  ungroup()
+# Plot relative abundance
+LMD_size_taxa_sorted <- LMD_size_rel_abun %>%
+  group_by(genus) %>%
+  summarise(median = median(relabun, na.rm = T)) %>%
+  arrange(-median)
+
+# Reorder taxon_level based on the summary
+fig3d <- LMD_size_rel_abun %>%
+  mutate(genus = factor(genus, levels = rev(LMD_size_taxa_sorted %>% pull(genus))))  %>%
+  ggplot(aes(x = relabun, y = genus, group = genus, fill = order)) +
+      scale_fill_manual(values = order_colors) +
+    geom_jitter(shape = 21, alpha = 1, size=1, 
+                color = "black", stroke = 0.1) +
+    facet_nested(. ~  size, 
+                 scales = "free", space = "free", switch = "y",
+                 strip = strip_themed(
+                  background_x = elem_list_rect(
+                  fill = size_colors,
+                  colour = "white",
+                  size = 0.8))) +
+    theme_minimal() +
+    custom_ggplot_theme_LMD_size + 
+    scale_x_continuous(limits = c(0, 0.4)) +
+    theme(panel.spacing = unit(0.2, "lines"))
+
+fig3d
+```
+
+
 
 ## Resource Optimisation and Throughput (Suppl. Note 3.5)
 ```{r sn3_5_df,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}

@@ -35,8 +35,20 @@ mssm_discriminative_metadata <- macroquant_metrics_filt_30 %>%
   filter(microsample %in% c(rownames(mssm_discriminative_obj$df_clr_dist)))
 ```
 
-```{r supplementary_figure_5, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
-autoplot(mssm_discriminative_obj$pca_result, data = mssm_discriminative_metadata, colour = "animal", shape = "cryosection", size = 3, alpha = 0.5, loadings = FALSE, scale = 0) + custom_ggplot_theme
+```{r supplementary_figure_5, echo = FALSE,  warning = FALSE, comments = "", message = FALSE, fig.height=6, fig.width=8}
+figs_5 <- plot_pca(mssm_discriminative_obj$pca_result,
+         samples_color_metadata = "animal", 
+         samples_shape_metadata = "cryosection",
+         samples_color_value = c('#ffc273','#c1558b'), 
+         loadings_color_metadata = "order", 
+         loadings_color_value = order_colors, 
+         loadings_taxon_level = "species",
+         sample_metadata = mssm_discriminative_metadata, 
+         genome_metadata = macromag_genomemetadata, 
+         custom_ggplot_theme = custom_ggplot_theme, 
+         order_colors, loadings_number = 20)
+
+figs_5
 ```
 
 
@@ -74,8 +86,152 @@ MSSM data across individuals revealed highly distinct microbial communities. In 
 ## MSSM compared to FISH and Macro-scale Metagenomics
 
 ### MSSM vs FISH
-```{r x3, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r MSSM_vs_FISH_plot_settings, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+custom_ggplot_theme_fish_mssm <- custom_ggplot_theme +
+  theme( 
+        legend.text = element_text(size = 7),
+        legend.title = element_text(size = 7),
+        axis.text = element_text(size = 5),
+        axis.title = element_text(size = 7, face = "bold"),
+        strip.text = element_text(size = 7, face = "bold", color = "black"),
+        plot.title = element_text(size = 7, face = "bold", color = "black"),
+        plot.margin = unit(c(0, 0, 0, 0), "cm"))
 ```
+
+#### PCA (Fig. 4b)
+```{r PCA_MSSM_vs_FISH, echo = FALSE,  warning = FALSE, comments = "", message = FALSE, fig.height=7, fig.width=7}
+# Load FISH counts as wide df
+fish_df_wide <- fish_counts %>%
+  select(-Total, -animal, -cryosection, -sample_type, -Other) %>%
+  select(where(~ any(. != 0)) | where(is.character) | where(is.factor)) %>%  
+  mutate(across(-c(microsample), ~ . / rowSums(across(where(is.numeric))) * 100 )) %>%
+  column_to_rownames(var = "microsample")
+
+# Create a tidy MSSM df with the relevant data
+mssm_df_wide <- macroquant_genome_counts_filt_30_tidy %>%
+  filter(type == "positive") %>%
+  filter(batch == "MSEB0011") %>%
+  # filter(mapmag_filteredreads_pct > 0.8) %>%
+  select(domain, phylum, class, order, family, genus, genome, microsample, count) %>%
+  group_by(microsample, genus) %>%
+  summarise(genus_count = sum(count, na.rm = TRUE))%>%
+  filter(genus != "") %>%
+  mutate(count=genus_count) %>%
+  select(-genus_count) %>%
+  pivot_wider(names_from = genus,values_from = count,values_fill = 0) %>%
+  select(where(~ any(. != 0)) | where(is.character) | where(is.factor)) %>%   
+  column_to_rownames(var = "microsample") #%>%
+
+# Remove almost empty samples or taxa from entire MSSM df
+mssm_df_wide <- remove_samples_or_taxa(df = mssm_df_wide,
+                                       min_samples_per_taxon = 30, 
+                                       min_taxa_per_sample = 26)  
+  
+# Sum all other genera into "Other"
+mssm_df_wide <- mssm_df_wide %>%
+  mutate(Other = rowSums(select(., -all_of(fish_selected_genera)), na.rm = TRUE)) %>% 
+  # Keep only the selected genera
+  select(any_of(fish_selected_genera)) %>%
+  mutate(across(where(is.numeric), ~ . / rowSums(across(where(is.numeric))) * 100))
+
+# Combine the dfs for MSSM and FISH
+fish_mssm_df_wide <- bind_rows(fish_df_wide, mssm_df_wide) 
+fish_mssm_sample_metadata <- bind_rows(
+  fish_sample_metadata,
+  macroquant_metrics_filt_30 %>%
+    filter(type == "positive", batch == "MSEB0011") %>%
+    select(microsample, animal, cryosection) %>%
+    mutate(sample_type = "MSSM")
+)
+# Perform PCA
+fish_mssm_pca <- perform_pca(fish_mssm_df_wide, z_delete = TRUE)
+fig4_b <- plot_pca(fish_mssm_pca$pca_result,
+                   samples_color_metadata = "sample_type", 
+                   samples_shape_metadata = "animal",
+                   samples_color_value = c('#4f5bd5', '#c1558b'),
+                   loadings_color_metadata = "order", 
+                   loadings_color_value = order_colors, 
+                   loadings_taxon_level = "genus",
+                   sample_metadata = fish_mssm_sample_metadata, 
+                   genome_metadata = fish_genome_metadata, 
+                   scaling_factor_value = 1,
+                   order_colors, 
+                   custom_ggplot_theme_fish_mssm)
+fig4_b
+```
+
+#### PERMANOVA
+```{r PERMANOVA_MSSM_vs_FISH, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+# Calculate Euclidean distance on CLR data
+fish_mssm_dist_matrix <- vegdist(fish_mssm_pca$df_clr_dist, method = "euclidean")
+
+# Make sure that filtered df and metadata have the same number & order of rows
+fish_mssm_metadata_adonis <- fish_mssm_sample_metadata %>%
+  filter(microsample %in% rownames(fish_mssm_pca$df_clr_dist)) %>%
+  arrange(match(microsample, rownames(fish_mssm_pca$df_clr_dist)))
+all(fish_mssm_metadata_adonis$microsample == rownames(fish_mssm_pca$df_clr_dist))
+
+# Run PERMANOVA
+adonis2_result <- adonis2(
+  fish_mssm_dist_matrix ~ animal + sample_type,
+  data = fish_mssm_metadata_adonis,
+  permutations = 999,
+  by = "terms"
+)
+adonis2_result %>%
+  knitr::kable()
+```
+#### Fig. 4a
+```{r barplot_MSSM_vs_FISH,echo = FALSE,  warning = FALSE, comments = "", message = FALSE, fig.height=7, fig.width=7}
+fish_mssm_df_CLR_tidy <- fish_mssm_pca$df_clr_dist %>%
+  rownames_to_column(var = "microsample") %>%
+  pivot_longer(
+    cols = -microsample,
+    names_to = "genome",
+    values_to = "relabun"
+  ) %>%
+  left_join(fish_genome_metadata, by = join_by(genome == genome)) %>%
+  left_join(fish_mssm_sample_metadata, by = join_by(microsample == microsample)) %>%
+  mutate(
+    phylum = factor(phylum, levels = unique(fish_genome_metadata$phylum)),
+    order = factor(order, levels = unique(fish_genome_metadata$order))
+  )
+
+# Order the genera based on abundance in animal G121 for plot
+summary <- fish_mssm_df_CLR_tidy %>%
+  filter(animal == "G121e") %>%
+  group_by(genome) %>%
+  summarise(mean = mean(relabun, na.rm = T)) %>%
+  arrange(-mean)
+
+# Plot barplot of CLR values per animal, for MSSM and FISH
+fig4_a <- fish_mssm_df_CLR_tidy %>%
+  mutate(genome = factor(genome, levels = rev(summary %>% pull(genome)))) %>%
+  ggplot(aes(x = genome, y = relabun)) +
+  geom_boxplot(aes(fill = sample_type),
+    outlier.shape = NA, alpha = 0.7, width = 0.6, size = 0.3,
+    position = position_dodge(width = 0.7)
+  ) +
+  scale_fill_manual(values = c('#4f5bd5', '#c1558b')) +
+  guides(fill = "none") + 
+  new_scale_fill() +
+  geom_jitter(aes(fill = genome, group = sample_type),
+    size = 0.8, alpha = 0.6, shape = 21,
+    color = "black",
+    stroke = 0.3,
+    position = position_jitterdodge(jitter.width = 0.6, dodge.width = 0.7)
+  ) +
+  scale_fill_manual(values = fish_genus_colors) +
+  facet_nested(animal ~ ., scales = "fixed", space = "fixed", switch = "y") + # switch = "y"
+  labs(x = "genus", y = "CLR") +
+  theme_minimal() +
+  custom_ggplot_theme_fish_mssm +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) + # Rotate x-axis labels
+  theme(legend.position = "bottom") +
+  theme(panel.spacing = unit(0.6, "lines"))
+fig4_a
+```
+
 
 ### Macro-scale Metagenomics vs MSSM
 

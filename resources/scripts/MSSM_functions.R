@@ -33,6 +33,126 @@ calculate_alpha_diversity <- function(input_data, metadata_name, tree_name) {
   return(alpha_diversity)
 }
 
+# MAG_tree_plot()
+### Generate the phylum color heatmap
+MAG_tree_plot <- function(genome_metadata, tree) {
+  phylum_heatmap <- genome_metadata %>%
+    arrange(match(genome, tree$tip.label)) %>%
+    select(genome,phylum) %>%
+    mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
+    column_to_rownames(var = "genome")
+  
+  ### Generate the order color heatmap
+  order_heatmap <- genome_metadata %>%
+    arrange(match(genome, tree$tip.label)) %>%
+    select(genome, order) %>%
+    mutate(order = factor(order, levels = unique(order))) %>%
+    column_to_rownames(var = "genome")
+  
+  ### Generate the basal tree
+  circular_tree <- force.ultrametric(tree, method="extend") %>% # extend to ultrametric for the sake of visualisation
+    ggtree(., layout="fan", open.angle=10, size=0.5)
+  
+  ### Add the phylum ring
+  circular_tree <- gheatmap(circular_tree, 
+                            phylum_heatmap, 
+                            offset = 1.2, width = 0.2, colnames = FALSE) +
+    scale_fill_manual(values = phylum_colors, name = "Phylum") +
+    geom_tiplab2(size = 1, hjust = -0.1) +
+    theme(plot.margin = margin(0, 0, 0, 0), 
+          panel.margin = margin(0, 0, 0, 0))
+    circular_tree <- circular_tree + new_scale_fill()
+  
+  ### Add order ring
+  circular_tree <- gheatmap(circular_tree, 
+                            order_heatmap, 
+                            offset = 0.55, width = 0.3, colnames = FALSE) +
+    scale_fill_manual(values = order_colors, name = "Order") +
+    theme(legend.position = "bottom", legend.box = "vertical") 
+    circular_tree <- circular_tree + new_scale_fill()
+  
+  ### Add completeness ring
+  circular_tree <- circular_tree +
+    new_scale_fill() +
+    scale_fill_gradient(low = "#d9727f", high = "#465c7a", 
+                        name = "Completeness") +
+    geom_fruit(data=genome_metadata, geom=geom_bar, 
+               mapping = aes(x=completeness, y=genome, fill=completeness),
+               offset = 1.00, orientation="y", stat="identity")
+  
+  ### Add contamination ring
+  circular_tree <- circular_tree +
+    new_scale_fill() +
+    scale_fill_gradient(low = "#465c7a", high = "#d9727f",
+                        name = "Contamination %") +
+    geom_fruit(data=genome_metadata, geom=geom_bar,
+               mapping = aes(x=contamination, y=genome, fill=contamination),
+               offset = 0.05, orientation="y", stat="identity")
+  
+  ### Add genome size ring
+  circular_tree <- circular_tree +
+    new_scale_fill() +
+    scale_fill_gradient(low = "#465c7a", high = "#fcbb6d", 
+                        name = "Genome size") +
+    geom_fruit(data = genome_metadata, geom = geom_bar,
+               mapping = aes(x = length, y = genome, fill = length),
+               offset = 0.01, orientation = "y", stat = "identity")
+  
+  ### Add circularised genome ring
+  circular_tree <- circular_tree +
+    new_scale_fill() +
+    scale_fill_manual(values = c("1" = "#fcbb6d", "0" = "#465c7a"), 
+                      name = 'Circularized genomes') +
+    geom_fruit(data = genome_metadata, geom = geom_bar,
+               mapping = aes(x = 1, y = genome, fill = circularity),
+               offset = 0.02, orientation = "y", stat = "identity")
+  
+  # Add text
+  circular_tree <-  circular_tree +
+    annotate('text', x=3.1, y=0, label='           Order', size=3.5) +
+    annotate('text', x=3.55, y=0, label='             Phylum', size=3.5) +
+    annotate('text', x=4.1, y=0, label='                         Completeness', size=3.5) +
+    annotate('text', x=4.5, y=0, label='                         Contamination', size=3.5) +
+    annotate('text', x=5.0, y=0, label='                       Genome size', size=3.5) +
+    annotate('text', x=5.5, y=0, label='                      Circularised', size=3.5)
+  
+  # Plot circular tree
+  p <-circular_tree %>% open_tree(30) %>% rotate_tree(90) 
+  return(p)
+}
+
+
+# remove_samples_or_taxa()
+## Input: A wide df with samples as rows and taxa as columns
+## Result: Remove taxa that are in too few samples, or samples that have too few taxa
+remove_samples_or_taxa <- function(df, min_samples_per_taxon, min_taxa_per_sample){
+  # Store & print original df dimensions
+  original_rows <- nrow(df)
+  original_cols <- ncol(df)
+  cat("Initial df: Rows (samples):", original_rows, ", Columns (taxa):", original_cols, "\n")
+  
+  # Remove taxa that are in less than x samples
+  df <- df %>% select(where(~ sum(. != 0) > min_samples_per_taxon))
+  
+  # Remove samples that contain less than x taxa
+  df <- df %>% filter(rowSums(. != 0) > min_taxa_per_sample)
+  
+  df < df %>% select(where(~ any(. != 0)) | where(is.character) | where(is.factor))  
+  
+  removed_rows <- original_rows - nrow(df)
+  removed_cols <- original_cols - ncol(df)
+  cat("Removed: Rows (samples):", removed_rows, ", Columns (taxa):", removed_cols, "\n")
+  
+  cat("Resulting df: Rows (samples):", nrow(df), ", Columns (taxa):", ncol(df), "\n")
+  
+  return(df)
+}
+
+
+# clr_transform
+clr_transform <- function(x) {
+  log(x) - mean(log(x), na.rm = TRUE)
+}
 
 # perform_pca()
 perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
@@ -53,10 +173,8 @@ perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
   # Print removed rows and columns
   removed_rows <- original_rows - nrow(df)
   removed_cols <- original_cols - ncol(df)
-  cat("Rows (samples) removed:", removed_rows, "\n")
-  cat("Columns (taxa) removed:", removed_cols, "\n")
-  
-  # plot_abundance_heatmap(df)
+  cat("Rows (samples) removed after zero replacement:", removed_rows, "\n")
+  cat("Columns (taxa) removed after zero replacement:", removed_cols, "\n")
   
   # Geometric mean function
   geometric_mean <- function(x) {
@@ -85,29 +203,95 @@ perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
   # 4. Scale data
   power_exponent <- 1 / sqrt(totvar)
   df_scaled <- df_centered^power_exponent
-  # print(df_scaled)
   
   # CLR transform data
-  clr_transform <- function(x) {
-    log(x) - mean(log(x), na.rm = TRUE)
-  }
-  df_clr <- t(apply(df_scaled, 1, clr_transform))
-  df_clr <- as.data.frame(df_clr)
+  df_clr <- as.data.frame(t(apply(df_scaled, 1, clr_transform)))
   
-  df_clr_dist <- t(apply(df, 1, clr_transform))
-  df_clr_dist <- as.data.frame(df_clr_dist)
+  df_clr_dist <- as.data.frame(t(apply(df, 1, clr_transform)))
   
   # Perform PCA on zero replaced, centered, scaled, and CLR transformed df
   pca_result <- prcomp(df_clr, center = FALSE, scale. = FALSE)
-  pca_result_dist <- prcomp(df_clr_dist, center = TRUE, scale. = TRUE)
   
   return(list(
     df_clr = df_clr,
     df_clr_dist = df_clr_dist,
-    pca_result = pca_result,
-    pca_result_dist = pca_result_dist
+    pca_result = pca_result
   ))
 }
+
+
+
+# plot_pca() 
+### Use the 'pca_result' df produced from 'perform_pca' function to make the PCA plot
+plot_pca <- function(df, 
+                     samples_color_metadata, samples_shape_metadata, 
+                     samples_color_value, loadings_color_metadata, 
+                     loadings_color_value, loadings_taxon_level,
+                     sample_metadata, genome_metadata, order_colors, 
+                     custom_ggplot_theme, scaling_factor_value = 1.5, 
+                     loadings_number = 10) {
+  
+  # Extract scores from PCA results
+  scores <- rownames_to_column(as.data.frame(df$x), var = "microsample")
+  scores <- left_join(scores, sample_metadata, by = join_by(microsample == microsample))
+  
+  # Calculate limits for x and y axes
+  x_limit <- max(abs(scores$PC1))
+  y_limit <- max(abs(scores$PC2))
+  
+  # Calculate variance explained by each PC (principal component) & create labels for plot
+  variance_explained <- (df$sdev^2) / sum(df$sdev^2) * 100
+  pc1_label <- paste0("PC1: ", round(variance_explained[1], 2), "% variance explained")
+  pc2_label <- paste0("PC2: ", round(variance_explained[2], 2), "% variance explained")
+  
+  # Set a scaling factor for loadings (arrows)
+  scaling_factor <- scaling_factor_value
+  
+  # Extract and scale the loadings
+  loadings <- df$rotation[, 1:2] %>%
+    as.data.frame() %>%
+    mutate(genome = rownames(.)) %>%  
+    mutate(PC1 = PC1 * scaling_factor,
+           PC2 = PC2 * scaling_factor) %>%
+    left_join(genome_metadata, by = join_by(genome == genome)) %>%  
+    mutate(abs_loading = sqrt(PC1^2 + PC2^2)) %>%  
+    arrange(desc(abs_loading)) %>%
+    slice_max(order_by = abs_loading, n = loadings_number) %>%
+    mutate(order_color = order_colors[order])
+  
+  # Create ggplot
+  p <- ggplot() +
+    geom_point(data = scores, 
+               aes(x = PC1, y = PC2, 
+                   fill = .data[[samples_color_metadata]],
+                   shape = .data[[samples_shape_metadata]]), 
+               size = 2, alpha = 0.8,
+               color = "black", stroke = 0.3) +
+    scale_fill_manual(values = samples_color_value) + 
+    scale_shape_manual(values = c(21, 24, 23, 22, 25)) +
+    new_scale_color() + 
+    geom_segment(data = loadings, 
+                 aes(x = 0, y = 0, xend = PC1, yend = PC2, color = .data[[loadings_color_metadata]]),
+                 arrow = arrow(length = unit(0.2, "cm")), 
+                 size = 0.7, alpha = 0.9) +
+    scale_color_manual(name = "Classification", values = loadings_color_value) +
+    geom_text_repel(data = loadings, 
+                    aes(x = PC1, y = PC2, label = .data[[loadings_taxon_level]]),
+                    color = "black", size = 2, vjust = -0.5, alpha=0.7, max.overlaps = 20) +
+    labs(title = "PCA Ordination Plot",
+         x = pc1_label,
+         y = pc2_label) +
+    scale_x_continuous(limits = c(-x_limit, x_limit)) +
+    scale_y_continuous(limits = c(-y_limit, y_limit)) +
+    geom_hline(yintercept = 0, color = "darkgrey") +
+    geom_vline(xintercept = 0, color = "darkgrey") +
+    theme_minimal() +
+    custom_ggplot_theme +
+    guides(fill = guide_legend(override.aes = list(shape = 21, color = "black"))) 
+  
+  return(p)
+}
+
 
 ### fit_and_analyze_model()
 fit_and_analyze_model <- function(model = c("lm", "glm"),
