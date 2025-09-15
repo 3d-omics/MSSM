@@ -652,20 +652,13 @@ knitr::kable(
 ###### Caecum {-}
 ```{r sn3_2_e_caecum,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # # Continuous floats (any real number): lm or gaussian, Gamma (continuous positive data, skewed to the right)
-sn3_2_e_ca <- fit_and_analyze_model(
-  model = "glm",
-  distribution = "gaussian", # DHARMa significant deviation KS
-  response_var = "neutral",
-  explanatory_var = "collection_attempts + buffer",
-  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
-)
-
-knitr::kable(
-  sn3_2_e_ca$anova,
-  digits = 3,
-  booktabs = TRUE,
-  align = "lccc"
-)
+#sn3_2_e_ca <- fit_and_analyze_model(
+#  model = "glm",
+#  distribution = "gaussian", # DHARMa significant deviation KS
+#  response_var = "neutral",
+#  explanatory_var = "collection_attempts + buffer",
+#  data = sn3_2_df %>% filter(section %in% c("Caecum right"))
+#)
 
 sn3_2_e_ca <- fit_and_analyze_model(
   model = "lm",
@@ -680,27 +673,18 @@ knitr::kable(
   booktabs = TRUE,
   align = "lccc"
 )
-
-
 ```
 ###### Colon {-}
 ```{r sn3_2_e_colon,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
-sn3_2_e_co <- fit_and_analyze_model(
-  model = "glm",
-  distribution = "gaussian",
-  response_var = "neutral",
-  explanatory_var = "collection_attempts + buffer",
-  data = sn3_2_df %>% filter(section %in% c("Colon"))
-)
+#sn3_2_e_co <- fit_and_analyze_model(
+#  model = "glm",
+#  distribution = "gaussian",
+#  response_var = "neutral",
+#  explanatory_var = "collection_attempts + buffer",
+#  data = sn3_2_df %>% filter(section %in% c("Colon"))
+#)
 # plot(sn3_2_e_co$simResidual)
-
-knitr::kable(
-  sn3_2_e_co$anova,
-  digits = 3,
-  booktabs = TRUE,
-  align = "lccc"
-)
 
 sn3_2_e_co <- fit_and_analyze_model(
   model = "lm",
@@ -757,22 +741,15 @@ cat("L07 =", length(sn3_2_unique_L07$genus), "\n")
 ###### f. Phylogenetic {-}
 ###### Caecum {-}
 ```{r sn3_2_f_caecum,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
-# # Continuous floats (any real number): lm or gaussian, Gamma (continuous positive data, skewed to the right)
-sn3_2_f_ca <- fit_and_analyze_model(
-  model = "glm",
-  distribution = "gaussian", # DHARMa significant deviation KS
-  response_var = "phylogenetic",
-  explanatory_var = "collection_attempts + buffer",
+# Continuous floats (any real number): lm or gaussian, Gamma (continuous positive data, skewed to the right)
+#sn3_2_f_ca <- fit_and_analyze_model(
+#  model = "glm",
+#  distribution = "gaussian", # DHARMa significant deviation KS
+#  response_var = "phylogenetic",
+#  explanatory_var = "collection_attempts + buffer",
   data = sn3_2_df %>% filter(section %in% c("Caecum right"))
-)
+#)
 # plot(sn3_2_f_ca$simResidual)
-knitr::kable(
-  sn3_2_f_ca$anova,
-  digits = 3,
-  booktabs = TRUE,
-  align = "lccc"
-)
-
 sn3_2_f_ca <- fit_and_analyze_model(
   model = "lm",
   response_var = "phylogenetic",
@@ -791,21 +768,14 @@ knitr::kable(
 ###### Colon {-}
 ```{r sn3_2_f_colon,  echo=FALSE, warning = FALSE, comments = "", message = FALSE}
 # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
-sn3_2_f_co <- fit_and_analyze_model(
-  model = "glm",
-  distribution = "gaussian",
-  response_var = "phylogenetic",
-  explanatory_var = "collection_attempts + buffer",
-  data = sn3_2_df %>% filter(section %in% c("Colon"))
-)
+#sn3_2_f_co <- fit_and_analyze_model(
+#  model = "glm",
+#  distribution = "gaussian",
+#  response_var = "phylogenetic",
+#  explanatory_var = "collection_attempts + buffer",
+#  data = sn3_2_df %>% filter(section %in% c("Colon"))
+#)
 # plot(sn3_2_f_co$simResidual)
-knitr::kable(
-  sn3_2_f_co$anova,
-  digits = 3,
-  booktabs = TRUE,
-  align = "lccc"
-)
-
 sn3_2_f_co <- fit_and_analyze_model(
   model = "lm",
   response_var = "phylogenetic",
@@ -1450,6 +1420,15 @@ figs3_4_3 <- macroquant_metrics_filt_30 %>%
   custom_ggplot_theme +
   theme(legend.position = "bottom")
 figs3_4_3
+
+table(macroquant_metrics_filt_30 %>% 
+  filter(type%in%c("negative")) %>% pull(cov_filtering))
+193/212
+
+table(macroquant_metrics_filt_30 %>% 
+  filter(type%in%c("positive")) %>% pull(cov_filtering))
+105/604
+
 ```
 A total of 83.1% of controls retaining no data 
 

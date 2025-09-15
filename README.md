@@ -29,7 +29,7 @@ The R code in 04-method_implementation.Rmd runs all analyses described in the Me
 
 The **bookdown-rendered webbook** containing all the above code and its output is available at:
 
-[https://3d-omics.github.io/MSSM](...)
+https://3d-omics.github.io/MSSM
 
 While the webbook provides a user-friendly overview of the procedures, analyses can be directly reproduced using the **.Rmd** files stored in the root directory of this repository. Note that some code chunks that require heavy computation might have been turned off using 'eval=FALSE' or cached using 'cache=TRUE'. To re-render the webbook, you can use the following code:
 
