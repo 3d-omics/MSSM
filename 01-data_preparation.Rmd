@@ -466,7 +466,7 @@ mssmmacroquant_vs_macro_sample_metadata <- macroquant_metrics_filt_30 %>%
       total_before_filtering.total_reads = 21962564 * 2,
       section = "right caecum digesta",
       type = "positive",
-      batch = NA, cryosection = NA, buffer = NA # Fill these with appropriate values or NA
+      batch = NA, cryosection = NA, buffer = NA 
     ),
     tibble(
       microsample = "D300499",
@@ -474,7 +474,7 @@ mssmmacroquant_vs_macro_sample_metadata <- macroquant_metrics_filt_30 %>%
       total_before_filtering.total_reads = 24855916 * 2,
       section = "right caecum digesta",
       type = "positive",
-      batch = NA, cryosection = NA, buffer = NA # Same here
+      batch = NA, cryosection = NA, buffer = NA 
     )
   ) %>%
   mutate(group = ifelse(section == "right caecum digesta", "Macro-scale Metagenomics", "Micro-scale Spatial Metagenomics")) %>%

@@ -116,18 +116,18 @@ mivsma_df <- tibble(
 total <- length(unique(mivsma_phylo_lg %>% pull(genus)))
 
 cat(
-  "Shared Genera =",
+  "Shared =",
   length(intersect(mivsma_micro, mivsma_macro)),
   "(", round(length(intersect(mivsma_micro, mivsma_macro)) / total * 100, 0), "%)",
   "\n"
 )
 cat(
-  "Unique Genera in Micro-scale Spatial Metagenomics =", length(mivsma_micro_unique),
+  "Unique in Micro-scale Spatial Metagenomics =", length(mivsma_micro_unique),
   "(", round(length(mivsma_micro_unique) / total * 100, 0), "%)",
   "\n"
 )
 cat(
-  "Unique Genera in Macro-scale Metagenomics =", length(mivsma_macro_unique),
+  "Unique in Macro-scale Metagenomics =", length(mivsma_macro_unique),
   "(", round(length(mivsma_macro_unique) / total * 100, 0), "%)",
   "\n"
 )
@@ -157,15 +157,15 @@ total <- length(unique(mivsma_phylo_lg %>%
                          filter(animal %in% c("G121e")) %>% 
                          pull(genus)))
 
-cat("Shared Genera =", 
+cat("Shared =", 
     length(intersect(mivsma_35d_micro, mivsma_35d_macro)), 
     "(", round(length(intersect(mivsma_35d_micro, mivsma_35d_macro)) / total * 100, 0),"%)",
     "\n")
-cat("Unique Genera in Micro-scale Spatial Metagenomics =", 
+cat("Unique in Micro-scale Spatial Metagenomics =", 
     length(mivsma_35d_micro_unique), 
     "(", round(length(mivsma_35d_micro_unique) / total * 100, 0),"%)",
     "\n")
-cat("Unique Genera in Macro-scale Metagenomics =", 
+cat("Unique in Macro-scale Metagenomics =", 
     length(mivsma_35d_macro_unique), 
     "(", round(length(mivsma_35d_macro_unique) / total * 100, 0),"%)",
     "\n")
@@ -219,15 +219,15 @@ total <- length(unique(mivsma_phylo_lg %>%
                          pull(genus)))
 
 
-cat("Shared Genera =", 
+cat("Shared =", 
     length(intersect(mivsma_14d_micro, mivsma_14d_macro)), 
     "(", round(length(intersect(mivsma_14d_micro, mivsma_14d_macro)) / total * 100, 0), "%)",
     "\n")
-cat("Unique Genera in Micro-scale Spatial Metagenomics =", 
+cat("Unique in Micro-scale Spatial Metagenomics =", 
     length(mivsma_14d_micro_unique), 
     "(", round(length(mivsma_14d_micro_unique) / total * 100, 0),"%)",
     "\n")
-cat("Unique Genera in Macro-scale Metagenomics =", 
+cat("Unique in Macro-scale Metagenomics =", 
     length(mivsma_14d_macro_unique), 
     "(", round(length(mivsma_14d_macro_unique) / total * 100, 0), "%)",
     "\n")

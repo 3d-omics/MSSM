@@ -89,7 +89,7 @@ mssm-vs-fish
 macro-scale-metagenomics-vs-mssm
 compare-presenceabsence-at-genus-level
 method-implementation
-investigate-spatial-patter
+investigate-spatial-pattern
 data-selection
 centered-log-ratio-clr-transformation
 diversity-partitioning

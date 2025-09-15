@@ -1421,16 +1421,15 @@ figs3_4_3 <- macroquant_metrics_filt_30 %>%
   theme(legend.position = "bottom")
 figs3_4_3
 
-table(macroquant_metrics_filt_30 %>% 
-  filter(type%in%c("negative")) %>% pull(cov_filtering))
-193/212
+#table(macroquant_metrics_filt_30 %>% 
+#  filter(type%in%c("negative")) %>% pull(cov_filtering))
+#193/212
 
-table(macroquant_metrics_filt_30 %>% 
-  filter(type%in%c("positive")) %>% pull(cov_filtering))
-105/604
-
+#table(macroquant_metrics_filt_30 %>% 
+#  filter(type%in%c("positive")) %>% pull(cov_filtering))
+#105/604
 ```
-A total of 83.1% of controls retaining no data 
+A total of 91% of controls retained no data 
 
 #### Composition
 ```{r figs3_4_5,  echo=FALSE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=8}
