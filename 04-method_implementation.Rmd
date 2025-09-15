@@ -3,7 +3,7 @@
 load("resources/working_data_object.Rdata") # load the data from 1-data_preparation
 ```
 
-## Investigate Spatial Patter
+## Investigate Spatial Pattern
 ### Data selection
 ```{r data_spatial, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
 metadata <- macroquant_metrics_filt_30 %>%
