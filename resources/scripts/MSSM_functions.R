@@ -1,4 +1,4 @@
-#print_median_iqr(
+# print_median_iqr(
 print_median_iqr <- function(x, name) {
   med <- round(median(x), 2)
   iqr_vals <- round(quantile(x, probs = c(0.25, 0.75)), 2)
@@ -39,68 +39,68 @@ perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
   # Store original dimensions
   original_rows <- nrow(df)
   original_cols <- ncol(df)
-  
+
   # 1. Zero replacement
   if (any(df == 0)) { # I think cmultRepl already does that
     print("Zeros found")
     df <- cmultRepl(df,
-                    method = zero_method, output = "prop",
-                    z.warning = 0.8, z.delete = z_delete
+      method = zero_method, output = "prop",
+      z.warning = 0.8, z.delete = z_delete
     )
     df <- df * 100
   }
-  
+
   # Print removed rows and columns
   removed_rows <- original_rows - nrow(df)
   removed_cols <- original_cols - ncol(df)
   cat("Rows (samples) removed:", removed_rows, "\n")
   cat("Columns (taxa) removed:", removed_cols, "\n")
-  
+
   # plot_abundance_heatmap(df)
-  
+
   # Geometric mean function
   geometric_mean <- function(x) {
     # Use log to avoid underflow
     exp(mean(log(x), na.rm = TRUE))
   }
-  
+
   # 2. Calculate geometric mean of the parts (taxa) of the data set.
   taxa_geometric_means <- apply(df, 2, geometric_mean)
-  
+
   # 3. Center data
   df_centered <- sweep(df, 2, taxa_geometric_means, FUN = "/")
-  
+
   df_centered <- as.matrix(df_centered)
-  
+
   # Compute the Variation Matrix
   variation_matrix <- outer(
     1:ncol(df_centered), 1:ncol(df_centered),
     Vectorize(function(i, j) var(log(df_centered[, i] / df_centered[, j]), na.rm = TRUE))
   )
-  
+
   # Calculate Total Variance
   D <- ncol(df_centered) # Number of taxa (columns)
   totvar <- (1 / (2 * D)) * sum(variation_matrix, na.rm = TRUE)
-  
+
   # 4. Scale data
   power_exponent <- 1 / sqrt(totvar)
   df_scaled <- df_centered^power_exponent
   # print(df_scaled)
-  
+
   # CLR transform data
   clr_transform <- function(x) {
     log(x) - mean(log(x), na.rm = TRUE)
   }
   df_clr <- t(apply(df_scaled, 1, clr_transform))
   df_clr <- as.data.frame(df_clr)
-  
+
   df_clr_dist <- t(apply(df, 1, clr_transform))
   df_clr_dist <- as.data.frame(df_clr_dist)
-  
+
   # Perform PCA on zero replaced, centered, scaled, and CLR transformed df
   pca_result <- prcomp(df_clr, center = FALSE, scale. = FALSE)
   pca_result_dist <- prcomp(df_clr_dist, center = TRUE, scale. = TRUE)
-  
+
   return(list(
     df_clr = df_clr,
     df_clr_dist = df_clr_dist,
@@ -118,12 +118,12 @@ fit_and_analyze_model <- function(model = c("lm", "glm"),
   model <- match.arg(model) # Restrict to "lm" or "glm"
   # Construct the model formula
   model_formula <- as.formula(paste(response_var, "~", explanatory_var))
-  
+
   # Initialize all possible return objects
   anova_result <- NULL
   md <- NULL
   simResids <- NULL
-  
+
   if (model == "lm") {
     # Continuous floats (any real number)
     md <- lm(model_formula, data = data)
@@ -135,9 +135,9 @@ fit_and_analyze_model <- function(model = c("lm", "glm"),
     if (is.null(distribution)) {
       stop("You must specify a distribution family for glm.")
     }
-    
+
     md <- glm(model_formula, family = distribution, data = data)
-    
+
     if (!grepl("^quasi", distribution)) { # Use DHARMa only on supported distributions
       simResids <- simulateResiduals(md)
       anova_result <- broom::tidy(Anova(md, test.statistic = "Wald")) # ANOVA with Chi-squared test
@@ -149,11 +149,11 @@ fit_and_analyze_model <- function(model = c("lm", "glm"),
     model_fit = md,
     anova = anova_result
   )
-  
+
   if (!is.null(simResids)) {
     result$simResidual <- simResids
   }
-  
+
   return(result)
 }
 
@@ -170,16 +170,16 @@ pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_l
   } else {
     .
   }
-  
+
   pivot_dataframe <- data.frame(otu_table(phyloseq_obj)) %>%
     rownames_to_column(var = "genome") %>%
     pivot_longer(-genome, names_to = "microsample", values_to = "abundance") %>%
     filter(abundance > 0) %>%
     left_join(data.frame(tax_table(phyloseq_obj)) %>%
-                rownames_to_column(var = "genome"), by = "genome") %>%
+      rownames_to_column(var = "genome"), by = "genome") %>%
     left_join(data.frame(sample_data(phyloseq_obj)) %>%
-                rownames_to_column(var = "microsample"), by = "microsample")
-  
+      rownames_to_column(var = "microsample"), by = "microsample")
+
   # Re-order levels
   taxa_levels <- c("domain", "phylum", "class", "order", "family", "genus", "species")
   # Iterate over taxonomic levels
@@ -212,24 +212,24 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
   decay_dfs <- list()
   distance_decay_plots <- list()
   structure_results <- list()
-  
+
   for (cryosection in cryosection_list) {
     # Filter metadata for this section
     metadata_data <- metadata_df %>%
       filter(cryosection == !!cryosection, !is.na(.data$Xcoord), !is.na(.data$Ycoord))
-    
+
     # Filter community data
     comm_data <- comm_clr %>%
       data.frame() %>%
       rownames_to_column(var = "microsample") %>%
       filter(microsample %in% metadata_data$microsample) %>%
       column_to_rownames(var = "microsample")
-    
+
     cryosection_dfs[[cryosection]] <- list(
       comm_clr = comm_data,
       metadata = metadata_data
     )
-    
+
     # Mantel correlogram
     mantel <- vegan::mantel(
       dist(comm_data),
@@ -237,7 +237,7 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
       permutations = 999
     )
     mantel_results[[cryosection]] <- mantel
-    
+
     # Mantel correlogram
     correlog <- vegan::mantel.correlog(
       D.eco = dist(comm_data),
@@ -245,14 +245,14 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
       nperm = 999
     )
     mantelcor_results[[cryosection]] <- correlog
-    
+
     # Distance decay
     toplot <- data.frame(
       spat_dist = as.numeric(dist(metadata_data[, c("Xcoord", "Ycoord")])),
       comm_dist = as.numeric(dist(comm_data))
     )
     decay_dfs[[cryosection]] <- toplot
-    
+
     # Plot
     p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
       geom_smooth() +
@@ -272,7 +272,7 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
   ))
 }
 
-### lawsonibacter_mantel_analysis() 
+### lawsonibacter_mantel_analysis()
 lawsonibacter_mantel_analysis <- function(data, circul_selection) {
   # 1. Filter and prepare presence-absence matrix
   if (circul_selection == "Y") {
@@ -282,9 +282,9 @@ lawsonibacter_mantel_analysis <- function(data, circul_selection) {
       )
   } else {
     message("circul_selection is not 'Y'; skipping circul filter.")
-    filtered_data <- data 
+    filtered_data <- data
   }
-  
+
   # Presence Absence
   # 1. Build presence-absence matrix
   lawsonibacter_pa <- filtered_data %>%
@@ -309,7 +309,7 @@ lawsonibacter_mantel_analysis <- function(data, circul_selection) {
     D.geo = spatial_dist_pa,
     nperm = 999
   )
-  
+
   # CLR
   # 1. Build count matrix and CLR transformation
   lawsonibacter_clr <- filtered_data %>%
@@ -339,16 +339,16 @@ lawsonibacter_mantel_analysis <- function(data, circul_selection) {
     D.geo = spatial_dist_clr,
     nperm = 999
   )
-  
+
   distance_clr_df <- data.frame(
     spat_dist = as.numeric(spatial_dist_clr),
     comm_dist = as.numeric(comm_dist_clr)
   )
-  
+
   clr_lm <- aovperm(lmperm(comm_dist ~ spat_dist, data = distance_clr_df, np = 10000))
-  
+
   return(list(
-    #cryosection = cryosection_id,
+    # cryosection = cryosection_id,
     mantel_pa = mantel_result_pa,
     correlogram_pa = mantelcor_result_pa,
     mantel_clr = mantel_result_clr,
@@ -360,38 +360,37 @@ lawsonibacter_mantel_analysis <- function(data, circul_selection) {
 
 ### ani_spatial_analysis()
 ani_spatial_analysis <- function(bin_name, ani_list, ids, meta_data) {
-  
   # Subset ANI matrix to samples of interest
   popani <- ani_list[[bin_name]][rownames(ani_list[[bin_name]]) %in% ids, ]
-  popani <- popani[, colnames(popani) %in% ids]  # keep only matching columns too
+  popani <- popani[, colnames(popani) %in% ids] # keep only matching columns too
   diag(popani) <- NA
   popani_dist <- as.dist(1 - popani)
-  
+
   # Spatial distance for those samples
   spatial_dist <- dist(meta_data %>%
-                         filter(microsample %in% colnames(popani)) %>%
-                         select(Xcoord, Ycoord))
-  
+    filter(microsample %in% colnames(popani)) %>%
+    select(Xcoord, Ycoord))
+
   # Data frame for plotting and stats
   toplot <- data.frame(
     spat_dist = as.numeric(spatial_dist),
     comm_dist = as.numeric(popani_dist)
   )
-  
+
   # Plot smooth relationship
   p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
-    geom_smooth() + 
+    geom_smooth() +
     ggtitle(paste("Spatial vs ANI distance:", bin_name))
-  
+
   # print(p)
-  
+
   # Permutation ANOVA test for linear relationship
   perm_aov <- aovperm(comm_dist ~ spat_dist, data = toplot, np = 10000)
-  
+
   # Mantel correlogram
   mantel_res <- vegan::mantel.correlog(popani_dist, spatial_dist, nperm = 999, cutoff = TRUE, n.class = 22, r.type = "spearman")
   plot(mantel_res)
-  title(main = paste("Mantel correlogram:", bin_name))  # add main title
+  title(main = paste("Mantel correlogram:", bin_name)) # add main title
 
   list(
     plot = p,
