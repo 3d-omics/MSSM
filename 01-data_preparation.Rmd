@@ -265,8 +265,35 @@ macroquant_metrics_filt_30 <- calculate_alpha_diversity(
   input_data = macroquant_genome_counts_filt_30,
   metadata_name = mssm_quality,
   tree_name = macromag_tree
-)
+) %>%
+    mutate(size = factor(size, levels = c(500, 1500, 2500, 5000, 25000, 50000)))
 ``` 
+
+#### Generate tidy genome count tables
+```{r tidy_genome_counts_macroquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+macroquant_genome_counts_tidy <-  macroquant_genome_counts %>%
+    mutate_at(vars(-genome), ~ . / sum(.)) %>% 
+    pivot_longer(-genome, names_to = "microsample", values_to = "count") %>% 
+    left_join(macromag_genomemetadata, by = join_by(genome == genome)) %>% 
+    inner_join(macroquant_metrics_filt_30, by = join_by(microsample == microsample)) %>%
+    mutate(section = unlist(section)) %>% 
+    filter(count > 0) %>%
+    mutate(phylum = factor(phylum, levels = unique(macromag_genomemetadata$phylum)),
+           order = factor(order, levels = unique(macromag_genomemetadata$order)),
+           size = factor(size, levels = c(500, 1500, 2500, 5000, 25000, 50000)))
+
+macroquant_genome_counts_filt_30_tidy <-  macroquant_genome_counts_filt_30 %>%
+    mutate_at(vars(-genome), ~ . / sum(.)) %>%
+    pivot_longer(-genome, names_to = "microsample", values_to = "count") %>% 
+    left_join(macromag_genomemetadata, by = join_by(genome == genome)) %>% 
+    inner_join(macroquant_metrics_filt_30, by = join_by(microsample == microsample)) %>%
+    mutate(section = unlist(section)) %>% 
+    filter(count > 0) %>%
+    mutate(phylum = factor(phylum, levels = unique(macromag_genomemetadata$phylum)),
+           order = factor(order, levels = unique(macromag_genomemetadata$order)),
+           size = factor(size, levels = c(500, 1500, 2500, 5000, 25000, 50000)))
+```
+
 
 
 ### Abundance Estimation Using Micro-scale MAGs Catalogue
@@ -398,7 +425,8 @@ microquant_metrics_filt_30 <- calculate_alpha_diversity(
   input_data = microquant_read_counts_filt_30,
   metadata_name = mssm_quality,
   tree_name = micromag_tree
-)
+) %>%
+    mutate(size = factor(size, levels = c(500, 1500, 2500, 5000, 25000, 50000)))
 ``` 
 
 ### Abundance Estimation Using Macro-scale MAGs Catalogue 98 ANI
@@ -507,7 +535,22 @@ physeq_genus_relabund <- transform_sample_counts(physeq_genus, function(x) x / s
 
 ### Import Sample Metadata
 ```{r sample_metadata_mock, warning=FALSE, comments="", message=FALSE, eval = FALSE}
-sample_metadata_mock <- read_tsv("resources/zenodo/sample_metadata_mock.tsv", show_col_types = FALSE)
+sample_metadata_mock <- read_tsv("resources/zenodo/sample_metadata_mock.tsv", show_col_types = FALSE) %>%
+  filter(LabBatch_text == "CSEB002") %>%
+  rename(sample=1,culture=2,buffer=3) %>%
+  rename(buffer_original_name = buffer) %>%
+  mutate(culture = factor(culture, levels = c("MX", "PA", "MO", "XR", "SR", "NG")),
+         buffer = case_when(
+          buffer_original_name == "B01" ~ "L01",
+          buffer_original_name == "B02" ~ "L02",
+          buffer_original_name == "B03" ~ "L03",
+          buffer_original_name == "B04" ~ "L04",
+          buffer_original_name == "B09" ~ "L05",
+          buffer_original_name == "B11" ~ "L06",
+          buffer_original_name == "B12" ~ "L07",
+          buffer_original_name == "B13" ~ "L08"),
+        buffer = factor(buffer, levels = c("L01", "L02", "L03", "L04", "L05", "L06", "L07", "L08"))
+        )
 ```
 
 ### Import Genome Metadata
@@ -523,11 +566,36 @@ genome_metadata_mock <- tibble(
 ### Import Genome Counts & Coverage
 
 ```{r load_count_mock, message=FALSE, warning = FALSE, comments = "", eval = FALSE}
-read_counts_mock <- read_tsv("resources/zenodo/read_counts_mock.tsv", show_col_types = FALSE)
+read_counts_mock <- read_tsv("resources/zenodo/read_counts_mock.tsv", show_col_types = FALSE) %>%
+  arrange(match(genome, genome_metadata_mock$genome))
 ```
 
 ```{r load_hits_mock, message=FALSE, warning = FALSE, comments = "", eval = FALSE}
-genome_covered_bases_mock <- read_tsv("resources/zenodo/genome_covered_bases_mock.tsv", show_col_types = FALSE)
+genome_covered_bases_mock <- read_tsv("resources/zenodo/genome_covered_bases_mock.tsv", show_col_types = FALSE) %>%
+  arrange(match(genome, genome_metadata_mock$genome))
+```
+
+### Coverage Filtering and Count Normalization
+```{r filt_norm_mock, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+genome_coverage_mock <- genome_covered_bases_mock %>%
+  mutate(across(where(is.numeric), ~ ./genome_metadata_mock$length))
+
+min_coverage=0.3
+read_counts_mock_filt_30 <- genome_coverage_mock %>%
+  mutate(across(where(is.numeric), ~ ifelse(. > min_coverage, 1, 0))) %>%
+  mutate(across(-1, ~ . * read_counts_mock[[cur_column()]])) 
+
+genome_counts_mock <- read_counts_mock %>%
+  mutate(across(where(is.numeric), ~ . / (genome_metadata_mock$length / readlength) ))
+
+genome_counts_mock_filt_30 <- read_counts_mock_filt_30 %>%
+  mutate(across(where(is.numeric), ~ . / (genome_metadata_mock$length / readlength) ))
+
+tidy_plot_genome_counts_filt_30_mock_closed <-  genome_counts_mock_filt_30 %>%
+    mutate_at(vars(-genome), ~ . / sum(.)) %>%
+    pivot_longer(-genome, names_to = "microsample", values_to = "count") %>% 
+    left_join(genome_metadata_mock, by = join_by(genome == genome)) %>% 
+    left_join(sample_metadata_mock, by = join_by(microsample == sample))
 ```
 
 ## Fluorescence In Situ hybridization (FISH)
@@ -537,7 +605,46 @@ dapi_df <- read_tsv("resources/zenodo/dapi_df.tsv", show_col_types = FALSE)
 ```
 
 ### Abundance Estimation using FISH
+### Amalia: Fluorescence In Situ hybridization (FISH)
+```{r FISH_df, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+# Import microscopy count data from FISH
+fish_counts_G103 <- read_csv("resources/zenodo/G103bI_FISH_Counts.csv", show_col_types = FALSE)
+fish_counts_G121 <- read_csv("resources/zenodo/G121eI_FISH_Counts.csv", show_col_types = FALSE)
 
+# Combine dfs for animals G121 and G103
+fish_counts <- bind_rows(fish_counts_G103, fish_counts_G121) %>%
+  mutate(
+    animal = substr(Cryosection, 1, 5),
+    microsample = paste0(Cryosection, "_", row_number()),
+    sample_type = "FISH"
+  ) %>%
+  rename("Lachnoclostridium_A" = "Lachnoclostridium A") %>%
+  rename(cryosection = Cryosection) %>%
+  select(-Pelethomonas, -Choladocola, -Caccovicinus)
+
+# Create separate df for sample metadata
+fish_sample_metadata <- fish_counts %>%
+  select(microsample, animal, cryosection, sample_type)
+
+# Nine FISH probes worked:
+fish_selected_genera <- c("Eisenbergiella", "Streptococcus", "Mediterraneibacter",
+                          "Lactobacillus", "Blautia", "Agathobaculum",
+                          "Acutalibacter", "Lawsonibacter","Lachnoclostridium_A"
+                          )
+
+# Create df for taxonomic classification of FISH taxa
+fish_genome_metadata <- macromag_genomemetadata %>%
+  filter(genus %in% fish_selected_genera) %>%
+  select(domain, phylum, class, order, family, genus) %>%
+  distinct(genus, .keep_all = TRUE) %>%
+  mutate(genome = genus)
+
+# Set-up colors for genera included in FISH (based on respective order color hues)
+fish_genus_colors <- c(Agathobaculum = "#b52b72", Lawsonibacter = "#c44c86", Acutalibacter = "#d06c9a",
+                       Eisenbergiella = "#e06363", Mediterraneibacter = "#e77d7d", Blautia = "#ee9999", 
+                       Lachnoclostridium_A = "#f5b3b3", Streptococcus = "#6390fb", Lactobacillus = "#84a7fc"
+                       )
+```
 
 ## Fragment Analyzer
 

@@ -5,7 +5,7 @@ bookdown::gitbook:
     toc:
       before: |
         <li class="toc-logo"><a href="index.html" target="blank"><img src="3domics-logo.png" alt="AlberdiLab logo"></a></li>
-        #<li align="center"><b>Ongoing study</b></li>
+        <li align="center"><b>Pietroni et al.</b></li>
       after: |
         <li><a href="https://www.3domics.eu" target="blank"><b>www.3domics.eu</b></a></li>
         <li><a href="https://github.com/3d-omics" target="blank"><b>www.github.com/3d-omics</b></a></li>

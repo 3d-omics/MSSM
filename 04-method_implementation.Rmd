@@ -512,7 +512,7 @@ lawsonibacter_pie_df <- macroquant_lawsonibacter %>%
   )
 
 lawsonibacter_piecharts <- split(lawsonibacter_pie_df, lawsonibacter_pie_df$cryosection) %>%
-  map(~ {
+  purrr::map(~ {
     ggplot(.x) +
       geom_arc_bar(
         aes(

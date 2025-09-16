@@ -22,6 +22,7 @@ import-genome-counts-coverage
 macro-scale-mags-catalogue
 coverage-filtering-count-normalization
 alpha-diversity-metrics
+generate-tidy-genome-count-tables
 abundance-estimation-using-micro-scale-mags-catalogue
 import-genome-counts-coverage-1
 micro-scale-mags-catalogue
@@ -38,9 +39,11 @@ mock-community-bac
 import-sample-metadata-1
 import-genome-metadata
 import-genome-counts-coverage-2
+coverage-filtering-and-count-normalization
 fluorescence-in-situ-hybridization-fish
 confocal-microscopy-of-dapi-stained-microsections
 abundance-estimation-using-fish
+amalia-fluorescence-in-situ-hybridization-fish
 fragment-analyzer
 lawsonibacter-pangenome-ppanggolin
 snp-level-microdiversity-lorikeet
@@ -56,6 +59,8 @@ read-counts
 alpha-diversity-fig.-s1.1a
 detected-taxa
 beta-diversity-fig.-s1.1b
+collection-attempts-vs.-success-suppl.fig.-4
+collection-success-at-different-microsample-areas
 tissue-lysis-and-sequencing-library-preparation-suppl.-note-3
 impact-of-lysis-conditions-on-microbial-taxonomic-profiling-suppl.-note-3.2
 mock-community-fig.-s3.2.1
@@ -75,6 +80,9 @@ figs3_4_2
 coverage-cutoff-filtering-fig.-s3.4.3
 composition
 design-considerations-microsample-area
+fig.-3b
+fig.-3c
+fig.-3d
 resource-optimisation-and-throughput-suppl.-note-3.5
 summary-statistic
 visual-comparison-of-sequencing-performance-fig.-s3.5.1a
@@ -86,6 +94,9 @@ permutational-multivariate-analysis-of-variance-permanova
 permanova
 mssm-compared-to-fish-and-macro-scale-metagenomics
 mssm-vs-fish
+pca-fig.-4b
+permanova-1
+fig.-4a
 macro-scale-metagenomics-vs-mssm
 compare-presenceabsence-at-genus-level
 method-implementation
