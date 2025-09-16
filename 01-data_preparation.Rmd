@@ -6,7 +6,7 @@ If you prefer to skip this step, you can continue to the next sections by ensuri
 ```{r data_zenodo, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 # 3D'omics data source - Micro-scale spatial metagenomics
 dir.create("resources/zenodo", recursive = TRUE, showWarnings = FALSE)
-url <- "https://zenodo.org/api/records/17091770/files-archive"
+url <- "https://zenodo.org/api/records/17132594/files-archive"
 download.file(url, "resources/zenodo.zip", mode = "wb")
 unzip("resources/zenodo.zip", exdir = "resources/zenodo", junkpaths = TRUE)
 file.remove("resources/zenodo.zip")
