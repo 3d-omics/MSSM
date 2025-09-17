@@ -1,12 +1,12 @@
 # Method Validation
 
-```{r load_data_validation, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r load_data_validation, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 load("resources/working_data_object.Rdata") 
 ```
 
 ## Discriminative power and replicability of MSSM data
 
-```{r mssm_discriminative_df, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r mssm_discriminative_df, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mssm_discriminative_df <- macroquant_genome_counts_filt_30 %>%
   select(genome, macroquant_metrics_filt_30 %>% 
     filter(
@@ -25,17 +25,17 @@ mssm_discriminative_df <- macroquant_genome_counts_filt_30 %>%
 ### Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA, Suppl Fig. 5)
 **Note:** The perform_pca() function needs to be loaded.
 
-```{r mssm_discriminative_object, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
-cat("Zero replacement determined", "\n")
+```{r mssm_discriminative_object, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+# cat("Zero replacement determined", "\n")
 mssm_discriminative_obj <- perform_pca(mssm_discriminative_df)
 ```
 
-```{r mssm_discriminative_metadata, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r mssm_discriminative_metadata, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mssm_discriminative_metadata <- macroquant_metrics_filt_30 %>%
   filter(microsample %in% c(rownames(mssm_discriminative_obj$df_clr_dist)))
 ```
 
-```{r supplementary_figure_5, echo = FALSE,  warning = FALSE, comments = "", message = FALSE, fig.height=6, fig.width=8}
+```{r supplementary_figure_5, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.height=6, fig.width=8}
 figs_5 <- plot_pca(mssm_discriminative_obj$pca_result,
          samples_color_metadata = "animal", 
          samples_shape_metadata = "cryosection",
@@ -56,14 +56,14 @@ figs_5
 
 #### Tests Homogeneity Of Dispersion Between Groups {-}
 ##### Animal {-}
-```{r mssm_discriminative_betadispersion_animal, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r mssm_discriminative_betadispersion_animal, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 betadisper_animal <- vegdist(mssm_discriminative_obj$df_clr_dist, method = "euclidean") %>%
   betadisper(., mssm_discriminative_metadata %>% pull(animal))
 knitr::kable(permutest(betadisper_animal, pairwise = TRUE)$tab, digits = 3)
 ```
 ##### Cryosection {-}
 
-```{r mssm_discriminative_betadispersion_cryosection, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r mssm_discriminative_betadispersion_cryosection, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 betadisper_cryo <- vegdist(mssm_discriminative_obj$df_clr_dist, method = "euclidean") %>%
   betadisper(., mssm_discriminative_metadata %>% pull(cryosection))
 knitr::kable(permutest(betadisper_cryo, pairwise = TRUE)$tab, digits = 3)
@@ -71,7 +71,7 @@ knitr::kable(permutest(betadisper_cryo, pairwise = TRUE)$tab, digits = 3)
 
 #### PERMANOVA
 
-```{r mssm_discriminative_permanova, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r mssm_discriminative_permanova, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 knitr::kable(vegdist(mssm_discriminative_obj$df_clr_dist, method = "euclidean") %>%
   adonis2(
     formula = . ~ animal + cryosection,
@@ -86,7 +86,7 @@ MSSM data across individuals revealed highly distinct microbial communities. In 
 ## MSSM compared to FISH and Macro-scale Metagenomics
 
 ### MSSM vs FISH
-```{r MSSM_vs_FISH_plot_settings, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r MSSM_vs_FISH_plot_settings, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 custom_ggplot_theme_fish_mssm <- custom_ggplot_theme +
   theme( 
         legend.text = element_text(size = 7),
@@ -99,7 +99,7 @@ custom_ggplot_theme_fish_mssm <- custom_ggplot_theme +
 ```
 
 #### PCA (Fig. 4b)
-```{r PCA_MSSM_vs_FISH, echo = FALSE,  warning = FALSE, comments = "", message = FALSE, fig.height=6, fig.width=8}
+```{r PCA_MSSM_vs_FISH, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.height=6, fig.width=8}
 # Load FISH counts as wide df
 fish_df_wide <- fish_counts %>%
   select(-Total, -animal, -cryosection, -sample_type, -Other) %>%
@@ -161,7 +161,7 @@ fig4_b
 ```
 
 #### PERMANOVA
-```{r PERMANOVA_MSSM_vs_FISH, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r PERMANOVA_MSSM_vs_FISH, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 # Calculate Euclidean distance on CLR data
 fish_mssm_dist_matrix <- vegdist(fish_mssm_pca$df_clr_dist, method = "euclidean")
 
@@ -182,7 +182,7 @@ adonis2_result %>%
   knitr::kable()
 ```
 #### Fig. 4a
-```{r barplot_MSSM_vs_FISH,echo = FALSE,  warning = FALSE, comments = "", message = FALSE, fig.height=7, fig.width=7}
+```{r barplot_MSSM_vs_FISH,echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.height=7, fig.width=7}
 fish_mssm_df_CLR_tidy <- fish_mssm_pca$df_clr_dist %>%
   rownames_to_column(var = "microsample") %>%
   pivot_longer(
@@ -237,7 +237,7 @@ fig4_a
 
 #### Compare Presence/Absence At Genus level
 
-```{r all_overlap, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r all_overlap, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mivsma_phylo_lg <- pivot_phylo(
   phyloseq_obj = subset_samples(
     physeq_all,
@@ -251,7 +251,7 @@ mivsma_phylo_lg <- pivot_phylo(
 ```
 
 ##### Shared Genera Overall {-}
-```{r mivsma_genus, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r mivsma_genus, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mivsma_micro <- unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics")
 ) %>%
@@ -290,7 +290,7 @@ cat(
 ```
 
 ##### Shared Genera 35 Days Animal (G121e, Supplementary Table 1) {-}
-```{r mivsma_35d_genus, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r mivsma_35d_genus, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mivsma_35d_micro <- unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics"),
   animal %in% c("G121e")
@@ -328,7 +328,7 @@ cat("Unique in Macro-scale Metagenomics =",
 ```
 
 
-```{r sup_table_1, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r sup_table_1, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 total_microsamples <- length(unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics"),
   animal %in% c("G121e"),
@@ -351,7 +351,7 @@ knitr::kable(mivsma_phylo_lg %>%
 ```
 
 ##### Shared Genera 14 Days Animal (G103b, Fig. 5a) {-}
-```{r mivsma_14d_genus, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
+```{r mivsma_14d_genus, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mivsma_14d_micro <- unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics"),
   animal %in% c("G103b")
@@ -389,7 +389,7 @@ cat("Unique in Macro-scale Metagenomics =",
     "\n")
 ```
 
-```{r fig5a, echo = FALSE,  warning = FALSE, comments = "", message = FALSE, fig.width=13, fig.height=7}
+```{r fig5a, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.width=13, fig.height=7}
 mivsma_14d_phylo <- subset_samples(
   physeq_all,
   type == "positive" &

@@ -362,13 +362,9 @@ pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_l
     left_join(data.frame(sample_data(phyloseq_obj)) %>%
       rownames_to_column(var = "microsample"), by = "microsample")
 
-  # Re-order levels
   taxa_levels <- c("domain", "phylum", "class", "order", "family", "genus", "species")
-  # Iterate over taxonomic levels
   for (taxa in taxa_levels) {
-    # Check if the column has more than one unique value
     if (taxa %in% colnames(pivot_dataframe) && length(unique(pivot_dataframe[[taxa]])) > 1) {
-      # Convert each taxonomic level to a factor with levels ordered by abundance
       pivot_dataframe <- pivot_dataframe %>%
         mutate(
           !!taxa := factor(
@@ -378,7 +374,7 @@ pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_l
               summarise(total_abundance = sum(abundance, na.rm = TRUE), .groups = "drop") %>%
               arrange(desc(total_abundance)) %>%
               pull(!!sym(taxa))
-          ) # Extract ordered levels
+          ) 
         )
     }
   }
@@ -412,7 +408,7 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
       metadata = metadata_data
     )
 
-    # Mantel correlogram
+    # Mantel 
     mantel <- vegan::mantel(
       dist(comm_data),
       dist(metadata_data[, c("Xcoord", "Ycoord")]),
@@ -435,7 +431,7 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
     )
     decay_dfs[[cryosection]] <- toplot
 
-    # Plot
+    # Distance decay Plot
     p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
       geom_smooth() +
       xlab("Spatial distance (μm)") +
@@ -456,7 +452,7 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
 
 ### lawsonibacter_mantel_analysis()
 lawsonibacter_mantel_analysis <- function(data, circul_selection) {
-  # 1. Filter and prepare presence-absence matrix
+  # 1. Filter MAGs based on circularisation
   if (circul_selection == "Y") {
     filtered_data <- data %>%
       filter(
@@ -542,37 +538,37 @@ lawsonibacter_mantel_analysis <- function(data, circul_selection) {
 
 ### ani_spatial_analysis()
 ani_spatial_analysis <- function(bin_name, ani_list, ids, meta_data) {
-  # Subset ANI matrix to samples of interest
+  # 1. Subset ANI matrix
   popani <- ani_list[[bin_name]][rownames(ani_list[[bin_name]]) %in% ids, ]
   popani <- popani[, colnames(popani) %in% ids] # keep only matching columns too
   diag(popani) <- NA
   popani_dist <- as.dist(1 - popani)
 
-  # Spatial distance for those samples
+  # 2. Spatial distances
   spatial_dist <- dist(meta_data %>%
     filter(microsample %in% colnames(popani)) %>%
     select(Xcoord, Ycoord))
 
-  # Data frame for plotting and stats
+  # 3. Data frame for plotting and stats
   toplot <- data.frame(
     spat_dist = as.numeric(spatial_dist),
     comm_dist = as.numeric(popani_dist)
   )
 
-  # Plot smooth relationship
+  # 4. Plot smooth relationship
   p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
     geom_smooth() +
     ggtitle(paste("Spatial vs ANI distance:", bin_name))
 
   # print(p)
 
-  # Permutation ANOVA test for linear relationship
+  # 5. Permutation ANOVA test for linear relationship
   perm_aov <- aovperm(comm_dist ~ spat_dist, data = toplot, np = 10000)
 
-  # Mantel correlogram
+  # 6. Mantel correlogram
   mantel_res <- vegan::mantel.correlog(popani_dist, spatial_dist, nperm = 999, cutoff = TRUE, n.class = 22, r.type = "spearman")
   plot(mantel_res)
-  title(main = paste("Mantel correlogram:", bin_name)) # add main title
+  title(main = paste("Mantel correlogram:", bin_name)) 
 
   list(
     plot = p,
