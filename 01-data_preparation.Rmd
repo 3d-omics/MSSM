@@ -467,7 +467,8 @@ macroquant_genome_counts_98 <- macroquant_read_counts_98 %>%
 ## Macro-scale Metagenomics (MACRO)
 ### Merge Genome Count to MSSM
 ```{r genome_count_combined, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
-macro_genome_count_macro_filt_30 <- read_tsv("resources/zenodo/macro_genome_count_macro_filt_30.tsv", show_col_types = FALSE)
+macro_genome_count_macro_filt_30 <- read_csv("resources/zenodo/macro_genome_count_macro_filt_30.csv", show_col_types = FALSE)
+
 if (all(macro_genome_count_macro_filt_30$genome %in% macromag_genomemetadata$genome)) {
   mssmmacroquant_vs_macro_genome_count_30 <- full_join(macroquant_genome_counts_filt_30 %>% select(genome, mssm_sample_metadata$microsample), macro_genome_count_macro_filt_30, by = "genome") %>%
     select(where(~ !all(. == 0))) %>%
@@ -489,9 +490,9 @@ mssmmacroquant_vs_macro_sample_metadata <- macroquant_metrics_filt_30 %>%
   filter(microsample %in% names(mssmmacroquant_vs_macro_genome_count_30)) %>%
   bind_rows(
     tibble(
-      microsample = "D300487",
+      microsample = "D300436", #'D300487",
       animal = "G103b",
-      total_before_filtering.total_reads = 21962564 * 2,
+      total_before_filtering.total_reads = 29222670 * 2, 
       section = "right caecum digesta",
       type = "positive",
       batch = NA, cryosection = NA, buffer = NA 

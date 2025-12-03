@@ -235,9 +235,9 @@ fig4_a
 
 ### Macro-scale Metagenomics vs MSSM
 
-#### Compare Presence/Absence At Genus level
+#### Compare Presence/Absence At Species level
 
-```{r all_overlap, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+```{r all_overlap_species, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mivsma_phylo_lg <- pivot_phylo(
   phyloseq_obj = subset_samples(
     physeq_all,
@@ -245,31 +245,31 @@ mivsma_phylo_lg <- pivot_phylo(
   ),
   glom = TRUE,
   tax_transform = TRUE,
-  taxon_level = "genus",
+  taxon_level = "species",
   tr_method = "compositional"
 ) %>% filter(abundance > 0)
 ```
 
-##### Shared Genera Overall {-}
-```{r mivsma_genus, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+##### Shared Species Overall {-}
+```{r mivsma_species, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mivsma_micro <- unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics")
 ) %>%
-  pull(genus))
+  pull(species))
 mivsma_macro <- unique(mivsma_phylo_lg %>%
   filter(group %in% c("Macro-scale Metagenomics")) %>%
-  pull(genus))
+  pull(species))
 mivsma_micro_unique <- setdiff(mivsma_micro, mivsma_macro)
 mivsma_macro_unique <- setdiff(mivsma_macro, mivsma_micro)
 mivsma_df <- tibble(
-  genus = c(mivsma_micro_unique, mivsma_macro_unique),
+  species = c(mivsma_micro_unique, mivsma_macro_unique),
   source = c(
     rep("Micro-scale Spatial Metagenomics", length(mivsma_micro_unique)),
     rep("Macro-scale Metagenomics", length(mivsma_macro_unique))
   )
 )
 
-total <- length(unique(mivsma_phylo_lg %>% pull(genus)))
+total <- length(unique(mivsma_phylo_lg %>% pull(species)))
 
 cat(
   "Shared =",
@@ -289,20 +289,20 @@ cat(
 )
 ```
 
-##### Shared Genera 35 Days Animal (G121e, Supplementary Table 1) {-}
-```{r mivsma_35d_genus, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+##### Shared Species 35 Days Animal (G121e) {-}
+```{r mivsma_35d_species, echo=TRUE, message=FALSE, warning=FALSE, comments=""}
 mivsma_35d_micro <- unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics"),
   animal %in% c("G121e")
-) %>% pull(genus))
+) %>% pull(species))
 mivsma_35d_macro <- unique(mivsma_phylo_lg %>% filter(
   group %in% c("Macro-scale Metagenomics"),
   animal %in% c("G121e")
-) %>% pull(genus))
+) %>% pull(species))
 mivsma_35d_micro_unique <- setdiff(mivsma_35d_micro, mivsma_35d_macro)
 mivsma_35d_macro_unique <- setdiff(mivsma_35d_macro, mivsma_35d_micro)
 mivsma_35d_df <- tibble(
-  genus = c(mivsma_35d_micro_unique, mivsma_35d_macro_unique),
+  species = c(mivsma_35d_micro_unique, mivsma_35d_macro_unique),
   source = c(
     rep("Micro-scale Spatial Metagenomics", length(mivsma_35d_micro_unique)),
     rep("Macro-scale Metagenomics", length(mivsma_35d_macro_unique))
@@ -311,7 +311,7 @@ mivsma_35d_df <- tibble(
 
 total <- length(unique(mivsma_phylo_lg %>% 
                          filter(animal %in% c("G121e")) %>% 
-                         pull(genus)))
+                         pull(species)))
 
 cat("Shared =", 
     length(intersect(mivsma_35d_micro, mivsma_35d_macro)), 
@@ -328,7 +328,7 @@ cat("Unique in Macro-scale Metagenomics =",
 ```
 
 
-```{r sup_table_1, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+```{r sup_table_1_species, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 total_microsamples <- length(unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics"),
   animal %in% c("G121e"),
@@ -340,30 +340,137 @@ knitr::kable(mivsma_phylo_lg %>%
     group %in% c("Micro-scale Spatial Metagenomics"),
     animal %in% c("G121e"),
     !section %in% c("Colon", "Ileum"),
-    genus %in% mivsma_35d_micro_unique
+    species %in% mivsma_35d_micro_unique
   ) %>%
-  group_by(genus) %>%
+  group_by(species) %>%
   summarise(
     # Prevalence = sum(abundance > 0),
     Prevalence_Total = round(sum(abundance > 0) / total_microsamples, 3),
     mean_abundance = round(mean(abundance), 3)
-  ))
+  ) %>% arrange(desc(Prevalence_Total))) 
+
 ```
 
-##### Shared Genera 14 Days Animal (G103b, Fig. 5a) {-}
-```{r mivsma_14d_genus, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+
+
+```{r fig5a_species, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.width=13, fig.height=13}
+species_micro <- mivsma_phylo_lg %>%
+  filter(
+    group %in% c("Micro-scale Spatial Metagenomics"),
+    animal %in% c("G121e"),
+    !section %in% c("Colon", "Ileum"),
+    species %in% mivsma_35d_micro_unique
+  ) %>%
+  group_by(species) %>%
+  summarise(
+    # Prevalence = sum(abundance > 0),
+    Prevalence_Total = round(sum(abundance > 0) / total_microsamples, 3),
+    mean_abundance = round(mean(abundance), 3)
+  ) %>% arrange(desc(Prevalence_Total)) %>% pull(species)
+
+species_other <- mivsma_phylo_lg %>%
+  filter(
+    animal %in% c("G121e"),
+    !section %in% c("Colon", "Ileum"),
+    species %in% intersect(mivsma_35d_micro, mivsma_35d_macro)
+  ) %>%
+  group_by(species) %>%
+  summarise(
+    # Prevalence = sum(abundance > 0),
+    Prevalence_Total = round(sum(abundance > 0) / total_microsamples, 3),
+    mean_abundance = round(mean(abundance), 3)
+  ) %>% arrange(desc(Prevalence_Total)) %>% pull(species)
+
+mivsma_35d_phylo <- subset_samples(
+  physeq_all,
+  type == "positive" &
+    !section == "Colon" &
+    !section == "Ileum" &
+    animal == "G121e" #
+)
+
+mivsma_35d_phylo <- prune_taxa(taxa_sums(mivsma_35d_phylo) > 0, mivsma_35d_phylo)
+species_target <- c(as.character(species_micro), as.character(species_other))
+mivsma_35d_phylo_pa <- tax_transform(mivsma_35d_phylo, "binary", rank = "species") 
+mivsma_35d_phylo_pa <- tax_reorder(mivsma_35d_phylo_pa, species_target)
+mivsma_35d_phylo_ra <- tax_transform(mivsma_35d_phylo, "compositional", rank = "species")
+mivsma_35d_phylo_ra <- tax_reorder(mivsma_35d_phylo_ra, species_target)
+mi_35d_phylo_pa <- subset_samples(mivsma_35d_phylo_pa, group == "Micro-scale Spatial Metagenomics")
+mi_35d_phylo_ra <- subset_samples(mivsma_35d_phylo_ra, group == "Micro-scale Spatial Metagenomics")
+#head(species_target)
+#tax_table(mivsma_35d_phylo)[, "species"]
+
+# Define colors for data
+pa_colors <- c("0" = "grey92", "1" = "black", "2" = "#ba2760")
+# Compute prevalence per taxa (proportion of 1's across samples)
+taxa_prev <- colSums(otu_table(mi_35d_phylo_pa) == 1) / nrow(otu_table(mi_35d_phylo_pa))
+
+top_anno <- HeatmapAnnotation(
+  Prevalence = anno_barplot(taxa_prev, 
+                            gp = gpar(fill = "grey92", fontsize = 13), 
+                            border = TRUE),
+  'Relative abundance'= anno_boxplot(as.matrix(otu_table(mi_35d_phylo_ra)), 
+                            border = TRUE,
+                            gp = gpar(fontsize = 13))
+)
+bottom_anno <- HeatmapAnnotation(
+  'Macro-scale' = anno_simple(
+    x = c(rep("grey92", 15), rep( "black", 85)),
+    col = c("grey92" = "grey92","black" ="black")
+  ))
+
+draft_fig5a <-  Heatmap(
+  otu_table(mi_35d_phylo_pa) %>%
+  data.frame() %>% 
+  mutate(across(all_of(gsub(" ", ".", species_micro)), ~ ifelse(.x == 1, 2, .x))),
+  name = "Presence/Absence",
+  cluster_rows = TRUE,           # cluster taxa
+  cluster_columns = FALSE,       # preserve sample order
+  show_row_names = FALSE,
+  show_column_names = TRUE,
+  col = pa_colors,
+  rect_gp = gpar(col = "white", lwd = 0.3),
+  row_dend_reorder = TRUE,
+  column_names_gp = gpar(col = c(rep("#ba2760", 15), rep("white", 85)), fontsize = 11),
+  top_annotation = top_anno,
+  bottom_annotation = bottom_anno,
+  show_heatmap_legend = FALSE,
+  row_km = 1,
+  left_annotation = rowAnnotation(foo = anno_block(gp = gpar(fill = 0:1),
+        labels = c("Micro-scale"), 
+        labels_gp = gpar(col = "black", fontsize = 13))),
+  show_row_dend = FALSE)
+draft_fig5a 
+
+?save_plot()
+
+pdf("heatmap.pdf", width = 13, height = 14)  # set your preferred size
+draw(draft_fig5a)                                    # IMPORTANT: use draw(), not plot()
+dev.off()
+
+
+ggsave("draft_fig5a.pdf", plot =  , width = 13, height = 13)
+
+
+```
+
+##### Shared Species 14 Days Animal (G103b, Fig. 5a) {-}
+```{r mivsma_14d_species, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+test <- mivsma_phylo_lg %>% filter(
+  animal %in% c("G103b"))
+  
 mivsma_14d_micro <- unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics"),
   animal %in% c("G103b")
-) %>% pull(genus))
+) %>% pull(species))
 mivsma_14d_macro <- unique(mivsma_phylo_lg %>% filter(
   group %in% c("Macro-scale Metagenomics"),
   animal %in% c("G103b")
-) %>% pull(genus))
+) %>% pull(species))
 mivsma_14d_micro_unique <- setdiff(mivsma_14d_micro, mivsma_14d_macro)
 mivsma_14d_macro_unique <- setdiff(mivsma_14d_macro, mivsma_14d_micro)
 mivsma_14d_df <- tibble(
-  genus = c(mivsma_14d_micro_unique, mivsma_14d_macro_unique),
+  species = c(mivsma_14d_micro_unique, mivsma_14d_macro_unique),
   source = c(
     rep("Micro-scale Spatial Metagenomics", length(mivsma_14d_micro_unique)),
     rep("Macro-scale Metagenomics", length(mivsma_14d_macro_unique))
@@ -372,7 +479,7 @@ mivsma_14d_df <- tibble(
 
 total <- length(unique(mivsma_phylo_lg %>% 
                          filter(animal %in% c("G103b")) %>% 
-                         pull(genus)))
+                         pull(species)))
 
 
 cat("Shared =", 
@@ -389,43 +496,3 @@ cat("Unique in Macro-scale Metagenomics =",
     "\n")
 ```
 
-```{r fig5a, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.width=13, fig.height=7}
-mivsma_14d_phylo <- subset_samples(
-  physeq_all,
-  type == "positive" &
-    !section == "Colon" &
-    !section == "Ileum" &
-    animal == "G103b"
-)
-mivsma_14d_phylo <- prune_taxa(taxa_sums(mivsma_14d_phylo) > 0, mivsma_14d_phylo)
-
-cols1 <- c("#ba2760","#E9C46A")
-names(cols1) <- unique(samdat_tbl(mivsma_14d_phylo)$group)
-fig5a <- tax_transform(mivsma_14d_phylo, "binary", rank = "genus") %>%
-  comp_heatmap(
-    sample_anno = sampleAnnotation(
-      "Dataset" = anno_sample_cat(
-        "group",
-        col = cols1,
-        box_col = NA,
-        border_col = "black",
-        legend_title = "Dataset"
-      ),
-      "Sequencing Yield" = anno_sample("total_before_filtering.total_reads"),
-      border = TRUE,
-      show_legend = c(TRUE)
-    ), # Show sample annotation legend
-    sample_names_show = FALSE,
-    tax_anno = taxAnnotation(
-      Prev. = anno_tax_prev(),
-      Abun. = anno_tax_box()
-    ),
-    show_heatmap_legend = FALSE,
-    heatmap_legend_param = list(
-      title_position = "lefttop", # Customize heatmap legend title position if needed
-      legend_direction = "horizontal", # Move heatmap legend horizontally
-      legend_width = unit(6, "cm") # Adjust the heatmap legend width
-    )
-  )
-fig5a
-```

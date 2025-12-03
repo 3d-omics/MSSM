@@ -1792,10 +1792,13 @@ LMD_size_df_wide <- macroquant_genome_counts_filt_30_tidy %>%
   mutate(across(-c(microsample), ~ . / rowSums(across(where(is.numeric))) * 100 )) %>%
   column_to_rownames(var = "microsample")
 
+# 68 obs x 88 variables
+
 # Remove samples with few taxa and taxa in few samples
 LMD_size_df_wide <- remove_samples_or_taxa(df = LMD_size_df_wide, 
                                            min_samples_per_taxon = 6,
                                            min_taxa_per_sample = 14)
+# 61 obs x 79 variables
 # Perform & plot PCA
 LMD_size_pca <- perform_pca(LMD_size_df_wide, z_delete = TRUE)
 

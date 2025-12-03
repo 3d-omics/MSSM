@@ -322,7 +322,7 @@ fit_and_analyze_model <- function(model = c("lm", "glm"),
 
     if (!grepl("^quasi", distribution)) { # Use DHARMa only on supported distributions
       simResids <- simulateResiduals(md)
-      anova_result <- broom::tidy(Anova(md, test.statistic = "Wald")) # ANOVA with Chi-squared test
+      anova_result <- broom::tidy(Anova(md, test.statistic = "LR")) # ANOVA with Chi-squared test or LR/
     } else {
       anova_result <- broom::tidy(Anova(md, test.statistic = "F")) # ANOVA with F test
     }
