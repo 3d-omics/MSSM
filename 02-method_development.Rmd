@@ -38,7 +38,7 @@ combined_plot <- ggplot(combined_data, aes(x = completeness, y = contamination, 
   scale_fill_manual(values = c("#E8BD50", "#B92D65")) +  
   geom_point(shape = 21, color = "black", alpha = 0.5) +
   xlim(c(70, 100)) +
-  ylim(c(8, 0)) +
+  ylim(c(25, 0)) +
   labs(y = "Contamination %", x = "Completeness %", color = "MAG catalogue", size = "Genome length") +
   theme_classic() +
   theme(legend.position = "none")
@@ -46,7 +46,7 @@ combined_plot <- ggplot(combined_data, aes(x = completeness, y = contamination, 
 # Plot contamination boxplot
 genome_contamination <- combined_data %>%
             ggplot(aes(y=contamination, x=dataset, fill=dataset)) +
-                    ylim(c(8,0)) +
+                    ylim(c(25,0)) +
                     geom_boxplot() +
                     theme_void() +
                     scale_fill_manual(values = c("#E8BD50", "#B92D65")) + 
