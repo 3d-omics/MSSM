@@ -7,7 +7,7 @@ author:
 - Amalia Bogri^[University of Copenhagen, amalia.bogri@sund.ku.dk]
 - Antton Alberdi^[University of Copenhagen, antton.alberdi@sund.ku.dk]
 date: "`r Sys.Date()`"
-subtitle: Insert manuscript link
+subtitle: https://doi.org/10.1101/2025.09.30.679663 
 site: bookdown::bookdown_site
 documentclass: book
 bibliography:
@@ -64,7 +64,7 @@ pacman::p_load(
   ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork,
   grid, pheatmap, janitor, spdep, adespatial, adegraphics,
   ade4, magick, permuco, rmarkdown, purrr, PerformanceAnalytics,
-  bookdown, htmlwidgets, webshot
+  bookdown, htmlwidgets, webshot, ComplexHeatmap
 )
 # If the package is not installed, installs from GitHub
 pacman::p_load_gh(
@@ -73,8 +73,10 @@ pacman::p_load_gh(
   "wilkelab/cowplot",
   "david-barnett/microViz"
 )
+
 select <- dplyr::select
 recode <- dplyr::recode
+
 ```
 
 ## Define Plotting Settings

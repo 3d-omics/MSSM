@@ -236,7 +236,6 @@ fig4_a
 ### Macro-scale Metagenomics vs MSSM
 
 #### Compare Presence/Absence At Species level
-
 ```{r all_overlap_species, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mivsma_phylo_lg <- pivot_phylo(
   phyloseq_obj = subset_samples(
@@ -419,7 +418,7 @@ bottom_anno <- HeatmapAnnotation(
     col = c("grey92" = "grey92","black" ="black")
   ))
 
-draft_fig5a <-  Heatmap(
+fig5a <-  Heatmap(
   otu_table(mi_35d_phylo_pa) %>%
   data.frame() %>% 
   mutate(across(all_of(gsub(" ", ".", species_micro)), ~ ifelse(.x == 1, 2, .x))),
@@ -440,25 +439,12 @@ draft_fig5a <-  Heatmap(
         labels = c("Micro-scale"), 
         labels_gp = gpar(col = "black", fontsize = 13))),
   show_row_dend = FALSE)
-draft_fig5a 
-
-?save_plot()
-
-pdf("heatmap.pdf", width = 13, height = 14)  # set your preferred size
-draw(draft_fig5a)                                    # IMPORTANT: use draw(), not plot()
-dev.off()
-
-
-ggsave("draft_fig5a.pdf", plot =  , width = 13, height = 13)
-
+fig5a 
 
 ```
 
 ##### Shared Species 14 Days Animal (G103b, Fig. 5a) {-}
 ```{r mivsma_14d_species, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-test <- mivsma_phylo_lg %>% filter(
-  animal %in% c("G103b"))
-  
 mivsma_14d_micro <- unique(mivsma_phylo_lg %>% filter(
   group %in% c("Micro-scale Spatial Metagenomics"),
   animal %in% c("G103b")

@@ -98,7 +98,7 @@ pca-fig.-4b
 permanova-1
 fig.-4a
 macro-scale-metagenomics-vs-mssm
-compare-presenceabsence-at-genus-level
+compare-presenceabsence-at-species-level
 method-implementation
 investigate-spatial-pattern
 data-selection
