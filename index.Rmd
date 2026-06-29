@@ -52,30 +52,18 @@ Once the R project has been created, follow the instructions and code chunks sho
 The following R packages are required for the data analysis. Most modules can be installed directly from CRAN or GitHub.
 However, four modules are provided through Bioconductor and should be installed if needed with the command below before loading:
 ```{r load_libraries, warning = FALSE, comments = "", message = FALSE}
-# install.packages('BiocManager', dependencies = TRUE)
-# BiocManager::install(c("phyloseq", "ggtreeExtra","ggtree", "ALDEx2"))'
+#install.packages('BiocManager', dependencies = TRUE)
+# BiocManager::install(c("phyloseq", "ggtreeExtra","ggtree", "ALDEx2", "ComplexHeatmap"))
 
-if (!require("pacman")) install.packages("pacman")
-# If the package is not installed, installs from CRAN
-pacman::p_load(
-  tidyverse, jsonlite, ape, ggtree, phytools, ggnewscale, ggtreeExtra,
-  ggpubr, broom, reshape2, zCompositions,
-  ALDEx2, car, DHARMa, sjPlot, ggeffects,
-  ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork,
-  grid, pheatmap, janitor, spdep, adespatial, adegraphics,
-  ade4, magick, permuco, rmarkdown, purrr, PerformanceAnalytics,
-  bookdown, htmlwidgets, webshot, ComplexHeatmap
-)
-# If the package is not installed, installs from GitHub
-pacman::p_load_gh(
-  "anttonalberdi/hilldiv2",
-  "anttonalberdi/distillR",
-  "wilkelab/cowplot",
-  "david-barnett/microViz"
-)
+if (!require("pacman")) install.packages("pacman") 
+# If the package is not installed, installs from CRAN 
+pacman::p_load( tidyverse, jsonlite, ape, ggtree, phytools, ggnewscale, ggtreeExtra, ggpubr, broom, reshape2, zCompositions, ALDEx2, car, DHARMa, sjPlot, ggeffects, ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork, grid, pheatmap, janitor, spdep, adespatial, adegraphics, ade4, magick, permuco, rmarkdown, purrr, PerformanceAnalytics, bookdown, htmlwidgets, webshot, kableExtra, hexbin, ComplexHeatmap, rstatix, circlize) 
+#If the package is not installed, installs from GitHub 
+pacman::p_load_gh("anttonalberdi/hilldiv2", "anttonalberdi/distillR", "wilkelab/cowplot")
 
 select <- dplyr::select
 recode <- dplyr::recode
+#install.packages("colorspace")
 
 ```
 
@@ -192,10 +180,22 @@ custom_ggplot_theme <- theme(
   panel.background = element_rect(fill = "white"), # Change panel background color
   plot.margin = unit(c(1, 1, 1, 1), "cm") # Adjust plot margins to ensure content fits
 )
+
+pnas_theme <- theme_classic(base_size = 12) +
+  theme(
+    plot.title = element_text(size = 12, face = "bold"),
+    plot.tag = element_text(size = 14, face = "bold"),
+    plot.tag.position = c(0, 1),
+    plot.margin = margin(5, 5, 5, 5),
+    legend.title = element_text(size = 10),
+    legend.text = element_text(size = 9)
+  )
+
 ggplot(data.frame(x = 0, y = 0), aes(x, y)) +
   geom_blank() +
   annotate("text", x = 0, y = 0, label = "MSSM", size = 8, fontface = "bold") +
-  custom_ggplot_theme
+pnas_theme
+
 ```
 
 ## Load Functions

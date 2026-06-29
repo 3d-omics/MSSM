@@ -1,8 +1,0 @@
-# Data Availability ENA
-
-```{r load_sequence_data_accessions, echo = FALSE,  warning = FALSE, comments = "", message = FALSE}
-sequence_data_accessions <- read_csv("resources/zenodo/sequence_data_accessions.csv", show_col_types = FALSE)
-knitr::kable(sequence_data_accessions) %>%
-  kableExtra::kable_styling(font_size = 10)  # smaller font size
-```
-

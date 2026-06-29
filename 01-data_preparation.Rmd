@@ -223,6 +223,7 @@ macromag_annotations <- read_tsv("resources/zenodo/macroscale_catalogue/dram.ann
   filter(genome %in% macroquant_read_counts$genome)
 macromag_gifts <- distill(macromag_annotations, GIFT_db, genomecol = 2, annotcol = c(9, 10, 19))
 GIFT_db_df <- GIFT_db
+
 ```
 
 ##### Phylogenetic Tree {-}
@@ -422,7 +423,7 @@ microquant_genome_counts <- microquant_read_counts %>%
 ```{r alpha_diversities_microquant, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 # Calculate alpha diversity for filtered genome counts data
 microquant_metrics_filt_30 <- calculate_alpha_diversity(
-  input_data = microquant_read_counts_filt_30,
+  input_data = microquant_genome_counts_filt_30,
   metadata_name = mssm_quality,
   tree_name = micromag_tree
 ) %>%
@@ -434,9 +435,43 @@ microquant_metrics_filt_30 <- calculate_alpha_diversity(
 ##### Mapping and Catalogue Data
 ```{r load_98ANI, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 # Read count
-macroquant_read_counts_98 <- read_tsv("resources/zenodo/macroquant_read_counts_98.tsv", show_col_types = FALSE)
+#macroquant_read_counts_98 <- read_tsv("resources/zenodo/macroquant_read_counts_98.tsv", show_col_types = FALSE)
+# 298 × 199
 # Covered bases
-macroquant_covered_bases_98 <- read_tsv("resources/zenodo/macroquant_covered_bases_98.tsv", show_col_types = FALSE)
+#macroquant_covered_bases_98 <- read_tsv("resources/zenodo/macroquant_covered_bases_98.tsv", #show_col_types = FALSE)
+# 298 × 199
+
+macroquant_read_counts_98_new <- read_tsv("resources/genome.count.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
+  rename_with(
+    .fn = ~ ifelse(.x == "genome", .x, sub("\\..*", "", .x))
+  )
+anyDuplicated(names(macroquant_read_counts_98_new))
+#298 × 769
+
+macroquant_read_counts_98_new <- full_join(
+  macroquant_read_counts_98,
+  macroquant_read_counts_98_new,
+  by = "genome"
+)
+# 298 × 967
+
+# 298 × 199
+# Covered bases
+macroquant_covered_bases_98_new <- read_tsv("resources/genome.covered_bases.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
+  rename_with(
+    .fn = ~ ifelse(.x == "genome", .x, sub("\\..*", "", .x))
+  )
+anyDuplicated(names(macroquant_covered_bases_98_new))
+
+macroquant_covered_bases_98_new <- full_join(
+  macroquant_covered_bases_98,
+  macroquant_covered_bases_98_new,
+  by = "genome"
+)
+
+macroquant_read_counts_98 <- macroquant_read_counts_98_new 
+macroquant_covered_bases_98 <- macroquant_covered_bases_98_new
+
 # Taxonomy
 macromag_taxonomy_98 <- macroscale_catalogue_taxonomy %>%
   arrange(match(genome, macroquant_read_counts_98$genome)) %>%
@@ -461,6 +496,17 @@ macroquant_counts_filt_30_98 <- macroquant_read_counts_filt_30_98 %>%
   mutate(across(where(is.numeric), ~ . / (macromag_genomemetadata_98$length / readlength)))
 macroquant_genome_counts_98 <- macroquant_read_counts_98 %>%
   mutate(across(where(is.numeric), ~ . / (macromag_genomemetadata_98$length / readlength)))
+
+macroquant_genome_counts_filt_30_98 <- macroquant_counts_filt_30_98
+
+macroquant_read_counts_98_old <- macroquant_read_counts_98  
+macroquant_covered_bases_98_old <- macroquant_covered_bases_98  
+macromag_taxonomy_98_old <- macromag_taxonomy_98
+macromag_genomemetadata_98_old <-  macromag_genomemetadata_98 
+macroquant_coverage_98_old <- macroquant_coverage_98
+macroquant_read_counts_filt_30_98_old <- macroquant_read_counts_filt_30_98
+macroquant_counts_filt_30_98_old <- macroquant_counts_filt_30_98 
+macroquant_genome_counts_98_old <- macroquant_genome_counts_98
 ```
 
 
@@ -701,5 +747,15 @@ names(ani_list) <- stringr::str_extract(basename(ani_files), "GPB_bin_\\d+")
 ## Wrap working objects
 In the last step, the objects that are needed for downstream analyses are stored in an R object.
 ```{r wrap_objects, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
-save.image(file = "resources/working_data_object.Rdata")
+load("resources/working_data_object_new.Rdata") # load the data from 1-data_preparation
+# update microquant_metrics_filt_30 
+microquant_metrics_filt_30 <- calculate_alpha_diversity(
+  input_data = microquant_genome_counts_filt_30,
+  metadata_name = mssm_quality,
+  tree_name = micromag_tree
+) %>%
+    mutate(size = factor(size, levels = c(500, 1500, 2500, 5000, 25000, 50000)))
+# 98ANI 
+
+save.image(file = "resources/working_data_object_20260610.Rdata")
 ```

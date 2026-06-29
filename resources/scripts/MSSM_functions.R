@@ -1,4 +1,10 @@
 # print_median_iqr(
+format_median_iqr <- function(x) {
+  med <- median(x, na.rm = TRUE)
+  q <- quantile(x, c(0.25, 0.75), na.rm = TRUE)
+  sprintf("%.1f (%.1f–%.1f)", med, q[1], q[2])
+}
+
 print_median_iqr <- function(x, name) {
   med <- round(median(x), 2)
   iqr_vals <- round(quantile(x, probs = c(0.25, 0.75)), 2)
@@ -290,53 +296,158 @@ plot_pca <- function(df,
   return(p)
 }
 
-
 ### fit_and_analyze_model()
 fit_and_analyze_model <- function(model = c("lm", "glm"),
                                   distribution = NULL,
                                   response_var,
                                   explanatory_var,
                                   data) {
-  model <- match.arg(model) # Restrict to "lm" or "glm"
-  # Construct the model formula
-  model_formula <- as.formula(paste(response_var, "~", explanatory_var))
-
-  # Initialize all possible return objects
-  anova_result <- NULL
-  md <- NULL
-  simResids <- NULL
-
-  if (model == "lm") {
-    # Continuous floats (any real number)
-    md <- lm(model_formula, data = data)
-    anova_result <- broom::tidy(Anova(md, test.statistic = "F"))
-  } else if (model == "glm") {
-    # Counts (integers ≥0): poisson, quasipoisson (accounts overdispersion)
-    # Proportions (0–1 continuous):	quasibinomial GLM (accounts overdispersion) but beta regression (not GLM)	Preferred over quasibinomial GLM
-    # Continuous floats (any real number): gaussian, Gamma (continuous positive data, skewed to the right)
-    if (is.null(distribution)) {
-      stop("You must specify a distribution family for glm.")
-    }
-
-    md <- glm(model_formula, family = distribution, data = data)
-
-    if (!grepl("^quasi", distribution)) { # Use DHARMa only on supported distributions
-      simResids <- simulateResiduals(md)
-      anova_result <- broom::tidy(Anova(md, test.statistic = "LR")) # ANOVA with Chi-squared test or LR/
-    } else {
-      anova_result <- broom::tidy(Anova(md, test.statistic = "F")) # ANOVA with F test
-    }
-  }
-  result <- list(
-    model_fit = md,
-    anova = anova_result
+  
+  model <- match.arg(model)
+  
+  form <- stats::as.formula(
+    paste(response_var, "~", explanatory_var)
   )
-
-  if (!is.null(simResids)) {
-    result$simResidual <- simResids
+  
+  distribution <- if (!is.null(distribution) && !is.na(distribution)) {
+    tolower(trimws(as.character(distribution)))
+  } else {
+    NA_character_
   }
+  
+  if (model == "lm") {
+    
+    md <- stats::lm(form, data = data)
+    anova_result <- car::Anova(md, type = 2, test.statistic = "F")
+    test_statistic <- "F"
+    
+  } else {
+    
+    if (is.na(distribution)) {
+      stop("You must specify a distribution for glm.")
+    }
+    
+    fam <- switch(
+      distribution,
+      "poisson" = stats::poisson(),
+      "binomial" = stats::binomial(),
+      "gaussian" = stats::gaussian(),
+      "gamma" = stats::Gamma(),
+      "quasipoisson" = stats::quasipoisson(),
+      "quasibinomial" = stats::quasibinomial(),
+      stop("Unsupported GLM distribution: ", distribution)
+    )
+    
+    md <- stats::glm(form, family = fam, data = data)
+    
+    if (distribution %in% c("quasipoisson", "quasibinomial")) {
+      anova_result <- car::Anova(md, type = 2, test.statistic = "F")
+      test_statistic <- "F"
+    } else {
+      anova_result <- car::Anova(md, type = 2, test.statistic = "LR")
+      test_statistic <- "Chi2"
+    }
+  }
+  
+  list(
+    model_fit = md,
+    anova = anova_result,
+    test_statistic = test_statistic,
+    distribution = distribution
+  )
+}
 
-  return(result)
+### format_p_value() 
+
+format_p_value <- function(p) {
+  dplyr::case_when(
+    is.na(p) ~ NA_character_,
+    p < 0.001 ~ "< 0.001",
+    TRUE ~ sprintf("%.3f", p)
+  )
+}
+
+### format_anova() 
+format_anova <- function(anova_df,
+                         model_obj,
+                         metric_name,
+                         term_name,
+                         test_statistic) {
+  
+  df <- as.data.frame(anova_df)
+  df$term <- rownames(df)
+  
+  row <- df[df$term == term_name, , drop = FALSE]
+  
+  if (nrow(row) == 0) {
+    return(NA_character_)
+  }
+  
+  if (test_statistic == "F") {
+    
+    stat_col <- grep("^F", names(row), value = TRUE)[1]
+    p_col <- grep("Pr\\(>F\\)", names(row), value = TRUE)[1]
+    
+    sprintf(
+      "%s: F(%s, %s) = %.2f, p = %s for %s",
+      metric_name,
+      row$Df,
+      stats::df.residual(model_obj),
+      row[[stat_col]],
+      format_p_value(row[[p_col]]),
+      term_name
+    )
+    
+  } else {
+    
+    stat_col <- grep("Chisq|LR", names(row), value = TRUE)[1]
+    p_col <- grep("Pr\\(>Chisq\\)", names(row), value = TRUE)[1]
+    
+    sprintf(
+      "%s: \u03C7\u00B2(%s) = %.2f, p = %s for %s",
+      metric_name,
+      row$Df,
+      row[[stat_col]],
+      format_p_value(row[[p_col]]),
+      term_name
+    )
+  }
+}
+
+### run_metric() 
+run_metric <- function(metric,
+                       response_var,
+                       model,
+                       distribution = NULL,
+                       section_name = NULL,
+                       explanatory_var,
+                       term_name,
+                       data) {
+  
+  if (!is.null(section_name)) {
+    data <- data %>%
+      dplyr::filter(section == section_name)
+  }
+  
+  fit <- fit_and_analyze_model(
+    model = model,
+    distribution = distribution,
+    response_var = response_var,
+    explanatory_var = explanatory_var,
+    data = data
+  )
+  
+  tibble::tibble(
+    metric = metric,
+    section_name = section_name,
+    report = format_anova(
+      anova_df = fit$anova,
+      model_obj = fit$model_fit,
+      metric_name = metric,
+      term_name = term_name,
+      test_statistic = fit$test_statistic
+    )
+  )
 }
 
 ### pivot_phylo()
@@ -348,20 +459,20 @@ pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_l
     .
   }
   if (tax_transform == TRUE && !is.null(tr_method)) {
-    phyloseq_obj <- tax_transform(phyloseq_obj, tr_method)
+    phyloseq_obj <- microbiome::transform(phyloseq_obj, tr_method)
   } else {
     .
   }
-
+  
   pivot_dataframe <- data.frame(otu_table(phyloseq_obj)) %>%
     rownames_to_column(var = "genome") %>%
     pivot_longer(-genome, names_to = "microsample", values_to = "abundance") %>%
     filter(abundance > 0) %>%
     left_join(data.frame(tax_table(phyloseq_obj)) %>%
-      rownames_to_column(var = "genome"), by = "genome") %>%
+                rownames_to_column(var = "genome"), by = "genome") %>%
     left_join(data.frame(sample_data(phyloseq_obj)) %>%
-      rownames_to_column(var = "microsample"), by = "microsample")
-
+                rownames_to_column(var = "microsample"), by = "microsample")
+  
   taxa_levels <- c("domain", "phylum", "class", "order", "family", "genus", "species")
   for (taxa in taxa_levels) {
     if (taxa %in% colnames(pivot_dataframe) && length(unique(pivot_dataframe[[taxa]])) > 1) {
@@ -380,6 +491,112 @@ pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_l
   }
   return(pivot_dataframe)
 }
+
+
+### compare_taxa_overlap()
+compare_taxa_overlap <- function(data,
+                                 group_var,
+                                 group_a,
+                                 group_b,
+                                 facet_var = NULL,
+                                 taxon_var = "species",
+                                 abundance_var = "abundance",
+                                 sample_var = "microsample") {
+  
+  group_cols <- c(".group", if (!is.null(facet_var)) ".facet")
+  sample_cols <- c(group_cols, ".sample")
+  taxon_cols <- c(group_cols, ".taxon")
+  
+  data_filt <- data %>%
+    filter(.data[[group_var]] %in% c(group_a, group_b)) %>%
+    filter(!is.na(.data[[taxon_var]])) %>%
+    mutate(
+      .group = .data[[group_var]],
+      .sample = .data[[sample_var]],
+      .taxon = .data[[taxon_var]],
+      .abundance = .data[[abundance_var]]
+    )
+  
+  if (!is.null(facet_var)) {
+    data_filt <- data_filt %>%
+      mutate(.facet = .data[[facet_var]])
+  }
+  
+  sample_counts <- data_filt %>%
+    distinct(across(all_of(sample_cols))) %>%
+    count(across(all_of(group_cols)), name = "n_samples")
+  
+  sample_taxa <- data_filt %>%
+    group_by(across(all_of(c(sample_cols, ".taxon")))) %>%
+    summarise(
+      sample_abundance = sum(.abundance, na.rm = TRUE),
+      .groups = "drop"
+    )
+  
+  taxa_a <- sample_taxa %>%
+    filter(.group == group_a, sample_abundance > 0) %>%
+    distinct(.taxon) %>%
+    pull(.taxon)
+  
+  taxa_b <- sample_taxa %>%
+    filter(.group == group_b, sample_abundance > 0) %>%
+    distinct(.taxon) %>%
+    pull(.taxon)
+  
+  overlap <- list(
+    a = taxa_a,
+    b = taxa_b,
+    a_unique = setdiff(taxa_a, taxa_b),
+    b_unique = setdiff(taxa_b, taxa_a),
+    shared = intersect(taxa_a, taxa_b)
+  )
+  
+  complete_sample_taxa <- data_filt %>%
+    distinct(across(all_of(sample_cols))) %>%
+    tidyr::crossing(.taxon = union(taxa_a, taxa_b)) %>%
+    left_join(
+      sample_taxa,
+      by = c(sample_cols, ".taxon")
+    ) %>%
+    mutate(
+      sample_abundance = tidyr::replace_na(sample_abundance, 0)
+    )
+  
+  plot_df <- complete_sample_taxa %>%
+    group_by(across(all_of(taxon_cols))) %>%
+    summarise(
+      mean_abundance = mean(sample_abundance, na.rm = TRUE),
+      prevalence_raw = sum(sample_abundance > 0),
+      .groups = "drop"
+    ) %>%
+    left_join(sample_counts, by = group_cols) %>%
+    mutate(
+      prevalence = prevalence_raw / n_samples,
+      Detection = case_when(
+        .group == group_a & .taxon %in% overlap$a_unique ~ paste(group_a, "only"),
+        .group == group_b & .taxon %in% overlap$b_unique ~ paste(group_b, "only"),
+        .taxon %in% overlap$shared ~ "Shared",
+        TRUE ~ NA_character_
+      )
+    ) %>%
+    filter(!is.na(Detection)) %>%
+    rename(
+      !!group_var := .group,
+      !!taxon_var := .taxon
+    )
+  
+  if (!is.null(facet_var)) {
+    plot_df <- plot_df %>%
+      rename(!!facet_var := .facet)
+  }
+  
+  list(
+    overlap = overlap,
+    plot_df = plot_df,
+    sample_taxa = complete_sample_taxa
+  )
+}
+
 
 
 ### spatial_cryosections()
@@ -412,7 +629,7 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
     mantel <- vegan::mantel(
       dist(comm_data),
       dist(metadata_data[, c("Xcoord", "Ycoord")]),
-      permutations = 999
+      permutations = 9999
     )
     mantel_results[[cryosection]] <- mantel
 
@@ -420,7 +637,7 @@ spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
     correlog <- vegan::mantel.correlog(
       D.eco = dist(comm_data),
       D.geo = dist(metadata_data[, c("Xcoord", "Ycoord")]),
-      nperm = 999
+      nperm = 9999
     )
     mantelcor_results[[cryosection]] <- correlog
 
@@ -480,12 +697,12 @@ lawsonibacter_mantel_analysis <- function(data, circul_selection) {
   # 4. Spatial distance
   spatial_dist_pa <- dist(coords_pa[, c("Xcoord", "Ycoord")])
   # 5. Mantel test
-  mantel_result_pa <- vegan::mantel(comm_dist_pa, spatial_dist_pa, permutations = 999)
+  mantel_result_pa <- vegan::mantel(comm_dist_pa, spatial_dist_pa, permutations = 9999)
   # 6. Mantel correlogram
   mantelcor_result_pa <- vegan::mantel.correlog(
     D.eco = comm_dist_pa,
     D.geo = spatial_dist_pa,
-    nperm = 999
+    nperm = 9999
   )
 
   # CLR
@@ -510,12 +727,12 @@ lawsonibacter_mantel_analysis <- function(data, circul_selection) {
   # 4. Spatial distance
   spatial_dist_clr <- dist(coords_clr[, c("Xcoord", "Ycoord")])
   # 5. Mantel test
-  mantel_result_clr <- vegan::mantel(comm_dist_clr, spatial_dist_clr, permutations = 999)
+  mantel_result_clr <- vegan::mantel(comm_dist_clr, spatial_dist_clr, permutations = 9999)
   # 6. Mantel correlogram
   mantelcor_result_clr <- vegan::mantel.correlog(
     D.eco = comm_dist_clr,
     D.geo = spatial_dist_clr,
-    nperm = 999
+    nperm = 9999
   )
 
   distance_clr_df <- data.frame(
@@ -523,7 +740,7 @@ lawsonibacter_mantel_analysis <- function(data, circul_selection) {
     comm_dist = as.numeric(comm_dist_clr)
   )
 
-  clr_lm <- aovperm(lmperm(comm_dist ~ spat_dist, data = distance_clr_df, np = 10000))
+  clr_lm <- aovperm(lmperm(comm_dist ~ spat_dist, data = distance_clr_df, np = 9999))
 
   return(list(
     # cryosection = cryosection_id,
@@ -536,45 +753,3 @@ lawsonibacter_mantel_analysis <- function(data, circul_selection) {
 }
 
 
-### ani_spatial_analysis()
-ani_spatial_analysis <- function(bin_name, ani_list, ids, meta_data) {
-  # 1. Subset ANI matrix
-  popani <- ani_list[[bin_name]][rownames(ani_list[[bin_name]]) %in% ids, ]
-  popani <- popani[, colnames(popani) %in% ids] # keep only matching columns too
-  diag(popani) <- NA
-  popani_dist <- as.dist(1 - popani)
-
-  # 2. Spatial distances
-  spatial_dist <- dist(meta_data %>%
-    filter(microsample %in% colnames(popani)) %>%
-    select(Xcoord, Ycoord))
-
-  # 3. Data frame for plotting and stats
-  toplot <- data.frame(
-    spat_dist = as.numeric(spatial_dist),
-    comm_dist = as.numeric(popani_dist)
-  )
-
-  # 4. Plot smooth relationship
-  p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
-    geom_smooth() +
-    ggtitle(paste("Spatial vs ANI distance:", bin_name))
-
-  # print(p)
-
-  # 5. Permutation ANOVA test for linear relationship
-  perm_aov <- aovperm(comm_dist ~ spat_dist, data = toplot, np = 10000)
-
-  # 6. Mantel correlogram
-  mantel_res <- vegan::mantel.correlog(popani_dist, spatial_dist, nperm = 999, cutoff = TRUE, n.class = 22, r.type = "spearman")
-  plot(mantel_res)
-  title(main = paste("Mantel correlogram:", bin_name)) 
-
-  list(
-    plot = p,
-    perm_aov = perm_aov,
-    mantel = mantel_res,
-    spatial_dist = spatial_dist,
-    mantel_summary = summary(mantel_res)
-  )
-}
