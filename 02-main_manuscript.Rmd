@@ -1311,7 +1311,7 @@ fig_s11
 
 ### Spatial and functional analysis of bacterial community structure
 
-### Data selection
+#### Data selection
 ```{r data_spatial, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 comm_data_t<- macroquant_genome_counts_filt_30
 metadata <- macroquant_metrics_filt_30 %>%
@@ -1343,7 +1343,7 @@ paste0("comm_data and metadata in the same order: ",all(rownames(comm_data)==met
 paste0("comm_data and genome_metadata in the same order: ",all(colnames(comm_data)==genome_metadata$user_genome))
 ```
 
-### Centered Log-Ratio (CLR) Transformation
+#### Centered Log-Ratio (CLR) Transformation
 **Note:** The prepare_spatial_section() function needs to be loaded.
 
 ```{r data_spatial_clr, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}

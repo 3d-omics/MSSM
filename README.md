@@ -11,19 +11,16 @@ The repository also contains an R object containing the necessary data to run St
 <br>
 
 
-## Analysis steps
+## Analysis
 
-#### Step 1 - Data Preparation
+#### 1 - Data Preparation
 The code in 01-data_preparation.Rmd loads and tidies the data, generates a filtered and normalized genome count table for downstream quantitative analyses, and saves all necessary data frames along with the customized color palettes in an R object (working_data_object.Rdata).
 
-#### Step 2 – Method Development
-The R code in 02-method_development.Rmd reproduces all analyses described in the Method Development section of the manuscript. This includes the comparison of macroscale and microscale MAG catalogues, as well as analyses focused on optimizing lysis conditions, evaluating library performance across intestinal sections and positive control reactions, and exploring resource optimization and throughput strategies to improve efficiency and sample processing capacity.
-
-#### Step 3 – Method Validation
-The R code in 03-method_validation.Rmd executes all analyses for the Method Validation section. It applies the developed MSSM method to two animals, assessing the discriminative power and replicability of MSSM data compared to FISH and macroscale metagenomics.
-
-#### Step 4 – Method Implementation
-The R code in 04-method_implementation.Rmd runs all analyses described in the Method Implementation section of the manuscript. This includes applying the validated MSSM method to caecum and colon cryosections, enabling the study of spatial patterns in taxonomic and functional variation. It also investigates the spatial and host distribution of Lawsonibacter strains resolved by MSSM and demonstrates the method’s ability to recover SNP-level microdiversity within strains.
+#### 2 – Main manuscript
+The R code in 02-main_manuscript.Rmd reproduces all analyses described in the manuscript. This includes It includes technical validation of microscale microbiome profiling across intestinal regions; comparison of de novo and reference-based genome catalogues for bacterial quantification in caecal MSSM datasets; assessment of environmental and host contamination; evaluation of inter-individual variation and technical reproducibility; validation of MSSM against FISH and conventional metagenomics; analysis of within-strain SNP-level microdiversity across individuals; and assessment of non-random spatial structuring of microbial communities.
+#### 3 – Supporting information
+The R code in 03-supporting information.Rmd executes all analyses described in the Supporting Information Text. This includes the validation of lysis condition (S1: Lysis Conditions) and resource optimisation (S2: Resource optimisation).
+## Analysis output
 
 ## Analysis output
 
