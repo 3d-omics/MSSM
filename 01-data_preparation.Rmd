@@ -440,8 +440,7 @@ microquant_metrics_filt_30 <- calculate_alpha_diversity(
 # Covered bases
 #macroquant_covered_bases_98 <- read_tsv("resources/zenodo/macroquant_covered_bases_98.tsv", #show_col_types = FALSE)
 # 298 × 199
-
-macroquant_read_counts_98_new <- read_tsv("resources/genome.count.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
+macroquant_read_counts_98_new <- read_tsv("resources/other/genome.count.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
   rename_with(
     .fn = ~ ifelse(.x == "genome", .x, sub("\\..*", "", .x))
   )
@@ -457,7 +456,7 @@ macroquant_read_counts_98_new <- full_join(
 
 # 298 × 199
 # Covered bases
-macroquant_covered_bases_98_new <- read_tsv("resources/genome.covered_bases.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
+macroquant_covered_bases_98_new <- read_tsv("resources/other/genome.covered_bases.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
   rename_with(
     .fn = ~ ifelse(.x == "genome", .x, sub("\\..*", "", .x))
   )
@@ -470,7 +469,9 @@ macroquant_covered_bases_98_new <- full_join(
 )
 
 macroquant_read_counts_98 <- macroquant_read_counts_98_new 
+rm(macroquant_read_counts_98_new)
 macroquant_covered_bases_98 <- macroquant_covered_bases_98_new
+rm(macroquant_covered_bases_98_new)
 
 # Taxonomy
 macromag_taxonomy_98 <- macroscale_catalogue_taxonomy %>%
@@ -481,6 +482,7 @@ macromag_genomemetadata_98 <- macromag_taxonomy_98 %>%
   left_join(macroscale_catalogue_quality, by = join_by(genome == genome)) %>% # join quality
   arrange(match(genome, macroquant_read_counts_98$genome)) %>%
   filter(genome %in% macroquant_read_counts_98$genome)
+
 ```
 
 ##### Filter and Normalise
@@ -499,21 +501,21 @@ macroquant_genome_counts_98 <- macroquant_read_counts_98 %>%
 
 macroquant_genome_counts_filt_30_98 <- macroquant_counts_filt_30_98
 
-macroquant_read_counts_98_old <- macroquant_read_counts_98  
-macroquant_covered_bases_98_old <- macroquant_covered_bases_98  
-macromag_taxonomy_98_old <- macromag_taxonomy_98
-macromag_genomemetadata_98_old <-  macromag_genomemetadata_98 
-macroquant_coverage_98_old <- macroquant_coverage_98
-macroquant_read_counts_filt_30_98_old <- macroquant_read_counts_filt_30_98
-macroquant_counts_filt_30_98_old <- macroquant_counts_filt_30_98 
-macroquant_genome_counts_98_old <- macroquant_genome_counts_98
+#macroquant_read_counts_98_old <- macroquant_read_counts_98  
+#macroquant_covered_bases_98_old <- macroquant_covered_bases_98  
+#macromag_taxonomy_98_old <- macromag_taxonomy_98
+#macromag_genomemetadata_98_old <-  macromag_genomemetadata_98 
+#macroquant_coverage_98_old <- macroquant_coverage_98
+#macroquant_read_counts_filt_30_98_old <- macroquant_read_counts_filt_30_98
+#macroquant_counts_filt_30_98_old <- macroquant_counts_filt_30_98 
+#macroquant_genome_counts_98_old <- macroquant_genome_counts_98
 ```
 
 
 ## Macro-scale Metagenomics (MACRO)
 ### Merge Genome Count to MSSM
 ```{r genome_count_combined, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
-macro_genome_count_macro_filt_30 <- read_csv("resources/zenodo/macro_genome_count_macro_filt_30.csv", show_col_types = FALSE)
+macro_genome_count_macro_filt_30 <- read_csv("resources/other/macro_genome_count_macro_filt_30.csv", show_col_types = FALSE)
 
 if (all(macro_genome_count_macro_filt_30$genome %in% macromag_genomemetadata$genome)) {
   mssmmacroquant_vs_macro_genome_count_30 <- full_join(macroquant_genome_counts_filt_30 %>% select(genome, mssm_sample_metadata$microsample), macro_genome_count_macro_filt_30, by = "genome") %>%
@@ -567,6 +569,7 @@ physeq_all <- phyloseq(
   mssmmacroquant_vs_macro_sample_metadata %>% sample_data(),
   mssmmacroquant_vs_macro_taxonomy %>% as.matrix() %>% tax_table()
 )
+
 physeq_all <- prune_taxa(taxa_sums(physeq_all) > 0, physeq_all)
 
 physeq_G121e <- subset_samples(physeq_all, animal %in% c("G121e"))
@@ -652,7 +655,7 @@ dapi_df <- read_tsv("resources/zenodo/dapi_df.tsv", show_col_types = FALSE)
 ```
 
 ### Abundance Estimation using FISH
-### Amalia: Fluorescence In Situ hybridization (FISH)
+### Fluorescence In Situ hybridization (FISH)
 ```{r FISH_df, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 # Import microscopy count data from FISH
 fish_counts_G103 <- read_csv("resources/zenodo/G103bI_FISH_Counts.csv", show_col_types = FALSE)
@@ -749,13 +752,7 @@ In the last step, the objects that are needed for downstream analyses are stored
 ```{r wrap_objects, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 load("resources/working_data_object_new.Rdata") # load the data from 1-data_preparation
 # update microquant_metrics_filt_30 
-microquant_metrics_filt_30 <- calculate_alpha_diversity(
-  input_data = microquant_genome_counts_filt_30,
-  metadata_name = mssm_quality,
-  tree_name = micromag_tree
-) %>%
-    mutate(size = factor(size, levels = c(500, 1500, 2500, 5000, 25000, 50000)))
 # 98ANI 
-
-save.image(file = "resources/working_data_object_20260610.Rdata")
+# update phyloseq object 
+#save.image(file = "resources/working_data_object_20260730_new.Rdata")
 ```

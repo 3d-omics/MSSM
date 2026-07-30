@@ -3,7 +3,7 @@
 .RData
 .Ruserdata
 # Ignore all contents of the "data_preparation" folder
-old_codes/
+old_new_codes/
 resources/zenodo/
 resources/data_preparation
 resources/data_preparation_old

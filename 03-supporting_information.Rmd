@@ -1,0 +1,479 @@
+# Supporting Information
+
+```{r load_data_supplementary, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+load("resources/working_data_object_20260730_new.Rdata") 
+```
+
+## S1: Lysis Conditions
+### B: Microbial taxonomic profiling across lysis conditions
+#### Four-species mock community (Fig. S1.1)
+```{r mock_RMSE_calculation, echo = TRUE, warning=FALSE, comments="", message=FALSE}
+# Select samples & close composition
+mock_wide <- tidy_plot_genome_counts_filt_30_mock_closed %>%
+  filter(culture == "MX") %>%
+  select(genome, microsample, count) %>%
+  pivot_wider(names_from = genome,values_from = count,values_fill = 0) %>%
+  select(where(~ any(. != 0)) | where(is.character) | where(is.factor)) %>%   
+  column_to_rownames(var = "microsample") %>%
+  mutate(across(where(is.numeric), ~ . / rowSums(across(where(is.numeric))) * 100))
+
+# Transform genome counts to CLR relative abundance values
+mock_wide_CLR <- as.data.frame(t(apply(mock_wide, 1, clr_transform))) 
+
+# Pivot df to tidy for plotting
+mock_wide_CLR_tidy <- mock_wide_CLR %>%
+  # Convert row names into a column
+  rownames_to_column(var = "microsample") %>%  
+  # Convert all other columns (microbes) into long format
+  pivot_longer(cols = -microsample,  
+               names_to = "genome", 
+               values_to = "relabun") %>%
+  left_join(genome_metadata_mock, by = join_by(genome == genome)) %>% 
+  left_join(sample_metadata_mock, by = join_by(microsample == sample)) %>%
+  select(-LabBatch_text, -culture) %>%
+  # Set expected CLR value for all genomes
+  mutate(expected = 0) %>% # not really needed, obviously, but for consistency
+  mutate(error = relabun - expected) 
+  
+mock_RMSE_df <- mock_wide_CLR_tidy %>%
+  group_by(genome, buffer) %>% 
+  summarise(
+    # Root Mean Squared Error across samples for each taxon for each buffer
+    RMSE = sqrt(mean(error^2, na.rm = TRUE)),
+    span = (max(relabun, na.rm = TRUE) - min(relabun, na.rm = TRUE)), 
+    .groups = "drop"
+  ) 
+
+mock_RMSE_df %>%
+  group_by(buffer) %>%
+  summarise(median_RMSE = median(RMSE, na.rm = TRUE)) %>%
+  knitr::kable(align = "lccc")
+```
+
+
+```{r fig_s1_1, echo = TRUE, warning=FALSE, comments="", message=FALSE, fig.height=9, fig.width=7}
+custom_ggplot_theme_mock <- custom_ggplot_theme +
+  theme(plot.margin = unit(c(0, 0, 0, 0), "pt"))
+
+# Composition of the mock community plot
+fig_s1_1_a <- tidy_plot_genome_counts_filt_30_mock_closed %>%
+  filter(culture == "MX") %>%
+  ggplot(aes(x = microsample, y = count, fill = species, group = species)) +
+  geom_col(position = "fill") +
+  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#E76F51")) +
+  labs(x = NULL, y = "Relative abundance", fill = "Bacteria") +
+  facet_nested(. ~ buffer, scales = "free", space = "free", switch = "y") +
+  theme_minimal() +
+  custom_ggplot_theme +
+  theme(axis.text.x = element_blank()) +
+  theme(legend.position = "bottom") +
+  theme(panel.spacing = unit(0.5, "lines"))
+
+# CLR values (relative abundance) of each taxon vs expected relative abundance (CLR=0)
+fig_s1_1_b <- mock_wide_CLR_tidy %>%
+  ggplot(aes(x = buffer, y = relabun)) +
+  geom_boxplot(
+    width = 0.3, alpha = 0.5, size = 0.3,
+    outlier.shape = NA, position = position_dodge(width = 0.9)
+  ) +
+  geom_jitter(aes(fill = genome, group = buffer),
+    size = 2, alpha = 1.0, shape = 21,
+    color = "black",
+    stroke = 0.3,
+    position = position_jitterdodge(jitter.width = 0.6, dodge.width = 0.9)
+  ) +
+  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#E76F51")) +
+  labs(x = NULL, y = "CLR") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", label = "expected error", linewidth = 0.5) +
+  theme_minimal() +
+  custom_ggplot_theme_mock +
+  theme(legend.position = "none") +
+  guides(fill = "none")
+
+# RMSE of CLR relative abundance vs expected CLR
+fig_s1_1_c <- ggplot(mock_RMSE_df, aes(x = buffer, y = RMSE)) + # y = mean_RMSE
+  geom_boxplot(
+    width = 0.3, size = 0.3,
+    outlier.shape = NA, fill = "grey", alpha = 0.5
+  ) +
+  geom_jitter(aes(fill = genome),
+    size = 2,
+    shape = 21,
+    color = "black",
+    stroke = 0.5,
+    width = 0.1, alpha = 1.0
+  ) +
+  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#E76F51")) +
+  labs(x = NULL, y = " RMSE") +
+  # scale_y_continuous(
+  #   limits = c(-0, 10),
+  #   breaks = seq(0, 10, by = 0.1)) +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "black", label = "expected error", linewidth = 0.5) +
+  theme_minimal() +
+  custom_ggplot_theme +
+  theme(legend.position = "none") +
+  guides(fill = "none") 
+
+# Combined plot
+fig_s1_1 <- fig_s1_1_a / fig_s1_1_b / fig_s1_1_c +
+  plot_annotation(tag_levels = 'a') +
+  plot_layout(guides = "collect") &
+  theme(legend.position = "bottom", legend.box = "vertical") 
+
+fig_s1_1
+```
+
+#### Microsamples (caecum and colon)
+
+##### Sequencing Performance (Fig. S1.2)
+```{r fig_s1_2_plot,  echo=TRUE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=8}
+s1_microsample_df <- macroquant_metrics_filt_30 %>%
+  filter(
+    batch %in% c("MSEB0006", "MSEB0010"), # Caeucum (MSEB0006) and Colon (MSEB0010)
+    section %in% c("Caecum right", "Colon"),
+    cycles %in% c(13, 14, 15),
+    type %in% c("positive"),
+    richness > 0
+  ) %>%
+  mutate(
+    collection_attempts = as.factor(collection_attempts),
+    buffer = as.factor(buffer)
+  )
+# something wrong duplication rate
+ordered_metrics <- c(
+  "total_after_filtering.total_reads",
+  "mapmag_prokreads_pct",
+  #"duplication.rate",
+  "richness",
+  "neutral",
+  "phylogenetic"
+)
+
+fig_s1_2 <- s1_microsample_df %>%
+  mutate(
+    mapmag_prokreads_pct = mapmag_prokreads_pct * 100 ) %>%
+  pivot_longer(
+    cols = -c(names(mssm_sample_metadata), "cov_filtering"),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  filter(metric %in% ordered_metrics) %>%
+  mutate(
+    metric = factor(metric, levels = ordered_metrics),
+    metric = fct_recode(metric,
+      "a. Sequencing Yield \nPost-Quality Filtering" = "total_after_filtering.total_reads",
+      "b. Reads Mapping \nMAG Catalogue (%)" = "mapmag_prokreads_pct",
+      #"c. Reads \nDuplication Rate (%)" = "duplication.rate",
+      "d. Richness" = "richness",
+      "e. Neutral" = "neutral",
+      "f. Phylogenetic" = "phylogenetic"
+    ),
+    section = recode(section,
+      "Caecum right" = "Caecum",
+      "Colon" = "Colon"
+    )
+  ) %>%
+  ggplot(aes(x = section, y = value, fill = buffer)) +
+  geom_boxplot(alpha = 0.6) +
+  facet_wrap(~metric, scales = "free_y", ncol = 3) +
+  labs(
+    fill = "Lysis",
+    y = "",
+    x = "Intestinal section"
+  ) +
+  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#2A9D8F", "#E76F51")) +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+
+fig_s1_2 
+
+```
+No clear performance advantage was observed between methods L06 and L07 in caecum microsamples. Although L06 was initially selected, a subsequent experiment suggested that L07 may offer enhanced lysis performance in colon microsamples. 
+
+
+##### Statistical Comparison Of Sequencing Performance
+**Note:** The fit_and_analyze_model(), format_anova() and run_metric() function needs to be loaded.
+
+```{r s1micro_stat,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
+s1_stat <- s1_microsample_df %>%
+  group_by(section, buffer) %>%
+  summarise(
+    `a. Sequencing Yield Post-Quality Filtering` = format_median_iqr(total_after_filtering.total_reads / 1000000),
+    `b. Reads Mapping MAG Catalogue (%)`   = format_median_iqr(mapmag_prokreads_pct),
+    #"c. Reads Duplication Rate (%)" = format_median_iqr(duplication.rate),
+    `d. Richness`     = format_median_iqr(richness),
+    `e. Neutral`       = format_median_iqr(neutral),
+    `f. Phylogenetic`  = format_median_iqr(phylogenetic),
+    .groups = "drop"
+  ) %>%
+  as.data.frame()
+
+knitr::kable(
+  s1_stat,
+  booktabs = TRUE,
+  align = "lccc",
+  caption = "Median percentage (IQR)"
+)
+```
+
+```{r s1micro_test,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
+# missing duplication rate!
+metrics <- tibble::tribble(
+  ~metric,           ~response_var,                       ~model, ~distribution,
+  "Reads retained",  "total_after_filtering.total_reads", "glm",  "quasipoisson",
+  "MAG mapping (%)", "mapmag_prokreads_pct",              "glm",  "quasibinomial",
+  #"Reads Duplication Rate (%)", "duplication.rate",              "glm",  "quasibinomial",
+  "Richness",        "richness",                          "glm",  "quasipoisson",
+  "Neutral",         "neutral",                           "lm",   NA_character_,
+  "Phylogenetic",    "phylogenetic",                      "lm",   NA_character_
+)
+
+sections <- c("Caecum right", "Colon")
+s1micro_test <-
+  tidyr::crossing(metrics, section_name = sections) %>%
+  purrr::pmap_dfr(
+    run_metric,
+    explanatory_var = "collection_attempts + buffer",
+    term_name = "buffer",
+    data = s1_microsample_df
+  ) %>%
+  dplyr::select(section_name, report)
+
+knitr::kable(
+  s1micro_test,
+  booktabs = TRUE,
+  align = "ll"
+  )
+
+
+```
+
+##### Taxa Overlap
+**Note:** The pivot_phylo() and compare_taxa_overlap() function needs to be loaded.
+```{r s1_taxa,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
+s1micro_phylo_lg <- pivot_phylo(
+  phyloseq_obj = subset_samples(
+    physeq_all,
+    type == "positive" & section == "Colon" & 
+      batch == "MSEB0010" & cycles %in% c(13, 14, 15) &
+      richness > 0
+  ),
+  glom = TRUE,
+  tax_transform = TRUE,
+  taxon_level = "genus",
+  tr_method = "compositional" # remove this 
+) %>% filter(abundance > 0)
+
+s1micro_taxa <- compare_taxa_overlap(
+  data = s1micro_phylo_lg,
+  group_var = "buffer",
+  group_a = "L06",
+  group_b = "L07",
+  facet_var = NULL,
+  taxon_var = "genus",
+  abundance_var = "abundance",
+  sample_var = "microsample"
+)
+
+s1micro_taxa_plot <- ggplot(s1micro_taxa$plot_df,
+       aes(x = prevalence,
+           y = mean_abundance,
+           color = Detection)) +
+  geom_point(size = 3, alpha = 0.85)   +
+  scale_color_manual(
+    values = c(
+      "L06 only" = "#2A9D8F", 
+      "L07 only" = "#E76F51",
+      "Shared" = "grey80"
+    )
+  ) +
+  scale_y_log10(labels = scales::label_scientific()) +
+  scale_x_continuous(labels = scales::percent_format()) +
+  labs(
+    x = "Prevalence in microsample",
+    y = "Mean relative abundance (log scale)"
+    ) +
+  pnas_theme + theme(legend.position = "bottom")
+s1micro_taxa_plot
+```      
+
+## S2: Resource optimisation
+### Summary Statistic
+```{r s2_stat,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
+s2_df <- macroquant_metrics_filt_30 %>%
+  filter(
+    batch %in% c("MSEB0009", "MSEB0014", "MSEB0015"),
+    type %in% c("positive"),
+    size %in% c("5000"),
+    !between(as.numeric(sub("M", "", microsample)), 300651, 300665)
+  ) %>%
+  mutate(
+    protocol = ifelse(protocol %in% c("ULV2_Full"), "100%", "50%"),
+    comparison = ifelse(batch %in% c("MSEB0009"), "Cost", "Throughput"),
+    lib_method = ifelse(batch %in% c("MSEB0015"), "Automation (1 plate set-up)", "Manual"),
+    comparison_grid = ifelse(comparison == "Cost", protocol, lib_method)
+  ) %>%
+  mutate(
+    comparison = as.factor(comparison),
+    comparison_grid = as.factor(comparison_grid)
+  ) # %>% count(comparison, batch)
+
+s2_stat <- s2_df %>%
+  mutate(
+    other = total_before_filtering.total_reads -
+      (
+        (total_before_filtering.total_reads - total_after_filtering.total_reads) +
+        reads_mapped_chicken +
+        reads_mapped_human +
+        reads_mapped_pig +
+        reads_mapped_mag +
+        reads_unmapped_mag
+      ),
+    low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads
+  ) %>%
+  select(
+    microsample,
+    comparison_grid,
+    total_before_filtering.total_reads,
+    low_quality_reads,
+    reads_mapped_chicken,
+    reads_mapped_human,
+    reads_mapped_pig,
+    reads_mapped_mag,
+    reads_unmapped_mag,
+    other
+  ) %>%
+  mutate(
+    across(
+      -c(microsample, comparison_grid, total_before_filtering.total_reads),
+      ~ (. / total_before_filtering.total_reads) * 100,
+      .names = "{.col}_pct"
+    )
+  ) %>%
+  select(microsample, comparison_grid, ends_with("_pct")) %>%
+  group_by(comparison_grid) %>%
+  summarise(
+    low_quality_reads = format_median_iqr(low_quality_reads_pct),
+    mapping_chicken   = format_median_iqr(reads_mapped_chicken_pct),
+    mapping_human     = format_median_iqr(reads_mapped_human_pct),
+    mapping_pig       = format_median_iqr(reads_mapped_pig_pct),
+    mapping_bacteria  = format_median_iqr(reads_mapped_mag_pct),
+    unmapped_bacteria = format_median_iqr(reads_unmapped_mag_pct),
+    other             = format_median_iqr(other_pct),
+    .groups = "drop"
+  ) %>%
+  tibble::column_to_rownames("comparison_grid") %>%
+  t() %>%
+  as.data.frame()
+
+knitr::kable(
+  s2_stat,
+  booktabs = TRUE,
+  align = "lccc",
+  caption = "Median percentage (IQR) of reads in each processing category"
+)
+```
+
+### Sequencing Performance (Fig. S2.1a)
+```{r fig_s2_1a,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
+ordered_metrics <- c(
+  # "total_before_filtering.total_reads",
+  "low_quality_reads",
+  "reads_mapped_chicken",
+  "reads_mapped_human",
+  "reads_mapped_pig",
+  "reads_mapped_mag",
+  "reads_unmapped_mag",
+  "reads_other"
+)
+
+fig_s2_1a <- s2_df %>%
+  mutate(
+    other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
+    + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag),
+    low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads
+  ) %>%
+  pivot_longer(
+    cols = -c(names(mssm_sample_metadata), comparison, lib_method, comparison_grid, cov_filtering),
+    names_to = "metric",
+    values_to = "value"
+  ) %>%
+  filter(metric %in% ordered_metrics) %>%
+  mutate(microsample = as.factor(microsample)) %>%
+  ggplot(aes(x = microsample, y = value, fill = metric)) +
+  geom_bar(position = "fill", stat = "identity") +
+  scale_fill_manual(values = c(colorRampPalette(supplementary_color)(6))) +
+  labs(x = "Microsample", y = "", fill = "Read type") +
+  facet_nested(. ~ comparison + comparison_grid, scales = "free", space = "free", switch = "y") +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+  custom_ggplot_theme +
+  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
+  theme(legend.position = "bottom") +
+  guides(fill = guide_legend(title = "Proportion \nSequencing \nReads"))
+fig_s2_1a 
+```
+
+
+### Library Preparation Efficiency (Fig. S2.1b)
+
+```{r fig_s2_1b,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
+s2_dreamprep_df <- read_tsv("resources/zenodo/sn3_5_dreamprep_df.tsv", show_col_types = FALSE) 
+s2_dreamprep_df <- s2_dreamprep_df %>%
+  mutate(plate = str_extract(sample, "^Plate \\d+")) %>%
+  filter(
+    !Range %in% c("35 bp to 100 bp"),
+    concentration %in% c("0.1"),
+    type %in% c("Positive")
+  ) %>%
+  mutate(
+    # Range = droplevels(Range),
+    plate = case_when(
+      grepl("Plate 1", plate, ignore.case = TRUE) ~ "Single-Plate",
+      grepl("Plate 2", plate, ignore.case = TRUE) ~ "Dual-Plate A",
+      grepl("Plate 3", plate, ignore.case = TRUE) ~ "Dual-Plate B",
+      TRUE ~ NA_character_
+    ),
+    plate = factor(plate, levels = c("Single-Plate", "Dual-Plate A", "Dual-Plate B")),
+    concentration = paste0("DNA Input ", concentration, " ng/μL"),
+    Range = case_when(
+      grepl("100 bp to 200 bp", Range, ignore.case = TRUE) ~ "Non-specific Short Fragments",
+      grepl("200 bp to 1000 bp", Range, ignore.case = TRUE) ~ "Library",
+      TRUE ~ NA_character_
+    )
+  )
+comparisons <- list(c("Single-Plate", "Dual-Plate A"), c("Dual-Plate A", "Dual-Plate B"), c("Single-Plate", "Dual-Plate B"))
+fig_s2_1b <- s2_dreamprep_df %>%
+  ggplot(aes(x = plate, y = nmole_L, fill = plate)) +
+  geom_boxplot(position = position_dodge(width = 0.75), alpha = 0.6) +
+  geom_point(position = position_jitterdodge(0.2)) +
+  stat_compare_means(
+    comparisons = comparisons,
+    method = "wilcox.test",
+    label = "p.signif",
+    p.adjust.method = "BH",
+    size = 4,
+    vjust = 0.2,
+    tip.length = 0.01
+  ) +
+  # scale_y_continuous(trans="log10") +
+  facet_wrap(~Range, scales = "free") +
+  labs(
+    y = "nmol/μL",
+    x = "",
+  ) +
+  geom_jitter(
+    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
+    size = 1.5, alpha = 0.3
+  ) +
+  scale_fill_manual(values = c("#2A9D8F", "#264653", "#E76F51")) +
+  custom_ggplot_theme +
+  theme(legend.position = "none")
+fig_s2_1b
+```
+
+

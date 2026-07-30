@@ -1,10 +1,11 @@
-# print_median_iqr(
+# format_median_iqr ()
 format_median_iqr <- function(x) {
   med <- median(x, na.rm = TRUE)
   q <- quantile(x, c(0.25, 0.75), na.rm = TRUE)
   sprintf("%.1f (%.1f–%.1f)", med, q[1], q[2])
 }
 
+# print_median_iqr()
 print_median_iqr <- function(x, name) {
   med <- round(median(x), 2)
   iqr_vals <- round(quantile(x, probs = c(0.25, 0.75)), 2)
@@ -296,6 +297,7 @@ plot_pca <- function(df,
   return(p)
 }
 
+
 ### fit_and_analyze_model()
 fit_and_analyze_model <- function(model = c("lm", "glm"),
                                   distribution = NULL,
@@ -357,25 +359,31 @@ fit_and_analyze_model <- function(model = c("lm", "glm"),
   )
 }
 
-### format_p_value() 
 
-format_p_value <- function(p) {
-  dplyr::case_when(
-    is.na(p) ~ NA_character_,
-    p < 0.001 ~ "< 0.001",
-    TRUE ~ sprintf("%.3f", p)
-  )
-}
-
-### format_anova() 
+### format_anova()
 format_anova <- function(anova_df,
                          model_obj,
                          metric_name,
                          term_name,
                          test_statistic) {
   
+  if (is.null(test_statistic) || length(test_statistic) == 0) {
+    stop("test_statistic is missing. Check run_metric() is passing fit$test_statistic.")
+  }
+  
+  format_p_value <- function(p) {
+    ifelse(
+      is.na(p),
+      NA_character_,
+      ifelse(p < 0.001, "< 0.001", sprintf("%.3f", p))
+    )
+  }
+  
   df <- as.data.frame(anova_df)
-  df$term <- rownames(df)
+  
+  if (!"term" %in% names(df)) {
+    df$term <- rownames(df)
+  }
   
   row <- df[df$term == term_name, , drop = FALSE]
   
@@ -383,15 +391,35 @@ format_anova <- function(anova_df,
     return(NA_character_)
   }
   
+  df_col <- if ("df" %in% names(row)) {
+    "df"
+  } else {
+    "Df"
+  }
+  
   if (test_statistic == "F") {
     
-    stat_col <- grep("^F", names(row), value = TRUE)[1]
-    p_col <- grep("Pr\\(>F\\)", names(row), value = TRUE)[1]
+    stat_col <- if ("statistic" %in% names(row)) {
+      "statistic"
+    } else {
+      grep("^F value$|^F$", names(row), value = TRUE)[1]
+    }
+    
+    p_col <- if ("p.value" %in% names(row)) {
+      "p.value"
+    } else {
+      grep("Pr\\(>F\\)", names(row), value = TRUE)[1]
+    }
+    
+    if (is.na(stat_col) || is.na(p_col) || is.na(df_col)) {
+      stop("Could not find F statistic, p-value, or df column. Columns are: ",
+           paste(names(row), collapse = ", "))
+    }
     
     sprintf(
       "%s: F(%s, %s) = %.2f, p = %s for %s",
       metric_name,
-      row$Df,
+      row[[df_col]],
       stats::df.residual(model_obj),
       row[[stat_col]],
       format_p_value(row[[p_col]]),
@@ -400,13 +428,27 @@ format_anova <- function(anova_df,
     
   } else {
     
-    stat_col <- grep("Chisq|LR", names(row), value = TRUE)[1]
-    p_col <- grep("Pr\\(>Chisq\\)", names(row), value = TRUE)[1]
+    stat_col <- if ("statistic" %in% names(row)) {
+      "statistic"
+    } else {
+      grep("Chisq|LR", names(row), value = TRUE)[1]
+    }
+    
+    p_col <- if ("p.value" %in% names(row)) {
+      "p.value"
+    } else {
+      grep("Pr\\(>Chisq\\)", names(row), value = TRUE)[1]
+    }
+    
+    if (is.na(stat_col) || is.na(p_col) || is.na(df_col)) {
+      stop("Could not find Chi-square statistic, p-value, or df column. Columns are: ",
+           paste(names(row), collapse = ", "))
+    }
     
     sprintf(
-      "%s: \u03C7\u00B2(%s) = %.2f, p = %s for %s",
+      "%s: χ²(%s) = %.2f, p = %s for %s",
       metric_name,
-      row$Df,
+      row[[df_col]],
       row[[stat_col]],
       format_p_value(row[[p_col]]),
       term_name
@@ -414,7 +456,8 @@ format_anova <- function(anova_df,
   }
 }
 
-### run_metric() 
+
+### run_metric()
 run_metric <- function(metric,
                        response_var,
                        model,
@@ -449,6 +492,7 @@ run_metric <- function(metric,
     )
   )
 }
+###
 
 ### pivot_phylo()
 pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_level, tr_method) {
@@ -503,253 +547,142 @@ compare_taxa_overlap <- function(data,
                                  abundance_var = "abundance",
                                  sample_var = "microsample") {
   
-  group_cols <- c(".group", if (!is.null(facet_var)) ".facet")
-  sample_cols <- c(group_cols, ".sample")
-  taxon_cols <- c(group_cols, ".taxon")
-  
-  data_filt <- data %>%
+  df <- data %>%
     filter(.data[[group_var]] %in% c(group_a, group_b)) %>%
     filter(!is.na(.data[[taxon_var]])) %>%
     mutate(
-      .group = .data[[group_var]],
-      .sample = .data[[sample_var]],
-      .taxon = .data[[taxon_var]],
-      .abundance = .data[[abundance_var]]
+      group = .data[[group_var]],
+      taxon = .data[[taxon_var]],
+      sample = .data[[sample_var]],
+      abundance = .data[[abundance_var]],
+      present = abundance > 0
     )
   
-  if (!is.null(facet_var)) {
-    data_filt <- data_filt %>%
-      mutate(.facet = .data[[facet_var]])
+  ## Check facet variable exists
+  if (!is.null(facet_var) && !facet_var %in% names(df)) {
+    stop("'", facet_var, "' is not a column in 'data'.")
   }
   
-  sample_counts <- data_filt %>%
-    distinct(across(all_of(sample_cols))) %>%
-    count(across(all_of(group_cols)), name = "n_samples")
-  
-  sample_taxa <- data_filt %>%
-    group_by(across(all_of(c(sample_cols, ".taxon")))) %>%
-    summarise(
-      sample_abundance = sum(.abundance, na.rm = TRUE),
-      .groups = "drop"
-    )
-  
-  taxa_a <- sample_taxa %>%
-    filter(.group == group_a, sample_abundance > 0) %>%
-    distinct(.taxon) %>%
-    pull(.taxon)
-  
-  taxa_b <- sample_taxa %>%
-    filter(.group == group_b, sample_abundance > 0) %>%
-    distinct(.taxon) %>%
-    pull(.taxon)
-  
-  overlap <- list(
-    a = taxa_a,
-    b = taxa_b,
-    a_unique = setdiff(taxa_a, taxa_b),
-    b_unique = setdiff(taxa_b, taxa_a),
-    shared = intersect(taxa_a, taxa_b)
+  ## Detection (facet-aware if facet_var is provided)
+  detection_vars <- c(
+    if (!is.null(facet_var)) facet_var,
+    "group",
+    "taxon"
   )
   
-  complete_sample_taxa <- data_filt %>%
-    distinct(across(all_of(sample_cols))) %>%
-    tidyr::crossing(.taxon = union(taxa_a, taxa_b)) %>%
-    left_join(
-      sample_taxa,
-      by = c(sample_cols, ".taxon")
+  detection <- df %>%
+    filter(present) %>%
+    distinct(across(all_of(detection_vars))) %>%
+    mutate(present = TRUE) %>%
+    tidyr::pivot_wider(
+      names_from = group,
+      values_from = present,
+      values_fill = FALSE
     ) %>%
     mutate(
-      sample_abundance = tidyr::replace_na(sample_abundance, 0)
-    )
-  
-  plot_df <- complete_sample_taxa %>%
-    group_by(across(all_of(taxon_cols))) %>%
-    summarise(
-      mean_abundance = mean(sample_abundance, na.rm = TRUE),
-      prevalence_raw = sum(sample_abundance > 0),
-      .groups = "drop"
-    ) %>%
-    left_join(sample_counts, by = group_cols) %>%
-    mutate(
-      prevalence = prevalence_raw / n_samples,
       Detection = case_when(
-        .group == group_a & .taxon %in% overlap$a_unique ~ paste(group_a, "only"),
-        .group == group_b & .taxon %in% overlap$b_unique ~ paste(group_b, "only"),
-        .taxon %in% overlap$shared ~ "Shared",
+        .data[[group_a]] & !.data[[group_b]] ~ paste(group_a, "only"),
+        !.data[[group_a]] & .data[[group_b]] ~ paste(group_b, "only"),
+        .data[[group_a]] & .data[[group_b]] ~ "Shared",
         TRUE ~ NA_character_
       )
     ) %>%
-    filter(!is.na(Detection)) %>%
-    rename(
-      !!group_var := .group,
-      !!taxon_var := .taxon
+    filter(!is.na(Detection))
+  
+  ## Number of samples per group (and facet)
+  sample_total_vars <- c(
+    if (!is.null(facet_var)) facet_var,
+    "group",
+    "sample"
+  )
+  
+  sample_count_vars <- c(
+    if (!is.null(facet_var)) facet_var,
+    "group"
+  )
+  
+  sample_totals <- df %>%
+    distinct(across(all_of(sample_total_vars))) %>%
+    group_by(across(all_of(sample_count_vars))) %>%
+    summarise(
+      n_samples = n(),
+      .groups = "drop"
     )
   
-  if (!is.null(facet_var)) {
-    plot_df <- plot_df %>%
-      rename(!!facet_var := .facet)
-  }
+  ## Mean abundance and prevalence
+  plot_group_vars <- c(
+    if (!is.null(facet_var)) facet_var,
+    "group",
+    "taxon"
+  )
+  
+  plot_df <- df %>%
+    group_by(across(all_of(plot_group_vars))) %>%
+    summarise(
+      mean_abundance = mean(abundance, na.rm = TRUE),
+      prevalence_raw = sum(present),
+      .groups = "drop"
+    ) %>%
+    left_join(
+      sample_totals,
+      by = sample_count_vars
+    ) %>%
+    mutate(
+      prevalence = prevalence_raw / n_samples
+    ) %>%
+    left_join(
+      detection,
+      by = c(
+        if (!is.null(facet_var)) facet_var,
+        "taxon"
+      )
+    ) %>%
+    filter(!is.na(Detection))
   
   list(
-    overlap = overlap,
     plot_df = plot_df,
-    sample_taxa = complete_sample_taxa
+    detection = detection,
+    sample_totals = sample_totals
   )
 }
 
-
-
-### spatial_cryosections()
-spatial_cryosections <- function(cryosection_list, metadata_df, comm_clr) {
-  cryosection_dfs <- list()
-  mantel_results <- list()
-  mantelcor_results <- list()
-  decay_dfs <- list()
-  distance_decay_plots <- list()
-  structure_results <- list()
-
-  for (cryosection in cryosection_list) {
-    # Filter metadata for this section
-    metadata_data <- metadata_df %>%
-      filter(cryosection == !!cryosection, !is.na(.data$Xcoord), !is.na(.data$Ycoord))
-
-    # Filter community data
-    comm_data <- comm_clr %>%
-      data.frame() %>%
-      rownames_to_column(var = "microsample") %>%
-      filter(microsample %in% metadata_data$microsample) %>%
-      column_to_rownames(var = "microsample")
-
-    cryosection_dfs[[cryosection]] <- list(
-      comm_clr = comm_data,
-      metadata = metadata_data
+### prepare_spatial_section()
+prepare_spatial_section <- function(cryosection_id,
+                                    comm_data,
+                                    metadata,
+                                    z.warning = 0.95) {
+  
+  comm_section <- comm_data %>%
+    as.data.frame() %>%
+    rownames_to_column(var = "microsample") %>%
+    left_join(metadata, by = "microsample") %>%
+    filter(cryosection == cryosection_id) %>%
+    column_to_rownames(var = "microsample") %>%
+    select(contains("bin_"))
+  
+  comm_zerRepl <- cmultRepl(
+    comm_section,
+    method = "GBM",
+    output = "prop",
+    z.warning = z.warning
+  )
+  
+  metadata_section <- metadata %>%
+    filter(microsample %in% rownames(comm_zerRepl)) %>%
+    mutate(
+      Xcoord = as.numeric(Xcoord),
+      Ycoord = as.numeric(Ycoord)
     )
-
-    # Mantel 
-    mantel <- vegan::mantel(
-      dist(comm_data),
-      dist(metadata_data[, c("Xcoord", "Ycoord")]),
-      permutations = 9999
-    )
-    mantel_results[[cryosection]] <- mantel
-
-    # Mantel correlogram
-    correlog <- vegan::mantel.correlog(
-      D.eco = dist(comm_data),
-      D.geo = dist(metadata_data[, c("Xcoord", "Ycoord")]),
-      nperm = 9999
-    )
-    mantelcor_results[[cryosection]] <- correlog
-
-    # Distance decay
-    toplot <- data.frame(
-      spat_dist = as.numeric(dist(metadata_data[, c("Xcoord", "Ycoord")])),
-      comm_dist = as.numeric(dist(comm_data))
-    )
-    decay_dfs[[cryosection]] <- toplot
-
-    # Distance decay Plot
-    p <- ggplot(toplot, aes(x = spat_dist, y = comm_dist)) +
-      geom_smooth() +
-      xlab("Spatial distance (μm)") +
-      ylab("Aitchison \ndistance") +
-      custom_ggplot_theme +
-      ggtitle(paste(cryosection))
-    distance_decay_plots[[cryosection]] <- p
-  }
-  return(list(
-    cryosection_dfs = cryosection_dfs,
-    mantel_results = mantel_results,
-    mantelcor_results = mantelcor_results,
-    decay_dfs = decay_dfs,
-    distance_decay_plots = distance_decay_plots,
-    structure_results = structure_results
-  ))
+  
+  comm_red <- comm_section %>%
+    select(all_of(colnames(comm_zerRepl))) %>%
+    filter(rownames(comm_section) %in% rownames(comm_zerRepl))
+  
+  list(
+    comm = comm_section,
+    comm_zerRepl = comm_zerRepl,
+    metadata_section = metadata_section,
+    comm_red = comm_red
+  )
 }
-
-### lawsonibacter_mantel_analysis()
-lawsonibacter_mantel_analysis <- function(data, circul_selection) {
-  # 1. Filter MAGs based on circularisation
-  if (circul_selection == "Y") {
-    filtered_data <- data %>%
-      filter(
-        circul == circul_selection,
-      )
-  } else {
-    message("circul_selection is not 'Y'; skipping circul filter.")
-    filtered_data <- data
-  }
-
-  # Presence Absence
-  # 1. Build presence-absence matrix
-  lawsonibacter_pa <- filtered_data %>%
-    mutate(presence = ifelse(abundance > 0, 1, 0)) %>%
-    select(microsample, genome, presence) %>%
-    pivot_wider(names_from = genome, values_from = presence, values_fill = 0) %>%
-    column_to_rownames("microsample")
-  # 2. Community distance
-  comm_dist_pa <- vegan::vegdist(lawsonibacter_pa, method = "jaccard")
-  # 3. Spatial coordinates
-  coords_pa <- filtered_data %>%
-    distinct(microsample, Xcoord, Ycoord) %>%
-    arrange(microsample)
-  coords_pa <- coords_pa[match(rownames(lawsonibacter_pa), coords_pa$microsample), ]
-  # 4. Spatial distance
-  spatial_dist_pa <- dist(coords_pa[, c("Xcoord", "Ycoord")])
-  # 5. Mantel test
-  mantel_result_pa <- vegan::mantel(comm_dist_pa, spatial_dist_pa, permutations = 9999)
-  # 6. Mantel correlogram
-  mantelcor_result_pa <- vegan::mantel.correlog(
-    D.eco = comm_dist_pa,
-    D.geo = spatial_dist_pa,
-    nperm = 9999
-  )
-
-  # CLR
-  # 1. Build count matrix and CLR transformation
-  lawsonibacter_clr <- filtered_data %>%
-    select(microsample, genome, abundance) %>%
-    pivot_wider(names_from = genome, values_from = abundance, values_fill = 0) %>%
-    column_to_rownames("microsample")
-  lawsonibacter_clr <- cmultRepl(lawsonibacter_clr, method = "GBM", output = "prop", z.warning = 0.95)
-  clr_transform <- function(x) {
-    log(x) - mean(log(x), na.rm = TRUE)
-  }
-  lawsonibacter_clr <- data.frame(t(apply(lawsonibacter_clr, 1, clr_transform)))
-  # 2. Community distance
-  comm_dist_clr <- vegan::vegdist(lawsonibacter_clr, method = "euclidean")
-  # 2. Spatial coordinates
-  coords_clr <- filtered_data %>%
-    distinct(microsample, Xcoord, Ycoord) %>%
-    arrange(microsample) %>%
-    filter(microsample %in% c(rownames(lawsonibacter_clr)))
-  coords_clr <- coords_clr[match(rownames(lawsonibacter_clr), coords_clr$microsample), ]
-  # 4. Spatial distance
-  spatial_dist_clr <- dist(coords_clr[, c("Xcoord", "Ycoord")])
-  # 5. Mantel test
-  mantel_result_clr <- vegan::mantel(comm_dist_clr, spatial_dist_clr, permutations = 9999)
-  # 6. Mantel correlogram
-  mantelcor_result_clr <- vegan::mantel.correlog(
-    D.eco = comm_dist_clr,
-    D.geo = spatial_dist_clr,
-    nperm = 9999
-  )
-
-  distance_clr_df <- data.frame(
-    spat_dist = as.numeric(spatial_dist_clr),
-    comm_dist = as.numeric(comm_dist_clr)
-  )
-
-  clr_lm <- aovperm(lmperm(comm_dist ~ spat_dist, data = distance_clr_df, np = 9999))
-
-  return(list(
-    # cryosection = cryosection_id,
-    mantel_pa = mantel_result_pa,
-    correlogram_pa = mantelcor_result_pa,
-    mantel_clr = mantel_result_clr,
-    correlogram_clr = mantelcor_result_clr,
-    clr_lm = clr_lm
-  ))
-}
-
 

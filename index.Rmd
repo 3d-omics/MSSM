@@ -57,7 +57,7 @@ However, four modules are provided through Bioconductor and should be installed 
 
 if (!require("pacman")) install.packages("pacman") 
 # If the package is not installed, installs from CRAN 
-pacman::p_load( tidyverse, jsonlite, ape, ggtree, phytools, ggnewscale, ggtreeExtra, ggpubr, broom, reshape2, zCompositions, ALDEx2, car, DHARMa, sjPlot, ggeffects, ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork, grid, pheatmap, janitor, spdep, adespatial, adegraphics, ade4, magick, permuco, rmarkdown, purrr, PerformanceAnalytics, bookdown, htmlwidgets, webshot, kableExtra, hexbin, ComplexHeatmap, rstatix, circlize) 
+pacman::p_load( tidyverse, jsonlite, ape, ggtree, phytools, ggnewscale, ggtreeExtra, ggpubr, broom, reshape2, zCompositions, ALDEx2, car, DHARMa, sjPlot, ggeffects, ggh4x, vegan, ggfortify, ggrepel, microbiome, ggforce, patchwork, grid, pheatmap, janitor, spdep, adespatial, adegraphics, ade4, magick, permuco, rmarkdown, purrr, PerformanceAnalytics, bookdown, htmlwidgets, webshot, kableExtra, hexbin, ComplexHeatmap, rstatix, circlize, scales) 
 #If the package is not installed, installs from GitHub 
 pacman::p_load_gh("anttonalberdi/hilldiv2", "anttonalberdi/distillR", "wilkelab/cowplot")
 

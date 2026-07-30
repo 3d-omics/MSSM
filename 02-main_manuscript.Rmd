@@ -1,489 +1,16 @@
-# Incorporate manuscript updates
+# Main analysis
 
-```{r load_data_validation, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-load("resources/working_data_object_20260614.Rdata") 
-
+```{r load_data_main, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+load("resources/working_data_object_20260730_new.Rdata") 
 ```
 
 ## Microsample collection (Suppl.Fig. 2)
 
 ```{r figs2_plot, echo = TRUE, warning=FALSE, comments="", message=FALSE, fig.height=5, fig.width=8}
-#figs2
+#add figs2
 ```
 
-## S1: Lysis Conditions
-### Microbial taxonomic profiling across lysis conditions
-
-#### Four-species mock community (Fig. S1.1)
-```{r mock_RMSE_calculation, echo = TRUE, warning=FALSE, comments="", message=FALSE}
-# Select samples & close composition
-mock_wide <- tidy_plot_genome_counts_filt_30_mock_closed %>%
-  filter(culture == "MX") %>%
-  select(genome, microsample, count) %>%
-  pivot_wider(names_from = genome,values_from = count,values_fill = 0) %>%
-  select(where(~ any(. != 0)) | where(is.character) | where(is.factor)) %>%   
-  column_to_rownames(var = "microsample") %>%
-  mutate(across(where(is.numeric), ~ . / rowSums(across(where(is.numeric))) * 100))
-
-# Transform genome counts to CLR relative abundance values
-mock_wide_CLR <- as.data.frame(t(apply(mock_wide, 1, clr_transform))) 
-
-# Pivot df to tidy for plotting
-mock_wide_CLR_tidy <- mock_wide_CLR %>%
-  # Convert row names into a column
-  rownames_to_column(var = "microsample") %>%  
-  # Convert all other columns (microbes) into long format
-  pivot_longer(cols = -microsample,  
-               names_to = "genome", 
-               values_to = "relabun") %>%
-  left_join(genome_metadata_mock, by = join_by(genome == genome)) %>% 
-  left_join(sample_metadata_mock, by = join_by(microsample == sample)) %>%
-  select(-LabBatch_text, -culture) %>%
-  # Set expected CLR value for all genomes
-  mutate(expected = 0) %>% # not really needed, obviously, but for consistency
-  mutate(error = relabun - expected) 
-  
-mock_RMSE_df <- mock_wide_CLR_tidy %>%
-  group_by(genome, buffer) %>% 
-  summarise(
-    # Root Mean Squared Error across samples for each taxon for each buffer
-    RMSE = sqrt(mean(error^2, na.rm = TRUE)),
-    span = (max(relabun, na.rm = TRUE) - min(relabun, na.rm = TRUE)), 
-    .groups = "drop"
-  ) 
-
-mock_RMSE_df %>%
-  group_by(buffer) %>%
-  summarise(median_RMSE = median(RMSE, na.rm = TRUE)) %>%
-  knitr::kable(align = "lccc")
-```
-
-
-```{r fig_s1_1, echo = TRUE, warning=FALSE, comments="", message=FALSE, fig.height=9, fig.width=7}
-custom_ggplot_theme_mock <- custom_ggplot_theme +
-  theme(plot.margin = unit(c(0, 0, 0, 0), "pt"))
-
-# Composition of the mock community plot
-fig_s1_1_a <- tidy_plot_genome_counts_filt_30_mock_closed %>%
-  filter(culture == "MX") %>%
-  ggplot(aes(x = microsample, y = count, fill = species, group = species)) +
-  geom_col(position = "fill") +
-  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#E76F51")) +
-  labs(x = NULL, y = "Relative abundance", fill = "Bacteria") +
-  facet_nested(. ~ buffer, scales = "free", space = "free", switch = "y") +
-  theme_minimal() +
-  custom_ggplot_theme +
-  theme(axis.text.x = element_blank()) +
-  theme(legend.position = "bottom") +
-  theme(panel.spacing = unit(0.5, "lines"))
-
-# CLR values (relative abundance) of each taxon vs expected relative abundance (CLR=0)
-fig_s1_1_b <- mock_wide_CLR_tidy %>%
-  ggplot(aes(x = buffer, y = relabun)) +
-  geom_boxplot(
-    width = 0.3, alpha = 0.5, size = 0.3,
-    outlier.shape = NA, position = position_dodge(width = 0.9)
-  ) +
-  geom_jitter(aes(fill = genome, group = buffer),
-    size = 2, alpha = 1.0, shape = 21,
-    color = "black",
-    stroke = 0.3,
-    position = position_jitterdodge(jitter.width = 0.6, dodge.width = 0.9)
-  ) +
-  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#E76F51")) +
-  labs(x = NULL, y = "CLR") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "black", label = "expected error", linewidth = 0.5) +
-  theme_minimal() +
-  custom_ggplot_theme_mock +
-  theme(legend.position = "none") +
-  guides(fill = "none")
-
-# RMSE of CLR relative abundance vs expected CLR
-fig_s1_1_c <- ggplot(mock_RMSE_df, aes(x = buffer, y = RMSE)) + # y = mean_RMSE
-  geom_boxplot(
-    width = 0.3, size = 0.3,
-    outlier.shape = NA, fill = "grey", alpha = 0.5
-  ) +
-  geom_jitter(aes(fill = genome),
-    size = 2,
-    shape = 21,
-    color = "black",
-    stroke = 0.5,
-    width = 0.1, alpha = 1.0
-  ) +
-  scale_fill_manual(values = c("#264653", "#2A9D8F", "#E9C46A", "#E76F51")) +
-  labs(x = NULL, y = " RMSE") +
-  # scale_y_continuous(
-  #   limits = c(-0, 10),
-  #   breaks = seq(0, 10, by = 0.1)) +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "black", label = "expected error", linewidth = 0.5) +
-  theme_minimal() +
-  custom_ggplot_theme +
-  theme(legend.position = "none") +
-  guides(fill = "none") 
-
-# Combined plot
-fig_s1_1 <- fig_s1_1_a / fig_s1_1_b / fig_s1_1_c +
-  plot_annotation(tag_levels = 'a') +
-  plot_layout(guides = "collect") &
-  theme(legend.position = "bottom", legend.box = "vertical") 
-
-fig_s1_1
-```
-
-#### Microsamples (caecum and colon)
-
-```{r s1_microsample_df, echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-s1_microsample_df <- macroquant_metrics_filt_30 %>%
-  filter(
-    batch %in% c("MSEB0006", "MSEB0010"), # Caeucum (MSEB0006) and Colon (MSEB0010)
-    section %in% c("Caecum right", "Colon"),
-    cycles %in% c(13, 14, 15),
-    type %in% c("positive"),
-    richness > 0
-  ) %>%
-  mutate(
-    collection_attempts = as.factor(collection_attempts),
-    buffer = as.factor(buffer)
-  )
-```
-
-##### Sequencing Performance (Fig. S1.2)
-
-```{r fig_s1_2_plot,  echo=TRUE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=8}
-# something wrong duplication rate
-ordered_metrics <- c(
-  "total_after_filtering.total_reads",
-  "mapmag_prokreads_pct",
-  "duplication.rate",
-  "richness",
-  "neutral",
-  "phylogenetic"
-)
-
-fig_s1_2 <- s1_microsample_df %>%
-  mutate(
-    mapmag_prokreads_pct = mapmag_prokreads_pct * 100 ) %>%
-  pivot_longer(
-    cols = -c(names(mssm_sample_metadata), "cov_filtering"),
-    names_to = "metric",
-    values_to = "value"
-  ) %>%
-  filter(metric %in% ordered_metrics) %>%
-  mutate(
-    metric = factor(metric, levels = ordered_metrics),
-    metric = fct_recode(metric,
-      "a. Sequencing Yield \nPost-Quality Filtering" = "total_after_filtering.total_reads",
-      "b. Reads Mapping \nMAG Catalogue (%)" = "mapmag_prokreads_pct",
-      "c. Reads \nDuplication Rate (%)" = "duplication.rate",
-      "d. Richness" = "richness",
-      "e. Neutral" = "neutral",
-      "f. Phylogenetic" = "phylogenetic"
-    ),
-    section = recode(section,
-      "Caecum right" = "Caecum",
-      "Colon" = "Colon"
-    )
-  ) %>%
-  ggplot(aes(x = section, y = value, fill = buffer)) +
-  geom_boxplot(alpha = 0.6) +
-  facet_wrap(~metric, scales = "free_y", ncol = 3) +
-  labs(
-    fill = "Lysis",
-    y = "",
-    x = "Intestinal section"
-  ) +
-  # geom_violin(trim = TRUE, alpha = 0.7, position = position_dodge(0.8), na.rm = TRUE) +  # Violin plot
-  geom_jitter(
-    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
-    size = 1.5, alpha = 0.3
-  ) +
-  scale_fill_manual(values = c("#2A9D8F", "#E76F51")) +
-  custom_ggplot_theme +
-  theme(legend.position = "bottom")
-
-fig_s1_2 
-```
-No clear performance advantage was observed between methods L06 and L07 in caecum microsamples. Although L06 was initially selected, a subsequent experiment suggested that L07 may offer enhanced lysis performance in colon microsamples. 
-
-
-##### Statistical Comparison Of Sequencing Performance
-**Note:** The fit_and_analyze_model(), format_anova() and run_metric() function needs to be loaded.
-
-```{r s1micro_stat,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-s1_stat <- s1_microsample_df %>%
-  group_by(section, buffer) %>%
-  summarise(
-    `a. Sequencing Yield Post-Quality Filtering` = format_median_iqr(total_after_filtering.total_reads / 1000000),
-    `b. Reads Mapping MAG Catalogue (%)`   = format_median_iqr(mapmag_prokreads_pct),
-    `d. Richness`     = format_median_iqr(richness),
-    `e. Neutral`       = format_median_iqr(neutral),
-    `f. Phylogenetic`  = format_median_iqr(phylogenetic),
-    .groups = "drop"
-  ) %>%
-  as.data.frame()
-
-knitr::kable(
-  s1_stat,
-  booktabs = TRUE,
-  align = "lccc",
-  caption = "Median percentage (IQR)"
-)
-```
-
-
-```{r s1micro_test,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-# missing duplication rate!
-metrics <- tibble::tribble(
-  ~metric,           ~response_var,                       ~model, ~distribution,
-  "Reads retained",  "total_after_filtering.total_reads", "glm",  "quasipoisson",
-  "MAG mapping (%)", "mapmag_prokreads_pct",              "glm",  "quasibinomial",
-  "Richness",        "richness",                          "glm",  "quasipoisson",
-  "Neutral",         "neutral",                           "lm",   NA_character_,
-  "Phylogenetic",    "phylogenetic",                      "lm",   NA_character_
-)
-sections <- c("Caecum right", "Colon")
-s1micro_test <-
-  tidyr::crossing(metrics, section_name = sections) %>%
-  purrr::pmap_dfr(
-    run_metric,
-    explanatory_var = "collection_attempts + buffer",
-    term_name = "buffer",
-    data = s1_microsample_df
-  ) %>%
-  select(metric, section_name, report)
-s1micro_test
-```
-
-##### Taxa Overlap
-**Note:** The pivot_phylo() and compare_taxa_overlap() function needs to be loaded.
-```{r s1_taxa,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-s1micro_phylo_lg <- pivot_phylo(
-  phyloseq_obj = subset_samples(
-    physeq_all,
-    type == "positive" & section == "Colon" & 
-      batch == "MSEB0010" & cycles %in% c(13, 14, 15) &
-      richness > 0
-  ),
-  glom = TRUE,
-  tax_transform = TRUE,
-  taxon_level = "genus",
-  tr_method = "compositional" # remove this 
-) %>% filter(abundance > 0)
-
-s1micro_taxa <- compare_taxa_overlap(
-  data = s1micro_phylo_lg,
-  group_var = "buffer",
-  group_a = "L06",
-  group_b = "L07",
-  taxon_var = "genus",
-  abundance_var = "abundance",
-  sample_var = "microsample"
-)
-
-s1micro_taxa_plot <- ggplot(s1micro_taxa$plot_df,
-       aes(x = prevalence,
-           y = mean_abundance,
-           color = Detection)) +
-  geom_point(size = 3, alpha = 0.85)   +
-  scale_color_manual(
-    values = c(
-      "L06" = "#2A9D8F", 
-      "L07" = "#E76F51",
-      "Shared" = "grey80"
-    )
-  ) +
-  scale_y_log10(labels = scales::label_scientific()) +
-  scale_x_continuous(labels = scales::percent_format()) +
-  labs(
-    x = "Prevalence in microsample",
-    y = "Mean relative abundance (log scale)"
-    ) +
-  pnas_theme + theme(legend.position = "bottom")
-sn1_taxa_plot
-```      
-
-## S2: Resource optimisation
-
-```{r s2_df,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-s2_df <- macroquant_metrics_filt_30 %>%
-  filter(
-    batch %in% c("MSEB0009", "MSEB0014", "MSEB0015"),
-    type %in% c("positive"),
-    size %in% c("5000"),
-    !between(as.numeric(sub("M", "", microsample)), 300651, 300665)
-  ) %>%
-  mutate(
-    protocol = ifelse(protocol %in% c("ULV2_Full"), "100%", "50%"),
-    comparison = ifelse(batch %in% c("MSEB0009"), "Cost", "Throughput"),
-    lib_method = ifelse(batch %in% c("MSEB0015"), "Automation (1 plate set-up)", "Manual"),
-    comparison_grid = ifelse(comparison == "Cost", protocol, lib_method)
-  ) %>%
-  mutate(
-    comparison = as.factor(comparison),
-    comparison_grid = as.factor(comparison_grid)
-  ) # %>% count(comparison, batch)
-```
-
-### Summary Statistic
-```{r s2_stat,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-s2_stat <- s2_df %>%
-  mutate(
-    other = total_before_filtering.total_reads -
-      (
-        (total_before_filtering.total_reads - total_after_filtering.total_reads) +
-        reads_mapped_chicken +
-        reads_mapped_human +
-        reads_mapped_pig +
-        reads_mapped_mag +
-        reads_unmapped_mag
-      ),
-    low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads
-  ) %>%
-  select(
-    microsample,
-    comparison_grid,
-    total_before_filtering.total_reads,
-    low_quality_reads,
-    reads_mapped_chicken,
-    reads_mapped_human,
-    reads_mapped_pig,
-    reads_mapped_mag,
-    reads_unmapped_mag,
-    other
-  ) %>%
-  mutate(
-    across(
-      -c(microsample, comparison_grid, total_before_filtering.total_reads),
-      ~ (. / total_before_filtering.total_reads) * 100,
-      .names = "{.col}_pct"
-    )
-  ) %>%
-  select(microsample, comparison_grid, ends_with("_pct")) %>%
-  group_by(comparison_grid) %>%
-  summarise(
-    low_quality_reads = format_median_iqr(low_quality_reads_pct),
-    mapping_chicken   = format_median_iqr(reads_mapped_chicken_pct),
-    mapping_human     = format_median_iqr(reads_mapped_human_pct),
-    mapping_pig       = format_median_iqr(reads_mapped_pig_pct),
-    mapping_bacteria  = format_median_iqr(reads_mapped_mag_pct),
-    unmapped_bacteria = format_median_iqr(reads_unmapped_mag_pct),
-    other             = format_median_iqr(other_pct),
-    .groups = "drop"
-  ) %>%
-  tibble::column_to_rownames("comparison_grid") %>%
-  t() %>%
-  as.data.frame()
-
-knitr::kable(
-  s2_stat,
-  booktabs = TRUE,
-  align = "lccc",
-  caption = "Median percentage (IQR) of reads in each processing category"
-)
-```
-
-### Sequencing Performance (Fig. S2.1a)
-```{r fig_s2_1a,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-ordered_metrics <- c(
-  # "total_before_filtering.total_reads",
-  "low_quality_reads",
-  "reads_mapped_chicken",
-  "reads_mapped_human",
-  "reads_mapped_pig",
-  "reads_mapped_mag",
-  "reads_unmapped_mag",
-  "reads_other"
-)
-
-fig_s2_1a <- s2_df %>%
-  mutate(
-    other = total_before_filtering.total_reads - ((total_before_filtering.total_reads - total_after_filtering.total_reads)
-    + reads_mapped_chicken + reads_mapped_human + reads_mapped_pig + reads_mapped_mag + reads_unmapped_mag),
-    low_quality_reads = total_before_filtering.total_reads - total_after_filtering.total_reads
-  ) %>%
-  pivot_longer(
-    cols = -c(names(mssm_sample_metadata), comparison, lib_method, comparison_grid, cov_filtering),
-    names_to = "metric",
-    values_to = "value"
-  ) %>%
-  filter(metric %in% ordered_metrics) %>%
-  mutate(microsample = as.factor(microsample)) %>%
-  ggplot(aes(x = microsample, y = value, fill = metric)) +
-  geom_bar(position = "fill", stat = "identity") +
-  scale_fill_manual(values = c(colorRampPalette(supplementary_color)(6))) +
-  labs(x = "Microsample", y = "", fill = "Read type") +
-  facet_nested(. ~ comparison + comparison_grid, scales = "free", space = "free", switch = "y") +
-  theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
-  custom_ggplot_theme +
-  theme(axis.text.x = element_blank(), axis.ticks.x = element_blank()) +
-  theme(legend.position = "bottom") +
-  guides(fill = guide_legend(title = "Proportion \nSequencing \nReads"))
-fig_s2_1a 
-```
-
-
-### Library Preparation Efficiency (Fig. S2.1b)
-```{r fig_s2_1b_data,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-s2_dreamprep_df <- read_tsv("resources/zenodo/sn3_5_dreamprep_df.tsv", show_col_types = FALSE) 
-s2_dreamprep_df <- s2_dreamprep_df %>%
-  mutate(plate = str_extract(sample, "^Plate \\d+")) %>%
-  filter(
-    !Range %in% c("35 bp to 100 bp"),
-    concentration %in% c("0.1"),
-    type %in% c("Positive")
-  ) %>%
-  mutate(
-    # Range = droplevels(Range),
-    plate = case_when(
-      grepl("Plate 1", plate, ignore.case = TRUE) ~ "Single-Plate",
-      grepl("Plate 2", plate, ignore.case = TRUE) ~ "Dual-Plate A",
-      grepl("Plate 3", plate, ignore.case = TRUE) ~ "Dual-Plate B",
-      TRUE ~ NA_character_
-    ),
-    plate = factor(plate, levels = c("Single-Plate", "Dual-Plate A", "Dual-Plate B")),
-    concentration = paste0("DNA Input ", concentration, " ng/μL"),
-    Range = case_when(
-      grepl("100 bp to 200 bp", Range, ignore.case = TRUE) ~ "Non-specific Short Fragments",
-      grepl("200 bp to 1000 bp", Range, ignore.case = TRUE) ~ "Library",
-      TRUE ~ NA_character_
-    )
-  )
-```
-
-
-```{r fig_s2_1b,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-comparisons <- list(c("Single-Plate", "Dual-Plate A"), c("Dual-Plate A", "Dual-Plate B"), c("Single-Plate", "Dual-Plate B"))
-fig_s2_1b <- s2_dreamprep_df %>%
-  ggplot(aes(x = plate, y = nmole_L, fill = plate)) +
-  geom_boxplot(position = position_dodge(width = 0.75), alpha = 0.6) +
-  geom_point(position = position_jitterdodge(0.2)) +
-  stat_compare_means(
-    comparisons = comparisons,
-    method = "wilcox.test",
-    label = "p.signif",
-    p.adjust.method = "BH",
-    size = 4,
-    vjust = 0.2,
-    tip.length = 0.01
-  ) +
-  # scale_y_continuous(trans="log10") +
-  facet_wrap(~Range, scales = "free") +
-  labs(
-    y = "nmol/μL",
-    x = "",
-  ) +
-  geom_jitter(
-    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
-    size = 1.5, alpha = 0.3
-  ) +
-  scale_fill_manual(values = c("#2A9D8F", "#264653", "#E76F51")) +
-  custom_ggplot_theme +
-  theme(legend.position = "none")
-fig_s2_1b
-```
-
-## Design Considerations: Microsample Area
+## Microsample Area Validation and Lower Detection Limit
 
 ```{r Fig2_prep, echo=TRUE,  warning = FALSE, comments = "", message = FALSE}
 custom_ggplot_theme_LMD_size <- custom_ggplot_theme +
@@ -639,9 +166,11 @@ fig2d
 ```
 
 
-## Performance Evaluation Across Intestinal Sections 
+## Assessment of MSSM Performance Across Intestinal Regions 
 
-```{r section_df,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
+### Summary Statistic
+
+```{r section_stat,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
 section_df <- macroquant_metrics_filt_30 %>%
   filter(
     batch %in% c("MSEB0006", "MSEB0010"),
@@ -654,11 +183,7 @@ section_df <- macroquant_metrics_filt_30 %>%
     buffer = as.factor(buffer),
     cycles = as.factor(cycles)
   )
-```
 
-### Summary Statistic
-
-```{r section_stat,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
 section_stat <- section_df %>% 
   filter(!cycles %in% c("19")) %>%
   group_by(section) %>%
@@ -669,8 +194,10 @@ section_stat <- section_df %>%
     `d. Microbial Fraction  Based On SCG (%)`  = format_median_iqr(read_fraction_singlem*100),
     `e. Richness`  = format_median_iqr(richness),
     .groups = "drop"
-  ) %>% t() %>% 
-  as.data.frame()
+  ) %>% 
+  as.data.frame() %>% 
+  column_to_rownames("section") %>% 
+  t() 
 
 knitr::kable(
   section_stat,
@@ -760,19 +287,25 @@ section_test <- metrics %>%
       response_var = response_var,
       model = model,
       distribution = distribution,
+      section_name = NULL,
       explanatory_var = "collection_attempts + section",
       term_name = "section",
       data = section_df %>%
-            filter(!cycles %in% c("19"))
+        dplyr::filter(!cycles %in% c("19"))
     )
   }) %>%
-  select(metric, report)
-section_test 
+  dplyr::select(report)
+
+knitr::kable(
+  section_test,
+  booktabs = TRUE,
+  align = "ll"
+  )
+
 ```
 
 
 ```{r e_sectioncomp,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-cat("Correlation", "\n")
 chart.Correlation(section_df %>%
   filter(section %in% c("Ileum")) %>%
   select(
@@ -792,7 +325,8 @@ animal_section_df <- macroquant_metrics_filt_30 %>%
     count = n(),
     .groups = "drop"
   )
-ggplot(animal_cov_plot_df,
+
+ggplot(animal_section_df,
        aes(x = animal,
            y = count,
            fill = cov_filtering)) +
@@ -815,7 +349,8 @@ ggplot(animal_cov_plot_df,
 MSSM performance at 5,000 μm² in the caecum of a 35-day-old (G121e) animal matched that of a 14-day-old (G103b) individual. Colon samples from the 14-day-old animal performed poorlydue to insufficient genome coverage.
 
 ### Confocal Microscopy Of DAPI-stained Microsections (Fig. S5a)
-```{r dapi_df,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
+
+```{r figs5a,  echo=TRUE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=9}
 dapi <- dapi_df %>%
   group_by(Animal, Sequence, Age, Section) %>%
   summarise(
@@ -844,9 +379,7 @@ summary <- dapi_df %>%
     q3 = quantile(Bacterial_count, 0.75), # Third quartile
     .groups = "drop"
   )
-```
 
-```{r figs5a,  echo=TRUE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=9}
 figs5a <- ggplot(dapi, aes(x = Distance_from_one_side_mn, y = median, color = Section)) +
   geom_line(linewidth = 1) + # Mean line
   geom_ribbon(aes(ymin = q1, ymax = q3, fill = Section),
@@ -1004,8 +537,6 @@ cat_phylo_count <- full_join(
   ) %>%
   column_to_rownames("genome")
 
-all(rowSums(cat_phylo_count) != 0)
-
 cat_phylo_metadata <- bind_rows(
   microquant_metrics_filt_30 %>%
     mutate(
@@ -1040,7 +571,7 @@ if (nrow(data.frame(cat_physeq_species@tax_table) %>%
   filter(n > 1)) > 0) {
   cat("warning: Some species appear more than once in the taxonomy table")
 } else {
-  cat("Verification: The combined macro and micro dataset contains only unique species.")
+  cat("Verification: The combined macro and micro phyloseq object contains only unique species.")
 }
 cat_physeq_G121e <- subset_samples(cat_physeq_species, animal == "G121e")
 cat_physeq_G121e <- prune_taxa(taxa_sums(cat_physeq_G121e) > 0, cat_physeq_G121e)
@@ -1084,12 +615,13 @@ cat_read_count <- cat_read_df %>%
 
 print_median_iqr(cat_read_df$macro / 1e6, "Reference genome catalogue: ")
 print_median_iqr(cat_read_df$micro / 1e6, "Micro-scale genome catalogue: ")
+cat_cor_result 
 ```
-Read mapping results were strongly correlated across the two catalogues. 
+Read mapping strongly correlated between catalogues, with slightly higher mapped read counts observed for the micro-scale catalogue (11.8 million reads (8.54–16.0) versus 10.58 (7.72–14.21). 
 
 #### Alpha Diversity (Suppl.Fig. 7a)
 
-```{r suppl_fig_7a_data, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+```{r suppl_fig_7a, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
 cat_alpha_df <- sample_data(cat_physeq_species) %>%
   data.frame() %>%
   filter(richness > 0) %>%
@@ -1097,14 +629,6 @@ cat_alpha_df <- sample_data(cat_physeq_species) %>%
   rename(
     `MAG Catalogue` = dataset,
     microsample = sample_id
-  )
-
-cat_alpha_df_wd <- cat_alpha_df %>%
-  pivot_wider(
-    id_cols = c(microsample, animal),
-    names_from = `MAG Catalogue`,
-    names_glue = "{`MAG Catalogue`}_{.value}",
-    values_from = c(richness, neutral, phylogenetic)
   )
 
 cat_alpha_df_lg <- cat_alpha_df %>%
@@ -1117,40 +641,6 @@ cat_alpha_df_lg <- cat_alpha_df %>%
     metric = factor(metric, levels = c("richness", "neutral", "phylogenetic"))
   )
 
-paired_wilcox <- function(df, animal_id, metric) {
-  micro_col <- paste0("Micro-scale_", metric)
-  ref_col <- paste0("Reference_", metric)
-
-  test_df <- df %>%
-    filter(animal == animal_id) %>%
-    select(micro = all_of(micro_col), ref = all_of(ref_col)) %>%
-    filter(complete.cases(.))
-
-  wilcox.test(
-    test_df$micro,
-    test_df$ref,
-    paired = TRUE,
-    exact = FALSE
-  ) %>%
-    broom::tidy()
-}
-
-pvals <- tidyr::expand_grid(
-  animal = c("G121e", "G103b"),
-  metric = c("richness", "neutral")
-) %>%
-  mutate(
-    test = purrr::map2(animal, metric, ~ paired_wilcox(cat_alpha_df_wd, .x, .y)),
-    p.value = purrr::map_dbl(test, "p.value"),
-    animal = recode(animal, "G121e" = "G121", "G103b" = "G103"),
-    metric = recode(metric, "richness" = "Richness", "neutral" = "Neutral"),
-    label = paste0("p = ", signif(p.value, 2))
-  )
-```
-
-
-
-```{r suppl_fig_7a, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
 plot_df <- cat_alpha_df_lg %>%
   filter(
     metric != "phylogenetic",
@@ -1166,14 +656,10 @@ plot_df <- cat_alpha_df_lg %>%
     )
   )
 
-pval_pos <- plot_df %>%
-  group_by(animal, metric) %>%
-  summarise(y = max(value, na.rm = TRUE) * 1.08, .groups = "drop") %>%
-  left_join(pvals, by = c("animal", "metric"))
-
 figs7_a <- ggplot(plot_df, aes(x = metric, y = value, fill = `MAG Catalogue`)) +
   geom_boxplot(alpha = 0.6, outlier.shape = NA) +
   geom_jitter(
+    aes(group = `MAG Catalogue`),
     position = position_jitterdodge(
       jitter.width = 0.2,
       dodge.width = 0.8
@@ -1181,23 +667,22 @@ figs7_a <- ggplot(plot_df, aes(x = metric, y = value, fill = `MAG Catalogue`)) +
     size = 1.5,
     alpha = 0.3
   ) +
-  geom_text(
-    data = pval_pos,
-    aes(x = metric, y = y, label = label),
-    inherit.aes = FALSE
+  stat_compare_means(
+    aes(group = `MAG Catalogue`),
+    method = "wilcox.test",
+    paired = TRUE,
+    label = "p.format"
   ) +
   facet_wrap2(~ animal) +
   scale_fill_manual(values = c("#5c7fba", "#79b1a3")) +
   pnas_theme
-
 figs7_a
 ```
-
-We detected significant differences in alpha diversity between the two reference catalogues.
+Mapping to the micro-scale catalogue resulted in significantly higher species richness and Shannon diversity in one of the two examined animals, whereas only species richness was significantly increased in the other, suggesting differential sensitivity to rare versus abundant taxa.
 
 ##### Taxa Overlap (Suppl.Fig. 8)
 **Note:** The pivot_phylo() and compare_taxa_overlap() function needs to be loaded.
-```{r catalogues_taxa, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+```{r catalogues_taxa_table, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
 cat_phylo_lg <- pivot_phylo(
   phyloseq_obj = subset_samples(
     cat_physeq_species
@@ -1214,10 +699,24 @@ cat_taxa <- compare_taxa_overlap(
   group_a = "Micro-scale",
   group_b = "Reference",
   taxon_var = "species",
+  facet_var = NULL,
   abundance_var = "abundance",
   sample_var = "microsample"
 )
 
+cat_taxa$plot_df %>%
+  distinct(Detection, taxon) %>%
+  count(Detection, name = "Number of species") %>%
+  arrange(Detection)  %>%
+  knitr::kable(
+    col.names = c("Detection category", "Number of species"),
+    align = c("l", "r"))
+
+```
+
+A greater number of unique taxa were detected for the microscale catalogue.
+
+```{r catalogues_taxa_plot, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
 cat_taxa_plot <- ggplot(cat_taxa$plot_df,
        aes(x = prevalence,
            y = mean_abundance,
@@ -1230,28 +729,18 @@ cat_taxa_plot <- ggplot(cat_taxa$plot_df,
       "Shared" = "grey80"
     )
   ) +
-  scale_y_log10(labels = scales::label_scientific()) +
-  scale_x_continuous(labels = scales::percent_format()) +
+  scale_y_log10(labels = label_scientific()) +
+  scale_x_continuous(labels = percent_format()) +
   labs(
     x = "Prevalence in microsample",
     y = "Mean relative abundance (log scale)"
     ) +
   pnas_theme + theme(legend.position = "bottom")
 cat_taxa_plot
-
-cat_taxa$plot_df %>%
-  distinct(Detection, species) %>%
-  count(Detection, name = "Number of species") %>%
-  arrange(Detection)  %>%
-  knitr::kable(
-    col.names = c("Detection category", "Number of species"),
-    align = c("l", "r"))
 ```
 
-A greater number of unique taxa were detected for the microscale catalogue.
-
 ```{r suppl_fig_8, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-cat_taxa <- compare_taxa_overlap(
+cat_taxa_animal <- compare_taxa_overlap(
   data = cat_phylo_lg,
   group_var = "dataset",
   group_a = "Micro-scale",
@@ -1261,133 +750,6 @@ cat_taxa <- compare_taxa_overlap(
   abundance_var = "abundance",
   sample_var = "microsample"
 )
-
-# ----------------------------
-# 1. Prepare heatmap dataframe
-# ----------------------------
-heatmap_df <- cat_taxa$plot_df %>%
-  mutate(
-    column_id = paste(dataset, animal, sep = "_"),
-    Detection = recode(
-      Detection,
-      "Shared" = "Both"
-    )
-  ) %>%
-  select(species, dataset, animal, column_id, prevalence, Detection)
-
-# ----------------------------
-# 2. Frequency matrix
-# ----------------------------
-freq_mat <- heatmap_df %>%
-  select(species, column_id, prevalence) %>%
-  tidyr::pivot_wider(
-    names_from = column_id,
-    values_from = prevalence,
-    values_fill = 0
-  ) %>%
-  tibble::column_to_rownames("species") %>%
-  as.matrix()
-
-# ----------------------------
-# 3. Row classification
-# ----------------------------
-species_label <- heatmap_df %>%
-  distinct(species, Detection) %>%
-  mutate(
-    Detection = factor(
-      Detection,
-      levels = c("Micro-scale only", "Reference only", "Both")
-    )
-  ) %>%
-  arrange(Detection, species)
-
-# keep matrix rows aligned with row annotation
-freq_mat <- freq_mat[species_label$species, , drop = FALSE]
-
-row_category <- species_label$Detection
-names(row_category) <- species_label$species
-
-# ----------------------------
-# 4. Column annotation
-# ----------------------------
-annotation_col <- heatmap_df %>%
-  distinct(column_id, dataset, animal) %>%
-  arrange(dataset, animal) %>%
-  tibble::column_to_rownames("column_id")
-
-freq_mat <- freq_mat[, rownames(annotation_col), drop = FALSE]
-
-# ----------------------------
-# 5. Color scale
-# ----------------------------
-col_fun <- circlize::colorRamp2(
-  c(0, max(freq_mat, na.rm = TRUE)),
-  c("white", "black")
-)
-
-# ----------------------------
-# 6. Row annotation
-# ----------------------------
-row_ha <- ComplexHeatmap::rowAnnotation(
-  Category = row_category,
-  col = list(
-    Category = c(
-      "Micro-scale only" = "#5c7fba",
-      "Reference only" = "#79b1a3",
-      "Both" = "darkgrey"
-    )
-  )
-)
-
-# ----------------------------
-# 7. Column annotation
-# ----------------------------
-col_ha <- ComplexHeatmap::HeatmapAnnotation(
-  dataset = annotation_col$dataset,
-  animal = annotation_col$animal,
-  col = list(
-    dataset = c(
-      "Micro-scale" = "#5c7fba",
-      "Reference" = "#79b1a3"
-    ),
-    animal = c(
-      "G121e" = "#E8BD50",
-      "G103b" = "#B92D65"
-    )
-  )
-)
-
-# ----------------------------
-# 8. Heatmap
-# ----------------------------
-ht <- ComplexHeatmap::Heatmap(
-  freq_mat,
-  name = "Frequency",
-  col = col_fun,
-  
-  top_annotation = col_ha,
-  right_annotation = row_ha,
-  
-  cluster_rows = FALSE,
-  cluster_columns = FALSE,
-  
-  row_split = row_category,
-  row_labels = rownames(freq_mat),
-  
-  show_row_names = TRUE,
-  show_column_names = FALSE,
-  
-  row_names_gp = grid::gpar(fontsize = 6),
-  row_names_max_width = grid::unit(4, "cm")
-)
-
-ht
-#pdf("figures/figs8_PNAS.pdf", width = 7.5, height = 10)
-#draw(ht, heatmap_legend_side = "right", annotation_legend_side = "right")
-#dev.off()
-#png("figures/figs8_PNAS.png", width = 7.5, height = 10, units = "in", res = 300)
-#draw(ht, heatmap_legend_side = "right", annotation_legend_side = "right", merge_legends = TRUE)
-#dev.off()
 ```
 
 
@@ -1397,7 +759,7 @@ cat_betacount_df <- data.frame(otu_table(cat_physeq_species)) %>%
   rownames_to_column("genome") %>%
   melt(id = "genome") %>%
   setNames(c("genome", "microsample", "count")) %>%
-  left_join(data.frame(tax_table(sn1_physeq_species)) %>%
+  left_join(data.frame(tax_table(cat_physeq_species)) %>%
     rownames_to_column("genome"), by = "genome") %>%
   select(species, microsample, count) %>%
   filter(count > 0) %>%
@@ -1447,18 +809,16 @@ figs7_b <- ggplot() +
   geom_vline(xintercept = 0, color = "darkgrey") + # Vertical line at x = 0
   pnas_theme +
   theme(legend.position = "bottom")
-figs7_b
-
 figs7 <- figs7_a / figs7_b +
   plot_layout(heights = c(1, 1)) +
   plot_annotation(tag_levels = "a") &
   theme(plot.margin = margin(5, 5, 5, 5))
 
+figs7_b
 
 #ggsave( "figures/figs7_PNAS.pdf",
 #  plot = figs7, width = 7.5, height = 6.5, device = cairo_pdf
 #)
-
 #ggsave("figures/figs7_PNAS.png",
 #  plot = figs7, width = 7.5, height = 6.5, dpi = 300
 #)
@@ -1578,20 +938,20 @@ figs9 <- macroquant_metrics_filt_30 %>%
   scale_fill_manual(values = c("#79b1a3", "#E76F51")) +
   custom_ggplot_theme + 
   pnas_theme + theme(legend.position = "bottom") 
-
-figs9
 #ggsave("figures/figs9_PNAS.png",
 #  plot = figs9, width = 7.5, height = 10, dpi = 300
 #)
+
+figs9
 ```
 Although controls yielded sequencing data, they consistently exhibited poorer quality metrics.
 
 ### Host Contamination (Suppl.Fig. 10)
 ```{r host_contamination, echo=TRUE, fig.height=8, fig.width=8, message=FALSE, warning=FALSE, comments=""}
-format_median_iqr(macroquant_metrics_filt_30 %>%
-  filter(type == "positive", richness > 0) %>%
-  mutate(host_pct = host_pct * 100) %>%
-  pull(host_pct))
+#format_median_iqr(macroquant_metrics_filt_30 %>%
+#  filter(type == "positive", richness > 0) %>%
+#  mutate(host_pct = host_pct * 100) %>%
+#  pull(host_pct))
 
 host_df <- macroquant_metrics_filt_30 %>%
   filter(type == "positive", richness > 0) %>%
@@ -1614,7 +974,7 @@ df_bin <- host_df  %>% # binned summary (geometric mean + CI)
     .groups = "drop"
   )
 
-figs10 <- ggplot(df, aes(x = distance_host, y = host)) +
+figs10 <- ggplot(host_df, aes(x = distance_host, y = host)) +
   geom_point(alpha = 0.3, size = 1.5) +
   geom_ribbon(
     data = df_bin,
@@ -1636,19 +996,22 @@ figs10 <- ggplot(df, aes(x = distance_host, y = host)) +
     y = "Host reads (%) (log scale)"
   ) +
   pnas_theme
-
 #ggsave("figures/host_distance_final.pdf",
 #  plot = p_raw, width = 7.5, height = 3.5, device = cairo_pdf
 #)
-
 #ggsave("figures/host_distance_final.png",
 #   plot = p_raw,width = 7.5, height = 3.5, dpi = 300
 #)
-
+figs10 
 ```
 
 ## Discriminative power and replicability of MSSM data
-```{r mssm_discriminative_df, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+
+### Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA, Suppl Fig. 5)
+**Note:** The perform_pca() function needs to be loaded.
+
+```{r mssm_discriminative_object, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+# cat("Zero replacement determined", "\n")
 mssm_discriminative_df <- macroquant_genome_counts_filt_30 %>%
   select(genome, macroquant_metrics_filt_30 %>% 
     filter(
@@ -1662,21 +1025,10 @@ mssm_discriminative_df <- macroquant_genome_counts_filt_30 %>%
   select(where(~ any(. != 0))) %>%
   mutate(across(-microsample, ~ . / rowSums(across(where(is.numeric))) * 100)) %>% 
   column_to_rownames(var = "microsample")
-```
-
-### Centered Log-Ratio (CLR) Transformation And Principal Component Analysis (PCA, Suppl Fig. 5)
-**Note:** The perform_pca() function needs to be loaded.
-
-```{r mssm_discriminative_object, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-# cat("Zero replacement determined", "\n")
 mssm_discriminative_obj <- perform_pca(mssm_discriminative_df)
-```
-
-```{r mssm_discriminative_metadata, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mssm_discriminative_metadata <- macroquant_metrics_filt_30 %>%
   filter(microsample %in% c(rownames(mssm_discriminative_obj$df_clr_dist)))
 ```
-
 ```{r supplementary_figure_4, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.height=6, fig.width=8}
 #figs_4 <- plot_pca(mssm_discriminative_obj$pca_result,
 #         samples_color_metadata = "animal", 
@@ -1708,7 +1060,6 @@ knitr::kable(permutest(betadisper_animal, pairwise = TRUE, permutations = 9999)$
 ```{r mssm_discriminative_betadispersion_cryosection, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 betadisper_cryo <- vegdist(mssm_discriminative_obj$df_clr_dist, method = "euclidean") %>%
   betadisper(., mssm_discriminative_metadata %>% pull(cryosection))
-knitr::kable(permutest(betadisper_cryo, pairwise = TRUE)$tab, digits = 3)
 knitr::kable(permutest(betadisper_cryo, pairwise = TRUE, permutations = 9999)$tab, digits = 4)
 ```
 
@@ -1721,12 +1072,11 @@ knitr::kable(vegdist(mssm_discriminative_obj$df_clr_dist, method = "euclidean") 
     data = mssm_discriminative_metadata,
     permutations = 9999, by = "terms"
   ) %>%
-  broom::tidy(), digits = 3)
+  broom::tidy(), digits = 4)
 ```
 MSSM data across individuals revealed highly distinct microbial communities. In contrast, differences among sequential cryosections of the same individual, were negligible.
 
 ## MSSM compared to FISH and Macro-scale Metagenomics
-
 ### MSSM vs FISH
 ```{r MSSM_vs_FISH_plot_settings, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 custom_ggplot_theme_fish_mssm <- custom_ggplot_theme +
@@ -1875,11 +1225,11 @@ fig4_a
 ```
 
 
-### Macro-scale Metagenomics vs MSSM
+### MSSM vs Macro-scale Metagenomics
 
 ##### Taxa Overlap (Suppl.Fig. 11)
 **Note:** The pivot_phylo() and compare_taxa_overlap() function needs to be loaded.
-```{r fig_s11, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+```{r mivsma_overlap, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 mivsma_phylo_lg <- pivot_phylo(
   phyloseq_obj = subset_samples(
     physeq_all,
@@ -1892,73 +1242,29 @@ mivsma_phylo_lg <- pivot_phylo(
 ) %>%
   filter(abundance > 0)
 
-species_presence <- mivsma_phylo_lg %>%
-  filter(
-    group %in% c(
-      "Micro-scale Spatial Metagenomics",
-      "Macro-scale Metagenomics"
-    ),
-    animal %in% c("G121e", "G103b"),
-    !is.na(species)
-  ) %>%
-  distinct(animal, group, species) %>%
-  mutate(present = TRUE) %>%
-  tidyr::pivot_wider(
-    names_from = group,
-    values_from = present,
-    values_fill = FALSE
-  ) %>%
-  mutate(
-    Detection = case_when(
-      `Micro-scale Spatial Metagenomics` &
-        !`Macro-scale Metagenomics` ~ "MSSM",
-      `Micro-scale Spatial Metagenomics` &
-        `Macro-scale Metagenomics` ~ "Shared with conventional metagenomics",
-      TRUE ~ NA_character_
-    )
-  ) %>%
-  filter(!is.na(Detection))
+mivsma_overlap <- compare_taxa_overlap(
+  data = mivsma_phylo_lg,
+  group_var = "group",
+  group_a = "Micro-scale Spatial Metagenomics",
+  group_b = "Macro-scale Metagenomics",
+  facet_var = "animal",
+  taxon_var = "species",
+  abundance_var = "abundance",
+  sample_var = "microsample"
+)
 
-sample_counts <- mivsma_phylo_lg %>%
-  filter(
-    group == "Micro-scale Spatial Metagenomics",
-    animal %in% c("G121e", "G103b")
-  ) %>%
-  distinct(animal, microsample) %>%
-  count(animal, name = "total_microsamples")
+mivsma_overlap$plot_df %>%
+  count(animal, Detection, name = "Number of species") %>%
+  arrange(animal, Detection) %>%
+  knitr::kable(
+    col.names = c("Animal", "Detection category", "Number of species"),
+    align = c("l", "l", "r")
+  )
+```
 
-
-plot_df <- mivsma_phylo_lg %>%
-  filter(
-    group == "Micro-scale Spatial Metagenomics",
-    animal %in% c("G121e", "G103b"),
-    !is.na(species)
-  ) %>%
-  group_by(animal, microsample, species) %>%
-  summarise(
-    sample_abundance = sum(abundance, na.rm = TRUE),
-    .groups = "drop"
-  ) %>%
-  group_by(animal, species) %>%
-  summarise(
-    mean_abundance = mean(sample_abundance, na.rm = TRUE),
-    prevalence_raw = sum(sample_abundance > 0),
-    .groups = "drop"
-  ) %>%
-  left_join(sample_counts, by = "animal") %>%
-  mutate(
-    prevalence = prevalence_raw / total_microsamples
-  ) %>%
-  left_join(
-    species_presence %>%
-      select(animal, species, Detection),
-    by = c("animal", "species")
-  ) %>%
-  filter(!is.na(Detection))
-
-
+```{r fig_s11, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 fig_s11 <- ggplot(
-  plot_df,
+  mivsma_overlap$plot_df %>% filter(group %in% c("Micro-scale Spatial Metagenomics")),
   aes(
     x = prevalence,
     y = mean_abundance,
@@ -1969,45 +1275,107 @@ fig_s11 <- ggplot(
   facet_wrap(~ animal) +
   scale_color_manual(
     values = c(
-      "MSSM" = "#5c7fba",
-      "Shared with conventional metagenomics" = "grey80"
+      "Micro-scale Spatial Metagenomics only" = "#5c7fba",
+      "Shared" = "grey80"
     )
   ) +
   scale_y_log10(labels = scales::label_scientific()) +
   scale_x_continuous(labels = scales::percent_format()) +
   labs(
     x = "Prevalence in microsample",
-    y = "Mean abundance (log scale)",
+    y = "Mean relative abundance (log scale)",
     color = NULL
   ) +
   pnas_theme +
   theme(legend.position = "bottom")
+#ggsave(
+#  "figures/fig_s11.pdf",
+#  plot = fig_s11,
+#  width = 7.5,
+#  height = 3.5,
+#  device = cairo_pdf
+#)
 
+#ggsave(
+#  "figures/fig_s11.png",
+#  plot = fig_s11,
+#  width = 7.5,
+#  height = 3.5,
+#  dpi = 300
+#)
 fig_s11
-
-ggsave(
-  "figures/fig_s11.pdf",
-  plot = fig_s11,
-  width = 7.5,
-  height = 3.5,
-  device = cairo_pdf
-)
-
-ggsave(
-  "figures/fig_s11.png",
-  plot = fig_s11,
-  width = 7.5,
-  height = 3.5,
-  dpi = 300
-)
-
 ```
 
 
 ## Investigate Spatial Pattern
 
-## Subspecies Segregation and Spatial Structuring
-### Pangenome: Genes Presence/Absence  (Suppl.Fig. 12a)
+### Spatial and functional analysis of bacterial community structure
+
+### Data selection
+```{r data_spatial, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+comm_data_t<- macroquant_genome_counts_filt_30
+metadata <- macroquant_metrics_filt_30 %>%
+  filter(type=="positive")%>%
+  filter(cryosection %in% c("G121eI114B","G121eI117A","G121eI118B",
+                            "G121eO306A","G121eO307A","G121eO308A"),
+         !is.na(Xcoord))
+
+table(metadata$cryosection,metadata$batch)
+genome_id<-comm_data_t$genome
+comm_data<-comm_data_t %>%
+  select(-genome)%>%
+  t()%>%
+  as.data.frame()%>%
+  setNames(genome_id)
+comm_data<-comm_data%>%
+  filter(rownames(comm_data)%in%metadata$microsample)%>%
+  arrange(match(metadata$microsample,rownames(comm_data)))%>%
+  filter(rowSums(.)!=0)%>%
+  select(where(~ sum(.x, na.rm = TRUE) > 0))
+metadata<-metadata %>%
+  filter(microsample%in%rownames(comm_data))
+
+genome_metadata<-read_tsv("gtdbtk.summary.tsv")%>%
+  filter(user_genome%in%colnames(comm_data))%>%
+  arrange(match(colnames(comm_data),user_genome))
+
+paste0("comm_data and metadata in the same order: ",all(rownames(comm_data)==metadata$microsample))
+paste0("comm_data and genome_metadata in the same order: ",all(colnames(comm_data)==genome_metadata$user_genome))
+```
+
+### Centered Log-Ratio (CLR) Transformation
+**Note:** The prepare_spatial_section() function needs to be loaded.
+
+```{r data_spatial_clr, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+z.war <- 0.95
+
+spatial_sections <- c(
+  "G121eO306A",
+  "G121eO307A",
+  "G121eO308A",
+  "G121eI117A",
+  "G121eI118B",
+  "G121eI114B"
+)
+
+spatial_results <- lapply(
+  spatial_sections,
+  function(x) {
+    prepare_spatial_section(
+      cryosection_id = x,
+      comm_data = comm_data,
+      metadata = metadata,
+      z.warning = z.war
+    )
+  }
+)
+
+names(spatial_results) <- spatial_sections
+#plot(spatial_results[["G121eO306A"]]$metadata[, c("Xcoord", "Ycoord")], pch = 16)
+```
+
+### Subspecies Segregation 
+#### Pangenome: Genes Presence/Absence  (Suppl.Fig. 12a)
 ```{r fig_s12a, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=9}
 wide_data <- left_join(genepa_pg, duplication_pg, by = "gene") %>%
   left_join(partition_pg, by = "gene") %>%
@@ -2051,7 +1419,7 @@ fig_s12a <- pheatmap(mat,
 fig_s12a 
 ```
 
-### Distribution Lawsonibacter Strains (Suppl.Fig. 12b)
+#### Distribution Lawsonibacter Strains (Suppl.Fig. 12b)
 ```{r fig_s12b, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 macroquant_lawsonibacter <- macroquant_genome_counts_filt_30_98 %>%
   filter(genome %in% c(macromag_genomemetadata_98 %>%
@@ -2069,10 +1437,6 @@ macroquant_lawsonibacter <- macroquant_genome_counts_filt_30_98 %>%
   left_join(macromag_genomemetadata_98, by = "genome")
 
 lawsonibacter_pie_df <- macroquant_lawsonibacter %>%
-  #filter(
-    #cryosection %in% c("G121eI103A", "G103bI301A"),
-    # circul %in% c("Y")
-  #) %>% 
   group_by(microsample) %>%
   mutate(
     abundance = abundance / sum(abundance) # normalize counts to proportions
@@ -2102,27 +1466,25 @@ lawsonibacter_piecharts <- split(lawsonibacter_pie_df, lawsonibacter_pie_df$cryo
       scale_fill_manual(values = lawsonibacter_colors, drop = FALSE)
   })
 
-macroquant_lawsonibacter %>%
-  group_by(cryosection) %>%
-  summarise(n_microsamples = n_distinct(microsample))
-unique(macroquant_lawsonibacter$cryosection)
-# "G103bI301A" "G103bI301B"    
-# "G121eI103A" "G121eI103B"  "G121eI117A" "G121eI104C" "G121eI118B"
-# "G121eO307A" "G121eO306A" "G121eO308A"
-
-lawsonibacter_piecharts$G103bI301B
-lawsonibacter_piecharts$G103bI301A
-# Extra
-lawsonibacter_piecharts$G121eI103A
-lawsonibacter_piecharts$G121eI103B
-lawsonibacter_piecharts$G103bI301B
-lawsonibacter_piecharts$G121eI104C
-lawsonibacter_piecharts$G121eO306A
-
+fig_s12b <- wrap_plots(
+  lawsonibacter_piecharts[c(
+  "G103bI301A", "G121eI103A")]
+,
+  ncol = 3,
+  guides = "collect"
+) &
+theme(
+  legend.position = "none",
+  plot.title = element_text(hjust = 0.5)
+)
+fig_s12b
 ```
 
-## SNP level microdiversity (Lorikeet)
-```{r lawsonibacter_popANI, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+
+### SNP level microdiversity (Lorikeet)
+
+### Distribution popANI by Group (Suppl.Fig. 13)
+```{r fig_s13, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 lawsonibacter_popANI <- map_dfr(names(ani_list), function(bin_id) {
 
   ani_mat <- ani_list[[bin_id]]
@@ -2162,10 +1524,6 @@ lawsonibacter_popANI_meta <- macroquant_metrics_filt_30 %>%
     ) %>%
   select(cryosection, microsample, animal, Xcoord, Ycoord)
 
-```
-
-### Distribution popANI by Group (Suppl.Fig. 13)
-```{r fig_s13, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 stat.test <- lawsonibacter_popANI %>%
   filter(
     !is.nan(popANI),
@@ -2239,12 +1597,10 @@ fig_s13 <- lawsonibacter_popANI %>%
   )) +
   facet_wrap(~bin) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
-fig_s13
-
 #png("figures/fig_s13.png", width = 7.5, height = 4.5, units = "in", res = 300)
 #fig_s13 
 #dev.off()
-
+fig_s13
 ```
 
 ### Heatmap popANI (Suppl.Fig. 14)
@@ -2264,10 +1620,6 @@ plot_popani_3panel <- function(bin_ids,
   }
 
   dir.create(dirname(file), showWarnings = FALSE, recursive = TRUE)
-
-  ### -----------------------------
-  ### Samples + metadata
-  ### -----------------------------
   all_samples <- Reduce(union, lapply(bin_ids, function(b) {
     rownames(ani_list[[b]])
   }))
@@ -2301,9 +1653,7 @@ plot_popani_3panel <- function(bin_ids,
     col = list(Animal = animal_cols)  
     )
 
-  ### -----------------------------
-  ### BUILD HEATMAPS
-  ### -----------------------------
+
   ht_list <- lapply(seq_along(bin_ids), function(i) {
 
     bin_id <- bin_ids[i]
@@ -2337,14 +1687,10 @@ plot_popani_3panel <- function(bin_ids,
 
       row_title = bin_id,
 
-      ### IMPORTANT: fix panel size
       height = unit(8, "cm")
     )
   })
 
-  ### -----------------------------
-  ### FORCE VERTICAL STACK
-  ### -----------------------------
   ht_stack <- Reduce(`%v%`, ht_list)
   
   draw(
@@ -2353,10 +1699,7 @@ plot_popani_3panel <- function(bin_ids,
     annotation_legend_side = "left",
     annotation_legend_list = NULL
   )
-  
-  ### -----------------------------
-  ### DRAW
-  ### -----------------------------
+
   pdf(paste0(file, ".pdf"), width = width, height = height)
 
   draw(
@@ -2382,7 +1725,6 @@ plot_popani_3panel <- function(bin_ids,
   invisible(ht_stack)
 }
 
-
 plot_popani_3panel(
   bin_ids = c(
     "GPB_bin_000044",
@@ -2401,7 +1743,6 @@ plot_popani_3panel(
   cluster = FALSE,
   file = "figures/fig_s13"
 )
-
 ```
 
 
