@@ -9,10 +9,9 @@ resources/data_preparation
 resources/data_preparation_old
 _main_files/
 docs/_main_files/
-figures/
 .RDataTmp*
 other/
 _bookdown_files/
-figures/
+figures_new/
 .positai
 
