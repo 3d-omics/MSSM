@@ -84,8 +84,7 @@ mssm-vs-macro-scale-metagenomics
 taxa-overlap-suppl.fig.-11
 investigate-spatial-pattern
 spatial-and-functional-analysis-of-bacterial-community-structure
-data-selection
-centered-log-ratio-clr-transformation
+data-preparation
 subspecies-segregation
 pangenome-genes-presenceabsence-suppl.fig.-12a
 distribution-lawsonibacter-strains-suppl.fig.-12b

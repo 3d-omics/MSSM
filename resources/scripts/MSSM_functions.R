@@ -646,43 +646,207 @@ compare_taxa_overlap <- function(data,
   )
 }
 
-### prepare_spatial_section()
+# prepare_spatial_section()
 prepare_spatial_section <- function(cryosection_id,
                                     comm_data,
                                     metadata,
                                     z.warning = 0.95) {
   
-  comm_section <- comm_data %>%
+  comm <- comm_data %>%
     as.data.frame() %>%
     rownames_to_column(var = "microsample") %>%
-    left_join(metadata, by = "microsample") %>%
+    bind_cols(metadata) %>%
     filter(cryosection == cryosection_id) %>%
-    column_to_rownames(var = "microsample") %>%
+    column_to_rownames(var = "microsample...1") %>%
     select(contains("bin_"))
   
   comm_zerRepl <- cmultRepl(
-    comm_section,
+    comm,
     method = "GBM",
     output = "prop",
     z.warning = z.warning
   )
   
   metadata_section <- metadata %>%
-    filter(microsample %in% rownames(comm_zerRepl)) %>%
-    mutate(
-      Xcoord = as.numeric(Xcoord),
-      Ycoord = as.numeric(Ycoord)
-    )
+    filter(microsample %in% rownames(comm_zerRepl))
   
-  comm_red <- comm_section %>%
-    select(all_of(colnames(comm_zerRepl))) %>%
-    filter(rownames(comm_section) %in% rownames(comm_zerRepl))
+  comm_red <- comm %>%
+    select(colnames(comm_zerRepl)) %>%
+    filter(rownames(comm) %in% rownames(comm_zerRepl))
   
   list(
-    comm = comm_section,
+    comm = comm,
     comm_zerRepl = comm_zerRepl,
-    metadata_section = metadata_section,
+    metadata = metadata_section,
     comm_red = comm_red
   )
 }
 
+## 3. Spatial RLQ function
+run_spatial_rlq <- function(cryosection_id,
+                            comm_red,
+                            metadata_section,
+                            gift_pcoa,
+                            genome_tree,
+                            root = 0.5,
+                            correlogram_order = 8) {
+
+  comp <- decostand(comm_red, MARGIN = 1, method = "total")
+  comp <- comp^root
+  colnames(comp) <- gsub("\\.", ":", colnames(comp))
+  
+  env <- data.frame(
+    log_seq_counts = log(metadata_section$after_filtering.total_bases),
+    div = metadata_section$richness,
+    host_dist = log(metadata_section$distance_host)
+  )
+  
+  funct_PCOA <- gift_pcoa$vectors[
+    rownames(gift_pcoa$vectors) %in% colnames(comp),
+    1:2,
+    drop = FALSE
+  ]
+  
+  phy <- drop.tip(
+    genome_tree,
+    setdiff(genome_tree$tip.label, rownames(funct_PCOA))
+  )
+  
+  spa <- metadata_section[, c("Xcoord", "Ycoord")]
+  
+  comp <- comp[, match(phy$tip.label, colnames(comp)), drop = FALSE]
+  
+  funct_PCOA <- data.frame(
+    funct_PCOA[
+      match(phy$tip.label, rownames(funct_PCOA)),
+      ,
+      drop = FALSE
+    ]
+  )
+  
+  alignment_check <- c(
+    phy_comp = mean(phy$tip.label == colnames(comp)),
+    phy_funct = mean(phy$tip.label == rownames(funct_PCOA))
+  )
+  
+  phylog <- newick2phylog(write.tree(phy))
+  
+  colnames(comp) <- gsub(":", "_", colnames(comp))
+  rownames(funct_PCOA) <- gsub(":", "_", rownames(funct_PCOA))
+  
+  coacomp <- dudi.coa(comp, scan = FALSE, nf = ncol(comp))
+  
+  nb1 <- graph2nb(gabrielneigh(as.matrix(spa)), sym = TRUE)
+  
+  correlograms <- list(
+    div = sp.correlogram(
+      nb1,
+      log(env$div),
+      order = correlogram_order,
+      method = "I"
+    ),
+    log_seq_counts = sp.correlogram(
+      nb1,
+      env$log_seq_counts,
+      order = correlogram_order,
+      method = "I"
+    ),
+    host_dist = sp.correlogram(
+      nb1,
+      env$host_dist,
+      order = correlogram_order,
+      method = "I"
+    )
+  )
+  
+  lw1 <- nb2listw(nb1)
+  
+  nb1_neigh <- nb2neig(nb1)
+  vecspa <- scores.neig(nb1_neigh)
+  
+  pcaspa <- dudi.pca(
+    vecspa,
+    row.w = coacomp$lw,
+    scan = FALSE,
+    nf = ncol(vecspa)
+  )
+  
+  pcaenv <- dudi.pca(
+    env,
+    row.w = coacomp$lw,
+    scannf = FALSE,
+    nf = 2
+  )
+  
+  pcophy <- dudi.pco(
+    as.dist(as.matrix(phylog$Wdist)[names(comp), names(comp)]),
+    coacomp$cw,
+    full = TRUE
+  )
+  
+  disT <- dist.ktab(
+    ktab.list.df(list(funct_PCOA)),
+    c("Q"),
+    scan = FALSE
+  )
+  
+  pcotraits <- dudi.pco(
+    disT,
+    coacomp$cw,
+    full = TRUE
+  )
+  
+  rlqmix <- rlqESLTP(
+    pcaenv,
+    pcaspa,
+    coacomp,
+    pcotraits,
+    pcophy,
+    scan = FALSE,
+    nf = 2
+  )
+  
+  eig_prop <- rlqmix$eig / sum(rlqmix$eig)
+  
+  rlq_scores <- data.frame(
+    microsample = rownames(rlqmix$lR),
+    rlqmix$lR
+  )
+  
+  rlq_scores$microsample <- rownames(comm_red)[
+    as.numeric(rlq_scores$microsample)
+  ]
+  
+  rlq_scores <- rlq_scores %>%
+    left_join(
+      metadata_section %>%
+        select(microsample, Xcoord, Ycoord, after_filtering.total_bases,
+               richness,distance_host) %>% 
+        mutate(log_seq_counts= log(after_filtering.total_bases),
+               log_distance_host = log(metadata_section$distance_host)),
+      by = "microsample"
+    )
+  
+  list(
+    cryosection = cryosection_id,
+    comp = comp,
+    env = env,
+    funct_PCOA = funct_PCOA,
+    phy = phy,
+    phylog = phylog,
+    spa = spa,
+    coacomp = coacomp,
+    nb1 = nb1,
+    correlograms = correlograms,
+    lw1 = lw1,
+    pcaspa = pcaspa,
+    pcaenv = pcaenv,
+    pcophy = pcophy,
+    disT = disT,
+    pcotraits = pcotraits,
+    rlqmix = rlqmix,
+    eig_prop = eig_prop,
+    rlq_scores = rlq_scores,
+    alignment_check = alignment_check
+  )
+}

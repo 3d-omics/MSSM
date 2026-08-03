@@ -1311,44 +1311,57 @@ fig_s11
 
 ### Spatial and functional analysis of bacterial community structure
 
-#### Data selection
-```{r data_spatial, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
-comm_data_t<- macroquant_genome_counts_filt_30
-metadata <- macroquant_metrics_filt_30 %>%
-  filter(type=="positive")%>%
-  filter(cryosection %in% c("G121eI114B","G121eI117A","G121eI118B",
-                            "G121eO306A","G121eO307A","G121eO308A"),
-         !is.na(Xcoord))
-
-table(metadata$cryosection,metadata$batch)
-genome_id<-comm_data_t$genome
-comm_data<-comm_data_t %>%
-  select(-genome)%>%
-  t()%>%
-  as.data.frame()%>%
-  setNames(genome_id)
-comm_data<-comm_data%>%
-  filter(rownames(comm_data)%in%metadata$microsample)%>%
-  arrange(match(metadata$microsample,rownames(comm_data)))%>%
-  filter(rowSums(.)!=0)%>%
-  select(where(~ sum(.x, na.rm = TRUE) > 0))
-metadata<-metadata %>%
-  filter(microsample%in%rownames(comm_data))
-
-genome_metadata<-read_tsv("gtdbtk.summary.tsv")%>%
-  filter(user_genome%in%colnames(comm_data))%>%
-  arrange(match(colnames(comm_data),user_genome))
-
-paste0("comm_data and metadata in the same order: ",all(rownames(comm_data)==metadata$microsample))
-paste0("comm_data and genome_metadata in the same order: ",all(colnames(comm_data)==genome_metadata$user_genome))
-```
-
-#### Centered Log-Ratio (CLR) Transformation
+#### Data preparation
 **Note:** The prepare_spatial_section() function needs to be loaded.
+```{r data_spatial, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+comm_data <- macroquant_genome_counts_filt_30
+genome_id <- macroquant_genome_counts_filt_30$genome
 
-```{r data_spatial_clr, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+metadata <- macroquant_metrics_filt_30 %>%
+  filter(
+    type == "positive",
+    cryosection %in% c(
+      "G121eI114B", "G121eI117A", "G121eI118B",
+      "G121eO306A", "G121eO307A", "G121eO308A"
+    ),
+    !is.na(Xcoord)
+  )
+
+table(metadata$cryosection, metadata$batch)
+
+comm_data <- comm_data %>%
+  select(-genome) %>%
+  t() %>%
+  as.data.frame() %>%
+  setNames(genome_id)
+
+comm_data <- comm_data %>%
+  filter(rownames(.) %in% metadata$microsample) %>%
+  arrange(match(rownames(.), metadata$microsample)) %>%
+  filter(rowSums(.) != 0) %>%
+  select(where(~ sum(.x, na.rm = TRUE) > 0))
+
+metadata <- metadata %>%
+  filter(microsample %in% rownames(comm_data)) %>%
+  arrange(match(microsample, rownames(comm_data)))
+
+paste0(
+  "comm_data and metadata in the same order: ",
+  all(rownames(comm_data) == metadata$microsample)
+)
+
+macromag_genomemetadata_spatial <- macromag_genomemetadata[
+  match(colnames(comm_data), macromag_genomemetadata$genome),
+  ,
+  drop = FALSE
+]
+
+paste0(
+  "comm_data and genome_metadata in the same order: ",
+  all(colnames(comm_data) == macromag_genomemetadata_spatial$genome)
+)
+
 z.war <- 0.95
-
 spatial_sections <- c(
   "G121eO306A",
   "G121eO307A",
@@ -1358,7 +1371,8 @@ spatial_sections <- c(
   "G121eI114B"
 )
 
-spatial_results <- lapply(
+## community matrices
+spatial_datasets <- lapply(
   spatial_sections,
   function(x) {
     prepare_spatial_section(
@@ -1369,9 +1383,151 @@ spatial_results <- lapply(
     )
   }
 )
+names(spatial_datasets) <- spatial_sections
+```
 
-names(spatial_results) <- spatial_sections
-#plot(spatial_results[["G121eO306A"]]$metadata[, c("Xcoord", "Ycoord")], pch = 16)
+```{r functional_ordination, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+#genome_list <- Reduce(
+#  union,
+#  lapply(spatial_datasets, function(x) colnames(x$comm_red))
+#)
+
+genome_list <- colnames(spatial_datasets$G121eI117A$comm_red)
+genome_gifts_red <- macromag_gifts %>%
+  as.data.frame() %>%
+  select(-starts_with(c("S0", "D04"))) %>%
+  filter(rownames(.) %in% genome_list)
+
+genome_funct_red <- genome_gifts_red %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "genome") %>%
+  pivot_longer(-genome, names_to = "column", values_to = "value") %>%
+  left_join(macromag_genomemetadata_spatial, by = join_by("genome")) %>%
+  select(genome, column, value, length) %>%
+  mutate(
+    group = substr(column, 1, 3),
+    log_length = log(length)
+  ) %>%
+  group_by(genome, group) %>%
+  summarise(mean_value = mean(value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = group, values_from = mean_value) %>%
+  column_to_rownames(var = "genome")
+
+gift_pcoa <- ape::pcoa(dist(genome_gifts_red))
+```
+
+
+```{r rlqESLTP, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+spatial_sections <- c(
+  "G121eO306A",
+  "G121eO307A",
+  "G121eO308A",
+  "G121eI117A",
+  "G121eI118B",
+  "G121eI114B"
+)
+
+correlogram_orders <- c(
+  G121eO306A = 8,
+  G121eO307A = 8,
+  G121eO308A = 8,
+  G121eI117A = 8,
+  G121eI118B = 8,
+  G121eI114B = 7
+)
+
+spatial_rlq_results <- lapply(
+  spatial_sections,
+  function(x) {
+    run_spatial_rlq(
+      cryosection_id = x,
+      comm_red = spatial_datasets[[x]]$comm_red,
+      metadata_section = spatial_datasets[[x]]$metadata,
+      gift_pcoa = gift_pcoa,
+      genome_tree = macromag_tree,
+      root = root,
+      correlogram_order = correlogram_orders[[x]]
+      )
+  }
+)
+names(spatial_rlq_results) <- spatial_sections
+
+head(spatial_rlq_results$G121eO306A$rlq_scores) #invert
+head(spatial_rlq_results$G121eO307A$rlq_scores) #invert
+head(spatial_rlq_results$G121eO308A$rlq_scores)
+head(spatial_rlq_results$G121eI117A$rlq_scores) #invert
+head(spatial_rlq_results$G121eI118B$rlq_scores) #invert
+head(spatial_rlq_results$G121eI114B$rlq_scores)
+```
+
+
+```{r flip_axis, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+spatial_rlq_results_raw <- spatial_rlq_results
+spatial_rlq_results_flipped <- spatial_rlq_results_raw
+axes_to_flip <- list(
+  G121eO306A = 1,
+  G121eO307A = 1,
+  G121eI117A = c(1, 2),
+  G121eI118B = c(1, 2)
+)
+
+flip_rlq_axis <- function(x, ax = 1) {
+  slots <- c(
+    "lR", "mR", "lQ", "mQ",
+    "lR_givenE", "lR_givenS",
+    "lQ_givenT", "lQ_givenP"
+  )
+  
+  for (s in slots) {
+    if (!is.null(x[[s]]) && ncol(x[[s]]) >= ax) {
+      x[[s]][, ax] <- -x[[s]][, ax]
+    }
+  }
+  
+  x
+}
+
+for (section_id in names(axes_to_flip)) {
+  for (ax in axes_to_flip[[section_id]]) {
+    spatial_rlq_results_flipped[[section_id]]$rlqmix <- flip_rlq_axis(
+      spatial_rlq_results_flipped[[section_id]]$rlqmix,
+      ax = ax
+    )
+  }
+}
+
+for (section_id in names(axes_to_flip)) {
+  spatial_rlq_results_flipped[[section_id]]$rlq_scores <- data.frame(
+    microsample = rownames(spatial_rlq_results_flipped[[section_id]]$rlqmix$lR),
+    spatial_rlq_results_flipped[[section_id]]$rlqmix$lR
+  )
+
+  spatial_rlq_results_flipped[[section_id]]$rlq_scores$microsample <-
+    rownames(spatial_datasets[[section_id]]$comm_red)[
+      as.numeric(spatial_rlq_results_flipped[[section_id]]$rlq_scores$microsample)
+    ]
+
+  spatial_rlq_results_flipped[[section_id]]$rlq_scores <-
+    spatial_rlq_results_flipped[[section_id]]$rlq_scores %>%
+    left_join(
+      spatial_datasets[[section_id]]$metadata %>%
+        select(microsample, Xcoord, Ycoord),
+      by = "microsample"
+    )
+}
+
+head(spatial_rlq_results_flipped$G121eO306A$rlq_scores) 
+head(spatial_rlq_results_flipped$G121eO307A$rlq_scores) 
+head(spatial_rlq_results$G121eO308A$rlq_scores)
+head(spatial_rlq_results_flipped$G121eI117A$rlq_scores) 
+head(spatial_rlq_results_flipped$G121eI118B$rlq_scores) 
+head(spatial_rlq_results$G121eI114B$rlq_scores)
+spatial_rlq_results_flipped$G121eO306A$rlqmix$lQ
+spatial_rlq_results_flipped$G121eO307A$rlqmix$lQ
+spatial_rlq_results$G121eO308A$rlqmix$lQ
+spatial_rlq_results_flipped$G121eI117A$rlqmix$lQ
+spatial_rlq_results_flipped$G121eI118B$rlqmix$lQ
+spatial_rlq_results$G121eI114B$rlqmix$lQ
 ```
 
 ### Subspecies Segregation 
