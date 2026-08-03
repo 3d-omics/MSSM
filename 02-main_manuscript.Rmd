@@ -1,7 +1,7 @@
 # Main analysis
 
 ```{r load_data_main, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-load("resources/working_data_object_20260730_new.Rdata") 
+load("resources/working_data_object.Rdata") 
 ```
 
 ## Microsample collection (Suppl.Fig. 2)

@@ -15,5 +15,4 @@ other/
 _bookdown_files/
 figures/
 .positai
-resources/working_data_object_20260614.Rdata
-resources/*.Rdata
+
