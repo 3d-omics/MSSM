@@ -43,88 +43,165 @@ calculate_alpha_diversity <- function(input_data, metadata_name, tree_name) {
 # MAG_tree_plot()
 ### Generate the phylum color heatmap
 MAG_tree_plot <- function(genome_metadata, tree) {
-  phylum_heatmap <- genome_metadata %>%
+  desaturate_palette <- function(cols, amount = 0.12) {
+    desaturated <- vapply(cols, function(col) {
+      rgb_col <- grDevices::col2rgb(col) / 255
+      grey_val <- mean(rgb_col)
+      mixed <- rgb_col * (1 - amount) + grey_val * amount
+      grDevices::rgb(mixed[1], mixed[2], mixed[3])
+    }, character(1))
+    stats::setNames(desaturated, names(cols))
+  }
+  make_breaks <- function(x, n = 5) {
+    rng <- range(x, na.rm = TRUE)
+    brks <- pretty(rng, n = n)
+    brks <- brks[brks >= rng[1] & brks <= rng[2]]
+    if (length(brks) < 2) brks <- unique(rng)
+    brks
+  }
+  genome_size_colors <- c(
+    "#eef3f6",
+    "#c9d7e1",
+    "#98b2c2",
+    "#66879c",
+    "#35556b"
+  )
+  contamination_colors <- c(
+    "#f6f1ed",
+    "#e2cfc3",
+    "#c7a08d",
+    "#a36d58",
+    "#6f3f32"
+  )
+  completeness_colors <- c(
+    "#eef2ea",
+    "#cfd9c6",
+    "#a8bb9c",
+    "#6f8f6e",
+    "#3f5f45"
+  )
+  genome_metadata_ordered <- genome_metadata %>%
     arrange(match(genome, tree$tip.label)) %>%
-    select(genome,phylum) %>%
-    mutate(phylum = factor(phylum, levels = unique(phylum))) %>%
-    column_to_rownames(var = "genome")
+    mutate(
+      phylum = factor(phylum, levels = unique(phylum)),
+      order = factor(order, levels = unique(order))
+    )
+  circularised_genomes <- genome_metadata_ordered %>%
+    filter(as.character(circularity) %in% c("1", "TRUE", "true")) %>%
+    pull(genome)
+  completeness_breaks <- make_breaks(genome_metadata_ordered$completeness, n = 5)
+  contamination_breaks <- make_breaks(genome_metadata_ordered$contamination, n = 5)
+  genome_size_breaks <- make_breaks(genome_metadata_ordered$length, n = 5)
   
-  ### Generate the order color heatmap
-  order_heatmap <- genome_metadata %>%
-    arrange(match(genome, tree$tip.label)) %>%
-    select(genome, order) %>%
-    mutate(order = factor(order, levels = unique(order))) %>%
-    column_to_rownames(var = "genome")
+  ### basal tree
+  circular_tree_base <- force.ultrametric(tree, method = "extend") # extend to ultrametric for visualisation
+  circular_tree_base$edge.length <- circular_tree_base$edge.length * 2.05
+  circular_tree <- ggtree(circular_tree_base, layout = "fan", open.angle = 10, size = 0.35, color = "grey55")
+  circularised_tip_data <- circular_tree$data %>%
+    filter(isTip, label %in% circularised_genomes)
+  circular_tree <- circular_tree +
+    geom_tippoint(data = circularised_tip_data, color = "#fcbb6d", size = 1.2, alpha = 0.95)
   
-  ### Generate the basal tree
-  circular_tree <- force.ultrametric(tree, method="extend") %>% # extend to ultrametric for the sake of visualisation
-    ggtree(., layout="fan", open.angle=10, size=0.5)
+  ### completeness ring
+  circular_tree <- circular_tree +
+    new_scale_fill() +
+    scale_fill_stepsn(
+      colors = completeness_colors,
+      breaks = completeness_breaks,
+      name = "Completeness %",
+      na.value = "white",
+      guide = guide_colorsteps(
+        barwidth = grid::unit(4.2, "cm"),
+        barheight = grid::unit(0.35, "cm")
+      )
+    ) +
+    geom_fruit(data=genome_metadata_ordered, geom=geom_bar, 
+               mapping = aes(x=completeness, y=genome, fill=completeness),
+               offset = 0.05, pwidth = 0.07, orientation="y", stat="identity")
   
-  ### Add the phylum ring
-  circular_tree <- gheatmap(circular_tree, 
-                            phylum_heatmap, 
-                            offset = 1.2, width = 0.2, colnames = FALSE) +
-    scale_fill_manual(values = phylum_colors, name = "Phylum") +
-    geom_tiplab2(size = 1, hjust = -0.1) +
+  ### contamination ring
+  circular_tree <- circular_tree +
+    new_scale_fill() +
+    scale_fill_stepsn(
+      colors = contamination_colors,
+      breaks = contamination_breaks,
+      name = "Contamination %",
+      na.value = "white",
+      guide = guide_colorsteps(
+        barwidth = grid::unit(4.2, "cm"),
+        barheight = grid::unit(0.35, "cm")
+      )
+    ) +
+    geom_fruit(data=genome_metadata_ordered, geom=geom_bar,
+               mapping = aes(x=contamination, y=genome, fill=contamination),
+               offset = 0.015, pwidth = 0.07, orientation="y", stat="identity")
+  
+  ### genome size ring
+  circular_tree <- circular_tree +
+    new_scale_fill() +
+    scale_fill_stepsn(
+      colors = genome_size_colors,
+      breaks = genome_size_breaks,
+      labels = scales::label_number(scale_cut = scales::cut_short_scale()),
+      name = "Genome size",
+      na.value = "white",
+      guide = guide_colorsteps(
+        barwidth = grid::unit(4.2, "cm"),
+        barheight = grid::unit(0.35, "cm")
+      )
+    ) +
+    geom_fruit(data = genome_metadata_ordered, geom = geom_bar,
+               mapping = aes(x = length, y = genome, fill = length),
+               offset = 0.015, pwidth = 0.07, orientation = "y", stat = "identity")
+  
+  circular_tree <- circular_tree +
     theme(plot.margin = margin(0, 0, 0, 0), 
           panel.margin = margin(0, 0, 0, 0))
-    circular_tree <- circular_tree + new_scale_fill()
   
-  ### Add order ring
-  circular_tree <- gheatmap(circular_tree, 
-                            order_heatmap, 
-                            offset = 0.55, width = 0.3, colnames = FALSE) +
-    scale_fill_manual(values = order_colors, name = "Order") +
-    theme(legend.position = "bottom", legend.box = "vertical") 
-    circular_tree <- circular_tree + new_scale_fill()
-  
-  ### Add completeness ring
+  ### order ring 
   circular_tree <- circular_tree +
     new_scale_fill() +
-    scale_fill_gradient(low = "#d9727f", high = "#465c7a", 
-                        name = "Completeness") +
-    geom_fruit(data=genome_metadata, geom=geom_bar, 
-               mapping = aes(x=completeness, y=genome, fill=completeness),
-               offset = 1.00, orientation="y", stat="identity")
+    scale_fill_manual(
+      values = desaturate_palette(order_colors, amount = 0.12),
+      name = "Order",
+      guide = guide_legend(ncol = 2, byrow = FALSE)
+    ) +
+    geom_fruit(data = genome_metadata_ordered, geom = geom_bar,
+               mapping = aes(x = 1, y = genome, fill = order),
+               offset = 0.015, pwidth = 0.048, orientation = "y", stat = "identity",
+               width = 1.02, linewidth = 0, color = NA)
   
-  ### Add contamination ring
+  ### phylum ring
   circular_tree <- circular_tree +
     new_scale_fill() +
-    scale_fill_gradient(low = "#465c7a", high = "#d9727f",
-                        name = "Contamination %") +
-    geom_fruit(data=genome_metadata, geom=geom_bar,
-               mapping = aes(x=contamination, y=genome, fill=contamination),
-               offset = 0.05, orientation="y", stat="identity")
+    scale_fill_manual(values = desaturate_palette(phylum_colors, amount = 0.12), name = "Phylum") +
+    geom_fruit(data = genome_metadata_ordered, geom = geom_bar,
+               mapping = aes(x = 1, y = genome, fill = phylum),
+               offset = 0.001, pwidth = 0.048, orientation = "y", stat = "identity",
+               width = 1.03, linewidth = 0, color = NA) +
+    theme(
+      legend.position = "bottom",
+      legend.box = "vertical",
+      legend.spacing.y = grid::unit(0.05, "cm"),
+      legend.margin = margin(0, 0, 0, 0),
+      legend.box.margin = margin(0, 0, 0, 0),
+      legend.key.height = grid::unit(0.3, "cm"),
+      legend.key.width = grid::unit(0.5, "cm"),
+      plot.margin = margin(5, 5, 5, 5)
+    )
   
-  ### Add genome size ring
-  circular_tree <- circular_tree +
-    new_scale_fill() +
-    scale_fill_gradient(low = "#465c7a", high = "#fcbb6d", 
-                        name = "Genome size") +
-    geom_fruit(data = genome_metadata, geom = geom_bar,
-               mapping = aes(x = length, y = genome, fill = length),
-               offset = 0.01, orientation = "y", stat = "identity")
-  
-  ### Add circularised genome ring
-  circular_tree <- circular_tree +
-    new_scale_fill() +
-    scale_fill_manual(values = c("1" = "#fcbb6d", "0" = "#465c7a"), 
-                      name = 'Circularized genomes') +
-    geom_fruit(data = genome_metadata, geom = geom_bar,
-               mapping = aes(x = 1, y = genome, fill = circularity),
-               offset = 0.02, orientation = "y", stat = "identity")
-  
-  # Add text
+  # text
   circular_tree <-  circular_tree +
-    annotate('text', x=3.1, y=0, label='           Order', size=3.5) +
-    annotate('text', x=3.55, y=0, label='             Phylum', size=3.5) +
-    annotate('text', x=4.1, y=0, label='                         Completeness', size=3.5) +
-    annotate('text', x=4.5, y=0, label='                         Contamination', size=3.5) +
-    annotate('text', x=5.0, y=0, label='                       Genome size', size=3.5) +
-    annotate('text', x=5.5, y=0, label='                      Circularised', size=3.5)
+    annotate('text', x=4.00, y=0, label='Circularised', size=3.5, hjust = 0) +
+    annotate('text', x=4.40, y=0, label='Completeness', size=3.5, hjust = 0) +
+    annotate('text', x=4.80, y=0, label='Contamination', size=3.5, hjust = 0) +
+    annotate('text', x=5.10, y=0, label='Genome size', size=3.5, hjust = 0) +
+    annotate('text', x=5.45, y=0, label='Order', size=3.5, hjust = 0) +
+    annotate('text', x=5.70, y=0, label='Phylum', size=3.5, hjust = 0) +
+    coord_cartesian(clip = "off")
   
-  # Plot circular tree
-  p <-circular_tree %>% open_tree(30) %>% rotate_tree(90) 
+  # circular tree
+  p <-circular_tree %>% open_tree(55) %>% rotate_tree(90) 
   return(p)
 }
 
@@ -227,32 +304,52 @@ perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
 }
 
 # plot_pca() 
-### Use the 'pca_result' df produced from 'perform_pca' function to make the PCA plot
 plot_pca <- function(df, 
                      samples_color_metadata, samples_shape_metadata, 
                      samples_color_value, loadings_color_metadata, 
                      loadings_color_value, loadings_taxon_level,
                      sample_metadata, genome_metadata, order_colors, 
                      custom_ggplot_theme, scaling_factor_value = 1.5, 
-                     loadings_number = 10) {
+                     loadings_number = 10,
+                     group_overlay = c("none", "ellipse", "kde", "both"),
+                     overlay_group_metadata = NULL,
+                     overlay_color_values = NULL,
+                     overlay_legend = FALSE,
+                     overlay_legend_title = "Group overlay",
+                     ellipse_level = 0.95,
+                     ellipse_linewidth = 0.55,
+                     ellipse_alpha = 0.9,
+                     kde_contour_type = c("line", "filled"),
+                     kde_bins = 4,
+                     kde_breaks = NULL,
+                     kde_contour_var = c("density", "ndensity"),
+                     kde_adjust = c(1, 1),
+                     kde_n = 100,
+                     kde_linewidth = 0.6,
+                     kde_alpha = 0.9,
+                     plot_outliers = TRUE,
+                     kde_exclude_outliers_from_fit = FALSE,
+                     percent_outliers = 0.1,
+                     outlier_shape = 4,
+                     outlier_size = 1.8) {
   
-  # Extract scores from PCA results
+  group_overlay <- match.arg(group_overlay)
+  kde_contour_type <- match.arg(kde_contour_type)
+  kde_contour_var <- match.arg(kde_contour_var)
+  percent_outliers <- max(0, min(0.49, percent_outliers))
+  
   scores <- rownames_to_column(as.data.frame(df$x), var = "microsample")
   scores <- left_join(scores, sample_metadata, by = join_by(microsample == microsample))
   
-  # Calculate limits for x and y axes
   x_limit <- max(abs(scores$PC1))
   y_limit <- max(abs(scores$PC2))
   
-  # Calculate variance explained by each PC (principal component) & create labels for plot
   variance_explained <- (df$sdev^2) / sum(df$sdev^2) * 100
   pc1_label <- paste0("PC1: ", round(variance_explained[1], 2), "% variance explained")
   pc2_label <- paste0("PC2: ", round(variance_explained[2], 2), "% variance explained")
   
-  # Set a scaling factor for loadings (arrows)
   scaling_factor <- scaling_factor_value
   
-  # Extract and scale the loadings
   loadings <- df$rotation[, 1:2] %>%
     as.data.frame() %>%
     mutate(genome = rownames(.)) %>%  
@@ -264,7 +361,12 @@ plot_pca <- function(df,
     slice_max(order_by = abs_loading, n = loadings_number) %>%
     mutate(order_color = order_colors[order])
   
-  # Create ggplot
+  shape_levels <- unique(as.character(stats::na.omit(scores[[samples_shape_metadata]])))
+  shape_values <- setNames(
+    rep(c(21, 24, 23, 22, 25), length.out = length(shape_levels)),
+    shape_levels
+  )
+  
   p <- ggplot() +
     geom_point(data = scores, 
                aes(x = PC1, y = PC2, 
@@ -272,8 +374,208 @@ plot_pca <- function(df,
                    shape = .data[[samples_shape_metadata]]), 
                size = 2, alpha = 0.8,
                color = "black", stroke = 0.3) +
-    scale_fill_manual(values = samples_color_value) + 
-    scale_shape_manual(values = c(21, 24, 23, 22, 25)) +
+    scale_fill_manual(
+      values = samples_color_value,
+      name = samples_color_metadata,
+      drop = FALSE,
+      guide = guide_legend(override.aes = list(shape = 21, color = "black"))
+    ) + 
+    scale_shape_manual(values = shape_values, drop = FALSE)
+  
+  use_overlay <- group_overlay != "none"
+  overlay_data <- NULL
+  overlay_kde_data <- NULL
+  overlay_colors <- NULL
+  overlay_outliers <- tibble::tibble()
+  
+  if (use_overlay) {
+    if (is.null(overlay_group_metadata) || !overlay_group_metadata %in% colnames(scores)) {
+      warning("Overlay skipped: 'overlay_group_metadata' is missing in sample metadata.")
+      use_overlay <- FALSE
+    } else {
+      overlay_data <- scores %>%
+        filter(!is.na(PC1), !is.na(PC2), !is.na(.data[[overlay_group_metadata]])) %>%
+        mutate(overlay_group = factor(.data[[overlay_group_metadata]]))
+      
+      if (nrow(overlay_data) < 4 || nlevels(overlay_data$overlay_group) < 2) {
+        warning("Overlay skipped: insufficient points/groups for contour/ellipse overlay.")
+        use_overlay <- FALSE
+      } else {
+        overlay_levels <- levels(overlay_data$overlay_group)
+        fallback_cols <- setNames(grDevices::hcl.colors(length(overlay_levels), palette = "Dark 3"), overlay_levels)
+        
+        if (!is.null(overlay_color_values)) {
+          if (is.null(names(overlay_color_values))) {
+            overlay_colors <- setNames(rep(overlay_color_values, length.out = length(overlay_levels)), overlay_levels)
+          } else {
+            overlay_colors <- overlay_color_values[overlay_levels]
+            names(overlay_colors) <- overlay_levels
+          }
+        } else if (!is.null(samples_color_value)) {
+          if (is.null(names(samples_color_value))) {
+            overlay_colors <- setNames(rep(samples_color_value, length.out = length(overlay_levels)), overlay_levels)
+          } else {
+            overlay_colors <- samples_color_value[overlay_levels]
+            names(overlay_colors) <- overlay_levels
+          }
+        }
+        
+        if (is.null(overlay_colors)) {
+          overlay_colors <- fallback_cols
+        } else {
+          na_idx <- is.na(overlay_colors)
+          overlay_colors[na_idx] <- fallback_cols[names(overlay_colors)[na_idx]]
+        }
+        
+        if (group_overlay %in% c("kde", "both") && (plot_outliers || kde_exclude_outliers_from_fit)) {
+          overlay_outliers <- overlay_data %>%
+            group_by(overlay_group) %>%
+            group_modify(~{
+              if (nrow(.x) < 5) {
+                return(.x[0, , drop = FALSE])
+              }
+              cov_mat <- tryCatch(stats::cov(.x[, c("PC1", "PC2")]), error = function(e) NA)
+              if (anyNA(cov_mat) || abs(det(cov_mat)) < .Machine$double.eps) {
+                return(.x[0, , drop = FALSE])
+              }
+              d2 <- stats::mahalanobis(.x[, c("PC1", "PC2")], center = colMeans(.x[, c("PC1", "PC2")]), cov = cov_mat)
+              cutoff <- stats::quantile(d2, probs = 1 - percent_outliers, na.rm = TRUE)
+              .x[d2 > cutoff, , drop = FALSE]
+            }) %>%
+            ungroup()
+          
+          if (kde_exclude_outliers_from_fit && nrow(overlay_outliers) > 0) {
+            overlay_kde_data <- overlay_data %>%
+              anti_join(
+                overlay_outliers %>% select(microsample, overlay_group),
+                by = c("microsample", "overlay_group")
+              )
+          }
+        }
+      }
+    }
+  }
+  
+  if (use_overlay) {
+    has_ellipse <- group_overlay %in% c("ellipse", "both")
+    has_kde <- group_overlay %in% c("kde", "both")
+    use_overlay_color_scale <- FALSE
+    if (is.null(overlay_kde_data)) overlay_kde_data <- overlay_data
+    
+    if (has_ellipse) {
+      p <- p + stat_ellipse(
+        data = overlay_data,
+        aes(x = PC1, y = PC2, color = overlay_group, group = overlay_group),
+        type = "norm",
+        level = ellipse_level,
+        linewidth = ellipse_linewidth,
+        alpha = ellipse_alpha,
+        show.legend = overlay_legend
+      )
+      use_overlay_color_scale <- TRUE
+    }
+    
+    if (has_kde) {
+      if (kde_contour_type == "line") {
+        p <- p + stat_density_2d(
+          data = overlay_kde_data,
+          aes(x = PC1, y = PC2, color = overlay_group, group = overlay_group),
+          contour = TRUE,
+          contour_var = kde_contour_var,
+          bins = kde_bins,
+          breaks = kde_breaks,
+          adjust = kde_adjust,
+          n = kde_n,
+          linewidth = kde_linewidth,
+          alpha = kde_alpha,
+          show.legend = overlay_legend
+        )
+        use_overlay_color_scale <- TRUE
+      } else {
+        p <- p +
+          ggnewscale::new_scale_fill() +
+          stat_density_2d(
+            data = overlay_kde_data,
+            aes(x = PC1, y = PC2, fill = overlay_group, group = overlay_group, alpha = after_stat(level)),
+            geom = "polygon",
+            contour = TRUE,
+            contour_var = kde_contour_var,
+            bins = kde_bins,
+            breaks = kde_breaks,
+            adjust = kde_adjust,
+            n = kde_n,
+            color = NA,
+            show.legend = overlay_legend && !has_ellipse
+          ) +
+          scale_fill_manual(
+            values = overlay_colors,
+            name = overlay_legend_title,
+            guide = if (overlay_legend && !has_ellipse) "legend" else "none"
+          ) +
+          scale_alpha_continuous(range = c(0.10, kde_alpha), guide = "none") +
+          stat_density_2d(
+            data = overlay_kde_data,
+            aes(x = PC1, y = PC2, color = overlay_group, group = overlay_group),
+            contour = TRUE,
+            contour_var = kde_contour_var,
+            bins = kde_bins,
+            breaks = kde_breaks,
+            adjust = kde_adjust,
+            n = kde_n,
+            linewidth = kde_linewidth * 0.7,
+            alpha = pmin(1, kde_alpha + 0.05),
+            show.legend = FALSE
+          )
+      }
+      
+      if (plot_outliers && nrow(overlay_outliers) > 0) {
+        if (kde_contour_type == "line" || has_ellipse) {
+          p <- p + geom_point(
+            data = overlay_outliers,
+            aes(x = PC1, y = PC2, color = overlay_group),
+            shape = outlier_shape,
+            size = outlier_size,
+            stroke = 0.5,
+            alpha = 0.9,
+            show.legend = FALSE
+          )
+          use_overlay_color_scale <- TRUE
+        } else {
+          p <- p + geom_point(
+            data = overlay_outliers,
+            aes(x = PC1, y = PC2),
+            shape = outlier_shape,
+            size = outlier_size,
+            stroke = 0.5,
+            alpha = 0.9,
+            color = "black",
+            show.legend = FALSE
+          )
+        }
+      }
+    }
+    
+    if (use_overlay_color_scale) {
+      p <- p + scale_color_manual(values = overlay_colors, name = overlay_legend_title)
+    }
+  }
+  
+  if (use_overlay) {
+    p <- p +
+      ggnewscale::new_scale_fill() +
+      scale_fill_manual(values = samples_color_value, guide = "none", drop = FALSE) +
+      geom_point(
+        data = scores,
+        aes(x = PC1, y = PC2,
+            fill = .data[[samples_color_metadata]],
+            shape = .data[[samples_shape_metadata]]),
+        size = 2, alpha = 0.8,
+        color = "black", stroke = 0.3,
+        show.legend = FALSE
+      )
+  }
+  
+  p <- p +
     new_scale_color() + 
     geom_segment(data = loadings, 
                  aes(x = 0, y = 0, xend = PC1, yend = PC2, color = .data[[loadings_color_metadata]]),
@@ -291,8 +593,7 @@ plot_pca <- function(df,
     geom_hline(yintercept = 0, color = "darkgrey") +
     geom_vline(xintercept = 0, color = "darkgrey") +
     theme_minimal() +
-    custom_ggplot_theme +
-    guides(fill = guide_legend(override.aes = list(shape = 21, color = "black"))) 
+    custom_ggplot_theme
   
   return(p)
 }
