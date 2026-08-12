@@ -127,6 +127,79 @@ barplot(
 palette_color <- order_colors
 ```
 
+```{r family_colors, echo = FALSE, warning = FALSE, message = FALSE}
+# Lighter-to-darker shades of each order colour for multi-family orders.
+family_gradient_colors <- function(base_color, n) {
+  if (n <= 1) return(base_color)
+  rgb_col <- grDevices::col2rgb(base_color)[, 1] / 255
+  lighten <- function(col, amount = 0.45) col * (1 - amount) + amount
+  darken <- function(col, amount = 0.3) col * (1 - amount)
+  light_col <- lighten(rgb_col)
+  dark_col <- darken(rgb_col)
+  ramp <- grDevices::colorRampPalette(c(
+    grDevices::rgb(light_col[1], light_col[2], light_col[3]),
+    base_color,
+    grDevices::rgb(dark_col[1], dark_col[2], dark_col[3])
+  ))
+  ramp(n)
+}
+
+# Families present in the macro-scale MAG catalogue (mirrors macromag_genomemetadata).
+order_family_map <- tibble::tribble(
+  ~order, ~family,
+  "Actinomycetales", "Bifidobacteriaceae",
+  "Bacteroidales", "Rikenellaceae",
+  "CAJFEE01", "CAJFEE01",
+  "Christensenellales", "Borkfalkiaceae",
+  "Christensenellales", "CAG-314",
+  "Christensenellales", "CAG-74",
+  "Christensenellales", "UBA1750",
+  "Clostridiales", "Clostridiaceae",
+  "Coriobacteriales", "Eggerthellaceae",
+  "Enterobacterales", "Enterobacteriaceae",
+  "Erysipelotrichales", "Coprobacillaceae",
+  "Erysipelotrichales", "Erysipelotrichaceae",
+  "Lachnospirales", "Anaerotignaceae",
+  "Lachnospirales", "CAG-274",
+  "Lachnospirales", "Lachnospiraceae",
+  "Lactobacillales", "Enterococcaceae",
+  "Lactobacillales", "Lactobacillaceae",
+  "Lactobacillales", "Streptococcaceae",
+  "ML615J-28", "CAG-313",
+  "Monoglobales", "Monoglobaceae",
+  "Oscillospirales", "Acutalibacteraceae",
+  "Oscillospirales", "Butyricicoccaceae",
+  "Oscillospirales", "Oscillospiraceae",
+  "Oscillospirales", "Ruminococcaceae",
+  "Paenibacillales", "Paenibacillaceae",
+  "Peptostreptococcales", "Anaerovoracaceae",
+  "Peptostreptococcales", "Peptostreptococcaceae",
+  "RF39", "UBA660",
+  "TANB77", "CAG-508",
+  "UBA1381", "UBA1381",
+  "Verrucomicrobiales", "Akkermansiaceae"
+)
+
+family_colors <- do.call(c, unname(lapply(
+  split(order_family_map, order_family_map$order, drop = TRUE),
+  function(df) {
+    base <- order_colors[[gsub("-", "_", df$order[1])]] # order_colors keys use "_"
+    cols <- family_gradient_colors(base, nrow(df))
+    stats::setNames(cols, df$family)
+  }
+)))
+
+barplot(
+  1:length(family_colors),
+  col = family_colors,
+  main = "Family Colors",
+  yaxt = "n",
+  names.arg = names(family_colors),
+  las = 2,
+  cex.names = 0.7
+)
+```
+
 ```{r lawsonibacter_colors, echo = FALSE, warning = FALSE, message = FALSE}
 lawsonibacter_colors <- c(
   `GPB:bin_000217` = "#79b1a3",

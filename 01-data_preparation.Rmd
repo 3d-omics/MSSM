@@ -754,5 +754,10 @@ load("resources/working_data_object_new.Rdata") # load the data from 1-data_prep
 # update microquant_metrics_filt_30 
 # 98ANI 
 # update phyloseq object 
-#save.image(file = "resources/working_data_object.Rdata")
+# Do not use save.image(): it embeds themes and helper functions. Themes break
+# across ggplot2 versions; functions overwrite the scripts sourced in index.Rmd.
+#save(list = ls()[!vapply(ls(), function(x) {
+#  obj <- get(x); inherits(obj, "theme") || is.function(obj)
+#}, logical(1))],
+#     file = "resources/working_data_object.Rdata")
 ```

@@ -1,7 +1,8 @@
 # Supporting Information
 
 ```{r load_data_supplementary, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-load("resources/working_data_object.Rdata") 
+#load("resources/working_data_object.Rdata") 
+load_working_data("resources/working_data_object.Rdata")
 ```
 
 ## S1: Lysis Conditions

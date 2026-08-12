@@ -1,3 +1,22 @@
+# load_working_data()
+# The stored workspace was created with save.image(), so it also embeds plotting themes and copies of helper functions. 
+# Themes serialised by a newer ggplot2 break theme merging; functions overwrite the versions sourced from MSSM_functions.R / JEC_1743_sm_apps5.R (and dplyr::select / dplyr::recode set in index.Rmd). 
+# We skip both so index.Rmd remains the source of truth for code.
+# Requires those scripts (and the dplyr aliases) to be sourced before this runs, which is the normal bookdown order.
+load_working_data <- function(path = "resources/working_data_object.Rdata",
+                              envir = globalenv()) {
+  data_env <- new.env()
+  load(path, envir = data_env)
+  objects <- ls(data_env, all.names = TRUE)
+  skip <- vapply(objects, function(x) {
+    obj <- get(x, envir = data_env)
+    inherits(obj, "theme") || is.function(obj)
+  }, logical(1))
+  list2env(mget(objects[!skip], envir = data_env), envir = envir)
+  invisible(objects[skip])
+}
+
+
 # format_median_iqr ()
 format_median_iqr <- function(x) {
   med <- median(x, na.rm = TRUE)
@@ -983,7 +1002,7 @@ prepare_spatial_section <- function(cryosection_id,
   )
 }
 
-## 3. Spatial RLQ function
+## Spatial RLQ function
 run_spatial_rlq <- function(cryosection_id,
                             comm_red,
                             metadata_section,
@@ -1151,3 +1170,530 @@ run_spatial_rlq <- function(cryosection_id,
     alignment_check = alignment_check
   )
 }
+
+## Spatial RLQ tables
+
+# match_genomes()
+# RLQ tables name genomes with "_" (GPB_bin_000056), the tree and the GIFT tables with ":" (GPB:bin_000056).
+match_genomes <- function(norm_names, pool) {
+  pool[gsub(":", "_", pool) %in% norm_names]
+}
+
+# gifts_subset()
+gifts_subset <- function(norm_names, gifts = macromag_gifts) {
+  gifts[match_genomes(norm_names, rownames(gifts)), , drop = FALSE]
+}
+
+# tree_subset()
+tree_subset <- function(norm_names, tree = macromag_tree) {
+  ape::keep.tip(tree, match_genomes(norm_names, tree$tip.label))
+}
+
+# safe_rotate()
+# Node numbers refer to a tree pruned to a given genome set, so rotate only when the node is an internal node of that tree.
+safe_rotate <- function(tree, node) {
+  n_tip <- length(tree$tip.label)
+  if (node > n_tip && node <= n_tip + tree$Nnode) return(ape::rotate(tree, node))
+  warning("node ", node, " is not an internal node of this tree", call. = FALSE)
+  tree
+}
+
+# rlq_traits_table()
+# Genome-side (P+T) loadings of one cryosection: one row per genome, one AxcQ<axis>_<cryosection> column per requested axis.
+rlq_traits_table <- function(section, axes = 1:2,
+                             results = spatial_rlq_results_flipped) {
+  lq <- as.data.frame(results[[section]]$rlqmix$lQ)
+  out <- tibble(genome = rownames(lq))
+  for (ax in axes) {
+    out[[paste0("AxcQ", ax, "_", section)]] <- lq[[paste0("AxcQ", ax)]]
+  }
+  out
+}
+
+# rlq_space_table()
+# Sample-side (E+S) scores of one cryosection: coordinates, one AxcR<axis>_<cryosection> column per axis and the environmental RLQ inputs.
+rlq_space_table <- function(section, axes = 1:2,
+                            results = spatial_rlq_results_flipped,
+                            datasets = spatial_datasets) {
+  scores <- results[[section]]$rlq_scores
+  out <- scores %>% select(microsample, Xcoord, Ycoord)
+  for (ax in axes) {
+    out[[paste0("AxcR", ax, "_", section)]] <- scores[[paste0("AxcR", ax)]]
+  }
+  out %>%
+    left_join(
+      datasets[[section]]$metadata %>%
+        transmute(
+          microsample,
+          div = richness,
+          log_seq_counts = log(after_filtering.total_bases),
+          distance_host
+        ),
+      by = "microsample"
+    ) %>%
+    as_tibble()
+}
+
+# rlq_repl_traits_table()
+# Genome-side loadings of several cryosections side by side, restricted to the genomes they share.
+rlq_repl_traits_table <- function(sections, axis,
+                                  results = spatial_rlq_results_flipped) {
+  Reduce(
+    function(x, y) inner_join(x, y, by = "genome"),
+    lapply(sections, rlq_traits_table, axes = axis, results = results)
+  )
+}
+
+# make_extRLQ_tree_data()
+# Per-tip annotation: order/family plus the genome-side axis columns.
+make_extRLQ_tree_data <- function(tree, traits,
+                                  genome_metadata = macromag_genomemetadata) {
+  tibble(genome = tree$tip.label) %>%
+    mutate(norm = gsub(":", "_", genome)) %>%
+    left_join(genome_metadata %>% select(genome, order, family), by = "genome") %>%
+    left_join(traits, by = c("norm" = "genome"))
+}
+
+
+## Spatial RLQ figures
+
+# extRLQ_rdbu_scale()
+# Shared diverging scale of all sample-side RLQ plots.
+extRLQ_rdbu_scale <- function(lim, name) {
+  scale_color_fermenter(palette = "RdBu", n.breaks = 7,
+                        limits = c(-lim, lim), name = name)
+}
+
+# extRLQ_axis_r_lim()
+# Symmetric colour limit spanning several cryosections.
+extRLQ_axis_r_lim <- function(space_dfs, axis_cols) {
+  vals <- unlist(Map(function(df, col) df[[col]], space_dfs, axis_cols))
+  max(abs(vals), na.rm = TRUE)
+}
+
+# build_extRLQ_grad_tree()
+# Tree with tip points coloured by an RLQ axis (`axis_col`), and clade boxes and clade labels at `tax_rank` drawn as a fade of the taxon colour.
+build_extRLQ_grad_tree <- function(tree, tree_data, axis_col, axis_label,
+                                   tax_rank = "order") {
+  color_map <- switch(tax_rank,
+                      family = family_colors,
+                      order  = order_colors,
+                      stop("tax_rank must be 'family' or 'order'"))
+
+  axis_lim <- max(abs(tree_data[[axis_col]]), na.rm = TRUE)
+
+  grad <- ggtree(tree, size = 0.6, ladderize = FALSE) %<+% tree_data
+  tips <- grad$data %>% filter(isTip)
+  x_root <- min(grad$data$x, na.rm = TRUE)
+  label_x <- max(tips$x, na.rm = TRUE) + 0.04
+
+  labels <- tips %>%
+    filter(!is.na(.data[[tax_rank]])) %>%
+    mutate(taxon = .data[[tax_rank]]) %>%
+    arrange(desc(y)) %>%
+    distinct(taxon, .keep_all = TRUE) %>%
+    transmute(taxon, x = label_x, y)
+
+  boxes <- tips %>%
+    filter(!is.na(.data[[tax_rank]])) %>%
+    mutate(taxon = .data[[tax_rank]]) %>%
+    group_by(taxon) %>%
+    summarise(ymin = min(y) - 0.5, ymax = max(y) + 0.5, .groups = "drop")
+
+  grad_layers <- lapply(seq_len(nrow(boxes)), function(i) {
+    tax <- boxes$taxon[i]
+    tax_fill <- if (tax %in% names(color_map)) color_map[[tax]] else "grey80"
+    tax_grad <- grid::linearGradient(
+      colours = c(scales::alpha(tax_fill, 0), scales::alpha(tax_fill, 0.65)),
+      x1 = 0, y1 = 0.5, x2 = 1, y2 = 0.5)
+    annotation_custom(
+      grob = grid::rectGrob(gp = grid::gpar(fill = tax_grad, col = NA)),
+      xmin = x_root, xmax = label_x,
+      ymin = boxes$ymin[i], ymax = boxes$ymax[i])
+  })
+
+  grad <- grad +
+    grad_layers +
+    geom_tippoint(aes(fill = .data[[axis_col]]),
+                  shape = 21, size = 2.8, stroke = 0.4, color = "grey30") +
+    scale_fill_fermenter(palette = "RdBu", n.breaks = 7,
+                         limits = c(-axis_lim, axis_lim), name = axis_label) +
+    geom_text2(data = labels, mapping = aes(x = x, y = y, label = taxon),
+               inherit.aes = FALSE, size = 2.6, hjust = 0, vjust = 0.5) +
+    coord_cartesian(clip = "off") +
+    theme(legend.position = "bottom",
+          legend.direction = "horizontal",
+          legend.title.position = "top",
+          plot.margin = margin(5.5, 90, 5.5, 5.5, "pt"))
+
+  # gradient boxes to the back, so branches and tips sit on top
+  is_box <- vapply(grad$layers,
+                   function(l) inherits(l$geom, "GeomCustomAnn"), logical(1))
+  grad$layers <- c(grad$layers[is_box], grad$layers[!is_box])
+  grad
+}
+
+# build_extRLQ_family_tree_bars()
+# Tree with tip points coloured by family (which frees the fill aesthetic) and one bar panel per column in `bar_cols`, all on a single shared RdBu scale.
+build_extRLQ_family_tree_bars <- function(tree, tree_data, bar_cols, bar_legend,
+                                         tax_rank = "order",
+                                         bar_pwidth = 0.25,
+                                         bar_offset = 0.18,
+                                         first_offset = 0.5,
+                                         bar_width = 0.7) {
+  color_map <- switch(tax_rank,
+                      family = family_colors,
+                      order  = order_colors,
+                      stop("tax_rank must be 'family' or 'order'"))
+
+  bar_lim <- max(abs(unlist(tree_data[bar_cols])), na.rm = TRUE)
+
+  grad <- ggtree(tree, size = 0.6, ladderize = FALSE) %<+% tree_data
+  tips <- grad$data %>% filter(isTip)
+  x_root <- min(grad$data$x, na.rm = TRUE)
+  label_x <- max(tips$x, na.rm = TRUE) + 0.04
+
+  labels <- tips %>%
+    filter(!is.na(.data[[tax_rank]])) %>%
+    mutate(taxon = .data[[tax_rank]]) %>%
+    arrange(desc(y)) %>%
+    distinct(taxon, .keep_all = TRUE) %>%
+    transmute(taxon, x = label_x, y)
+
+  boxes <- tips %>%
+    filter(!is.na(.data[[tax_rank]])) %>%
+    mutate(taxon = .data[[tax_rank]]) %>%
+    group_by(taxon) %>%
+    summarise(ymin = min(y) - 0.5, ymax = max(y) + 0.5, .groups = "drop")
+
+  grad_layers <- lapply(seq_len(nrow(boxes)), function(i) {
+    tax <- boxes$taxon[i]
+    tax_fill <- if (tax %in% names(color_map)) color_map[[tax]] else "grey80"
+    tax_grad <- grid::linearGradient(
+      colours = c(scales::alpha(tax_fill, 0), scales::alpha(tax_fill, 0.65)),
+      x1 = 0, y1 = 0.5, x2 = 1, y2 = 0.5)
+    annotation_custom(
+      grob = grid::rectGrob(gp = grid::gpar(fill = tax_grad, col = NA)),
+      xmin = x_root, xmax = label_x,
+      ymin = boxes$ymin[i], ymax = boxes$ymax[i])
+  })
+
+  grad <- grad +
+    grad_layers +
+    geom_tippoint(aes(color = family), shape = 15, size = 1.5) +
+    scale_color_manual(values = family_colors, guide = "none") +
+    geom_text2(data = labels, mapping = aes(x = x, y = y, label = taxon),
+               inherit.aes = FALSE, size = 2.6, hjust = 0, vjust = 0.5)
+
+  # Map() so each layer captures its own column (a for-loop would not)
+  offsets <- c(first_offset, rep(bar_offset, length(bar_cols) - 1))
+  bar_layers <- Map(function(col, off) {
+    geom_fruit(
+      geom = geom_bar,
+      mapping = aes(x = !!rlang::sym(col), y = label, fill = !!rlang::sym(col)),
+      orientation = "y", stat = "identity",
+      offset = off, pwidth = bar_pwidth, width = bar_width)
+  }, bar_cols, offsets)
+
+  grad <- grad +
+    bar_layers +
+    scale_fill_fermenter(palette = "RdBu", n.breaks = 7,
+                         limits = c(-bar_lim, bar_lim), name = bar_legend) +
+    coord_cartesian(clip = "off") +
+    theme(legend.position = "right",
+          plot.margin = margin(5.5, 90, 5.5, 5.5, "pt"))
+
+  is_box <- vapply(grad$layers,
+                   function(l) inherits(l$geom, "GeomCustomAnn"), logical(1))
+  grad$layers <- c(grad$layers[is_box], grad$layers[!is_box])
+  grad
+}
+
+# build_gift_tree_heatmap_len()
+# Gradient tree + GIFT element heatmap of the degradation functions (D01 lipid, D02 polysaccharide, D03 sugar) + genome length bar. 
+# Each element is centred and scaled across genomes.
+build_gift_tree_heatmap_len <- function(grad_tree, gifts_sel,
+                                        genome_metadata = macromag_genomemetadata) {
+  gift_funcs_of_interest <- c("D01", "D02", "D03")
+
+  gift_elements_long <- gifts_sel %>%
+    to.elements(., GIFT_db) %>%
+    as.data.frame() %>%
+    rownames_to_column(var = "genome") %>%
+    pivot_longer(cols = -genome, names_to = "Code_element", values_to = "GIFT") %>%
+    filter(substr(Code_element, 1, 3) %in% gift_funcs_of_interest)
+
+  uniqueGIFT_db <- unique(GIFT_db[, c("Code_element", "Code_function",
+                                      "Function", "Element")])
+
+  func_labels <- uniqueGIFT_db %>%
+    distinct(Code_function, Function) %>%
+    filter(Code_function %in% gift_funcs_of_interest) %>%
+    mutate(Code_function = factor(Code_function, levels = gift_funcs_of_interest)) %>%
+    arrange(Code_function)
+
+  tip_y <- grad_tree$data %>%
+    filter(isTip) %>%
+    transmute(genome = label, y)
+
+  # columns by function, then element code, with readable element names on top
+  gift_heat_cols <- gift_elements_long %>%
+    distinct(Code_element) %>%
+    mutate(Code_function = factor(substr(Code_element, 1, 3),
+                                  levels = gift_funcs_of_interest)) %>%
+    left_join(uniqueGIFT_db %>% distinct(Code_element, Element), by = "Code_element") %>%
+    arrange(Code_function, Code_element)
+  gift_heat_col_levels <- gift_heat_cols$Code_element
+  gift_heat_elem_labels <- setNames(gift_heat_cols$Element, gift_heat_cols$Code_element)
+
+  gift_heat_mat <- gift_elements_long %>%
+    filter(genome %in% tip_y$genome) %>%
+    select(genome, Code_element, GIFT) %>%
+    pivot_wider(names_from = Code_element, values_from = GIFT) %>%
+    column_to_rownames("genome") %>%
+    as.matrix()
+  gift_heat_mat <- gift_heat_mat[, gift_heat_col_levels, drop = FALSE]
+
+  gift_heat_z <- scale(gift_heat_mat)
+  gift_heat_z[is.nan(gift_heat_z)] <- 0 # elements with sd = 0 give NaN
+  gift_heat_values <- gift_heat_z
+  gift_heat_zlim <- c(-ceiling(max(abs(gift_heat_z), na.rm = TRUE)),
+                      ceiling(max(abs(gift_heat_z), na.rm = TRUE)))
+  gift_heat_fill <- scale_fill_gradientn(
+    colours = c("#7F5F00", "#D9A521", "white", "#2F7D88", "#0B3D46"),
+    values = scales::rescale(c(gift_heat_zlim[1], gift_heat_zlim[1] / 2, 0,
+                               gift_heat_zlim[2] / 2, gift_heat_zlim[2])),
+    limits = gift_heat_zlim,
+    oob = scales::squish,
+    name = "GIFT (z)",
+    guide = guide_colorbar(title.position = "top",
+                           barwidth = unit(5, "cm"), barheight = unit(0.35, "cm"),
+                           ticks.colour = "grey30"))
+
+  gift_heat_long <- gift_heat_values %>%
+    as.data.frame() %>%
+    rownames_to_column("genome") %>%
+    pivot_longer(-genome, names_to = "Code_element", values_to = "value") %>%
+    mutate(Code_function = factor(substr(Code_element, 1, 3),
+                                  levels = gift_funcs_of_interest),
+           Code_element = factor(Code_element, levels = gift_heat_col_levels))
+
+  gift_func_name_vec <- setNames(
+    str_wrap(as.character(func_labels$Function), 16),
+    as.character(func_labels$Code_function))
+
+  gift_func_strip_colors <- c(D01 = "#F4D58D", D02 = "#BFD7B5", D03 = "#A9C5E0")
+
+  gift_heat_func_facet <- ggh4x::facet_grid2(
+    . ~ Code_function, scales = "free_x", space = "free_x",
+    labeller = labeller(Code_function = gift_func_name_vec),
+    strip = ggh4x::strip_themed(
+      background_x = ggh4x::elem_list_rect(
+        fill = unname(gift_func_strip_colors[gift_funcs_of_interest]))))
+
+  gift_heat_ylim <- c(min(tip_y$y) - 0.5, max(tip_y$y) + 0.5)
+
+  gift_heat_tree <- grad_tree +
+    scale_y_continuous(limits = gift_heat_ylim, expand = c(0, 0)) +
+    coord_cartesian(clip = "off", ylim = gift_heat_ylim) +
+    theme(legend.position = "bottom", legend.direction = "horizontal",
+          legend.title.position = "top",
+          plot.margin = margin(5.5, 70, 5.5, 5.5, "pt"))
+
+  heat_panel <- gift_heat_long %>%
+    inner_join(tip_y, by = "genome") %>%
+    ggplot(aes(x = Code_element, y = y, fill = value)) +
+    geom_tile(colour = "white", linewidth = 0.2) +
+    gift_heat_fill +
+    gift_heat_func_facet +
+    scale_x_discrete(position = "top", labels = gift_heat_elem_labels) +
+    scale_y_continuous(limits = gift_heat_ylim, expand = c(0, 0)) +
+    labs(x = NULL, y = NULL) +
+    theme_minimal() +
+    theme(plot.margin = margin(5.5, 5.5, 5.5, 0, "pt"),
+          axis.text.x.top = element_text(angle = 90, hjust = 0, vjust = 0.5, size = 7),
+          axis.text.y = element_blank(), axis.ticks.y = element_blank(),
+          panel.grid = element_blank(), panel.spacing.x = unit(4, "pt"),
+          strip.text = element_text(size = 7, face = "bold"),
+          legend.position = "bottom", legend.direction = "horizontal",
+          legend.title.position = "top")
+
+  len_panel <- tip_y %>%
+    left_join(genome_metadata %>% select(genome, length), by = "genome") %>%
+    mutate(panel = "Genome length") %>%
+    ggplot(aes(x = "len", y = y, fill = length)) +
+    geom_tile(colour = "white", linewidth = 0.2) +
+    scale_fill_gradientn(
+      colours = c("#eef3f6", "#c9d7e1", "#98b2c2", "#66879c", "#35556b"),
+      name = "Genome length",
+      labels = scales::label_number(scale = 1e-6, suffix = " Mb"),
+      guide = guide_colorbar(title.position = "top",
+                             barwidth = unit(3, "cm"), barheight = unit(0.35, "cm"),
+                             ticks.colour = "grey30")) +
+    ggh4x::facet_grid2(. ~ panel,
+      strip = ggh4x::strip_themed(
+        background_x = ggh4x::elem_list_rect(fill = "#c9d7e1"))) +
+    scale_x_discrete(position = "top", labels = NULL) +
+    scale_y_continuous(limits = gift_heat_ylim, expand = c(0, 0)) +
+    labs(x = NULL, y = NULL) +
+    theme_minimal() +
+    theme(plot.margin = margin(5.5, 5.5, 5.5, 6, "pt"),
+          axis.text.x = element_blank(), axis.text.y = element_blank(),
+          axis.ticks = element_blank(), panel.grid = element_blank(),
+          strip.text = element_text(size = 7, face = "bold"),
+          legend.position = "bottom", legend.direction = "horizontal",
+          legend.title.position = "top")
+
+  (gift_heat_tree + heat_panel + len_panel) +
+    plot_layout(widths = c(0.7, 1.1, 0.10), guides = "collect") &
+    theme(legend.position = "bottom", legend.direction = "horizontal",
+          legend.box = "vertical", legend.title.position = "top")
+}
+
+# build_extRLQ_scatter()
+# An RLQ sample-side score against an environmental variable, with a linear trend and the Spearman correlation in the subtitle.
+build_extRLQ_scatter <- function(df, x_col, axis_col, x_label, axis_label,
+                                 axis_lim = NULL, legend_label = NULL,
+                                 show_legend = TRUE) {
+  ct <- suppressWarnings(cor.test(df[[x_col]], df[[axis_col]], method = "spearman"))
+  lim <- if (is.null(axis_lim)) max(abs(df[[axis_col]]), na.rm = TRUE) else axis_lim
+  leg_name <- if (is.null(legend_label)) axis_label else legend_label
+  p <- ggplot(df, aes(x = .data[[x_col]], y = .data[[axis_col]],
+                      color = .data[[axis_col]])) +
+    geom_point(size = 2) +
+    geom_smooth(method = "lm", se = TRUE, color = "grey30", linewidth = 0.5) +
+    extRLQ_rdbu_scale(lim, leg_name) +
+    labs(x = x_label, y = axis_label,
+         subtitle = sprintf("Spearman rho = %.2f, p = %.3g",
+                            unname(ct$estimate), ct$p.value)) +
+    theme_minimal()
+  if (!show_legend) p <- p + theme(legend.position = "none")
+  p
+}
+
+# layout_extRLQ_scatter_pair()
+# Two scatters side by side, y-axis on the left panel and legend on the right
+layout_extRLQ_scatter_pair <- function(plot_left, plot_right) {
+  plot_left <- plot_left + theme(legend.position = "none")
+  plot_right <- plot_right +
+    theme(axis.title.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.ticks.y = element_blank())
+  plot_left + plot_right + plot_layout(widths = c(1, 1))
+}
+
+# layout_extRLQ_scatter_grid()
+# One column per cryosection, `plots_div` on top and `plots_seq` below
+layout_extRLQ_scatter_grid <- function(plots_div, plots_seq) {
+  n <- length(plots_div)
+  stopifnot(length(plots_seq) == n)
+
+  style_panel <- function(p, col, show_legend = FALSE) {
+    p <- p + theme(legend.position = if (show_legend) "right" else "none")
+    if (col > 1) {
+      p <- p + theme(axis.title.y = element_blank(),
+                     axis.text.y = element_blank(),
+                     axis.ticks.y = element_blank(),
+                     axis.title.x = element_blank())
+    }
+    p
+  }
+
+  top <- Reduce(`|`, Map(function(p, i) style_panel(p, i), plots_div, seq_len(n)))
+  bot <- Reduce(`|`, Map(function(p, i) style_panel(p, i, show_legend = (i == n)),
+                         plots_seq, seq_len(n)))
+  top / bot + plot_layout(widths = rep(1, n), heights = c(1, 1))
+}
+
+
+## Cryosection overlays
+
+# cryosection_image()
+cryosection_image <- function(cryo, dir = pixel_coords_dir, brightness = 100) {
+  if (!dir.exists(dir)) return(NULL)
+  hits <- list.files(dir, pattern = paste0("^", cryo, "_bright[.]png$"),
+                     recursive = TRUE, full.names = TRUE)
+  if (length(hits) == 0) {
+    hits <- list.files(dir, pattern = paste0("^", cryo, "[.]png$"),
+                       recursive = TRUE, full.names = TRUE)
+  }
+  if (length(hits) == 0) return(NULL)
+  magick::image_modulate(magick::image_read(hits[1]), brightness = brightness)
+}
+
+# make_overlay_df()
+# Pixel position of each microsample plus the value to colour it by. Image pixel y starts at the top, ggplot's at the bottom, so y is flipped
+make_overlay_df <- function(cryo, space_df, value_col,
+                            pixel_coords = pixel_coords_all, image_size = 1000) {
+  pixel_coords %>%
+    filter(cryosection == cryo, !is.na(pixel_x), !is.na(pixel_y)) %>%
+    select(microsample, pixel_x, pixel_y) %>%
+    inner_join(space_df %>% select(microsample, all_of(value_col)),
+               by = "microsample") %>%
+    mutate(pixel_y_flip = image_size - pixel_y)
+}
+
+# build_pixel_overlay()
+# Microsamples drawn on cryosection image
+build_pixel_overlay <- function(overlay_df, value_col, img, value_label,
+                                diverging = TRUE, n_bins = 5, image_size = 1000,
+                                axis_lim = NULL, show_legend = TRUE) {
+  plot_df <- overlay_df
+  if (diverging) {
+    color_aes <- aes(x = pixel_x, y = pixel_y_flip, color = .data[[value_col]])
+    lim <- if (is.null(axis_lim)) {
+      max(abs(plot_df[[value_col]]), na.rm = TRUE)
+    } else {
+      axis_lim
+    }
+    color_scale <- extRLQ_rdbu_scale(lim, value_label)
+  } else {
+    bin_col <- paste0(value_col, "_bin")
+    breaks <- unique(quantile(plot_df[[value_col]],
+                              probs = seq(0, 1, length.out = n_bins + 1),
+                              na.rm = TRUE))
+    if (length(breaks) < 3) {
+      breaks <- pretty(range(plot_df[[value_col]], na.rm = TRUE), n = n_bins)
+    }
+    plot_df[[bin_col]] <- cut(plot_df[[value_col]], breaks = breaks,
+                              include.lowest = TRUE, dig.lab = 4)
+    color_aes <- aes(x = pixel_x, y = pixel_y_flip, color = .data[[bin_col]])
+    color_scale <- scale_color_viridis_d(name = value_label, option = "viridis")
+  }
+
+  ggplot(plot_df, color_aes) +
+    annotation_raster(as.raster(img), xmin = 0, xmax = image_size,
+                      ymin = 0, ymax = image_size) +
+    geom_point(size = 2) +
+    color_scale +
+    coord_fixed(xlim = c(0, image_size), ylim = c(0, image_size), expand = FALSE) +
+    theme(axis.title = element_blank(), axis.text = element_blank(),
+          axis.ticks = element_blank(), axis.ticks.length = unit(0, "pt"),
+          panel.grid = element_blank(), panel.border = element_blank(),
+          panel.background = element_blank(), plot.background = element_blank(),
+          plot.margin = margin(0, 0, 0, 0),
+          legend.position = if (show_legend) "right" else "none")
+}
+
+# plot_pixel_overlay()
+# Overlay of one cryosection
+plot_pixel_overlay <- function(cryo, space_df, value_col, value_label,
+                               diverging = TRUE, axis_lim = NULL,
+                               shift_x = 0, shift_y = 0,
+                               pixel_coords = pixel_coords_all,
+                               dir = pixel_coords_dir, ...) {
+  img <- cryosection_image(cryo, dir = dir)
+  if (is.null(pixel_coords) || is.null(img)) {
+    message("no image or pixel coordinates for ", cryo, ", overlay skipped")
+    return(invisible(NULL))
+  }
+  overlay_df <- make_overlay_df(cryo, space_df, value_col,
+                                pixel_coords = pixel_coords) %>%
+    mutate(pixel_x = pixel_x + shift_x, pixel_y_flip = pixel_y_flip + shift_y)
+  build_pixel_overlay(overlay_df, value_col, img, value_label,
+                      diverging = diverging, axis_lim = axis_lim, ...)
+}
+
+# show_overlay()
+# Draw an overlay, or nothing when it was skipped
+show_overlay <- function(p) if (is.null(p)) invisible(NULL) else print(p)

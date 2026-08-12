@@ -1,7 +1,8 @@
 # Main analysis
 
 ```{r load_data_main, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-load("resources/working_data_object.Rdata") 
+#load("resources/working_data_object.Rdata") 
+load_working_data("resources/working_data_object.Rdata")
 ```
 
 ## Microsample collection (Suppl.Fig. 2)
@@ -1781,7 +1782,7 @@ fig_s11
 
 #### Data preparation
 **Note:** The prepare_spatial_section() function needs to be loaded.
-```{r data_spatial, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+```{r data_spatial, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 comm_data <- macroquant_genome_counts_filt_30
 genome_id <- macroquant_genome_counts_filt_30$genome
 
@@ -1854,7 +1855,7 @@ spatial_datasets <- lapply(
 names(spatial_datasets) <- spatial_sections
 ```
 
-```{r functional_ordination, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+```{r functional_ordination, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 #genome_list <- Reduce(
 #  union,
 #  lapply(spatial_datasets, function(x) colnames(x$comm_red))
@@ -1885,7 +1886,7 @@ gift_pcoa <- ape::pcoa(dist(genome_gifts_red))
 ```
 
 
-```{r rlqESLTP, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+```{r rlqESLTP, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 spatial_sections <- c(
   "G121eO306A",
   "G121eO307A",
@@ -1933,7 +1934,7 @@ head(spatial_rlq_results$G121eI114B$rlq_scores)
 ```
 
 
-```{r flip_axis, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, eval = FALSE}
+```{r flip_axis, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 spatial_rlq_results_raw <- spatial_rlq_results
 spatial_rlq_results_flipped <- spatial_rlq_results_raw
 axes_to_flip <- list(
@@ -2004,6 +2005,621 @@ spatial_rlq_results$G121eI114B$rlqmix$lQ
 
 
 
+#### Axis orientation
+```{r spt_flip_axis, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+spatial_rlq_results_raw <- spatial_rlq_results
+spatial_rlq_results_flipped <- spatial_rlq_results_raw
+axes_to_flip <- list(
+  G121eO306A = 1,
+  G121eO307A = 1,
+  G121eI117A = c(1, 2),
+  G121eI118B = c(1, 2)
+)
+
+flip_rlq_axis <- function(x, ax = 1) {
+  slots <- c(
+    "lR", "mR", "lQ", "mQ",
+    "lR_givenE", "lR_givenS",
+    "lQ_givenT", "lQ_givenP"
+  )
+
+  for (s in slots) {
+    if (!is.null(x[[s]]) && ncol(x[[s]]) >= ax) {
+      x[[s]][, ax] <- -x[[s]][, ax]
+    }
+  }
+
+  x
+}
+
+for (section_id in names(axes_to_flip)) {
+  for (ax in axes_to_flip[[section_id]]) {
+    spatial_rlq_results_flipped[[section_id]]$rlqmix <- flip_rlq_axis(
+      spatial_rlq_results_flipped[[section_id]]$rlqmix,
+      ax = ax
+    )
+  }
+}
+
+for (section_id in names(axes_to_flip)) {
+  spatial_rlq_results_flipped[[section_id]]$rlq_scores <- data.frame(
+    microsample = rownames(spatial_rlq_results_flipped[[section_id]]$rlqmix$lR),
+    spatial_rlq_results_flipped[[section_id]]$rlqmix$lR
+  )
+
+  spatial_rlq_results_flipped[[section_id]]$rlq_scores$microsample <-
+    rownames(spatial_datasets[[section_id]]$comm_red)[
+      as.numeric(spatial_rlq_results_flipped[[section_id]]$rlq_scores$microsample)
+    ]
+
+  spatial_rlq_results_flipped[[section_id]]$rlq_scores <-
+    spatial_rlq_results_flipped[[section_id]]$rlq_scores %>%
+    left_join(
+      spatial_datasets[[section_id]]$metadata %>%
+        select(microsample, Xcoord, Ycoord),
+      by = "microsample"
+    )
+}
+
+head(spatial_rlq_results_flipped$G121eO306A$rlq_scores)
+head(spatial_rlq_results_flipped$G121eO307A$rlq_scores)
+head(spatial_rlq_results_flipped$G121eO308A$rlq_scores)
+head(spatial_rlq_results_flipped$G121eI117A$rlq_scores)
+head(spatial_rlq_results_flipped$G121eI118B$rlq_scores)
+head(spatial_rlq_results_flipped$G121eI114B$rlq_scores)
+```
+
+#### Plotting tables
+```{r spt_rlq_tables, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+rlq_traits <- lapply(spatial_sections, rlq_traits_table)
+names(rlq_traits) <- spatial_sections
+rlq_space <- lapply(spatial_sections, rlq_space_table)
+names(rlq_space) <- spatial_sections
+
+sapply(rlq_traits, nrow) # genomes per cryosection
+sapply(rlq_space, nrow)  # microsamples per cryosection
+```
+
+#### Cryosection images and pixel coordinates
+```{r spt_pixel_setup, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+pixel_coords_dir  <- "resources/pixel_coords"
+pixel_coords_file <- file.path(pixel_coords_dir, "microsample_pixel_coords.csv")
+
+pixel_coords_all <- if (file.exists(pixel_coords_file)) {
+  readr::read_csv(pixel_coords_file, show_col_types = FALSE)
+} else {
+  NULL
+}
+# 
+# if (!is.null(pixel_coords_all)) print(count(pixel_coords_all, cryosection))
+# sapply(spatial_sections, function(x) !is.null(cryosection_image(x)))
+```
+
+```{r spt_pixel_checks, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+# # do the pixel coordinates cover the RLQ microsamples, and do their stage
+# # coordinates agree with the metadata of this project?
+# if (!is.null(pixel_coords_all)) {
+#   pixel_coverage <- map_dfr(spatial_sections, function(cryo) {
+#     rlq_ms <- rlq_space[[cryo]]$microsample
+#     px <- pixel_coords_all %>% filter(cryosection == cryo)
+#     tibble(
+#       cryosection = cryo,
+#       rlq_microsamples = length(rlq_ms),
+#       with_pixel_coords = sum(rlq_ms %in% px$microsample),
+#       missing_pixel_coords = sum(!rlq_ms %in% px$microsample),
+#       non_positive_in_csv = sum(px$type != "positive")
+#     )
+#   })
+#   print(pixel_coverage)
+# 
+#   coord_consistency <- pixel_coords_all %>%
+#     select(microsample, cryosection, Xcoord, Ycoord) %>%
+#     inner_join(
+#       bind_rows(rlq_space, .id = "cryosection") %>%
+#         select(microsample, cryosection, Xcoord, Ycoord),
+#       by = c("microsample", "cryosection"), suffix = c("_csv", "_rlq")
+#     ) %>%
+#     mutate(dx = abs(Xcoord_csv - Xcoord_rlq),
+#            dy = abs(Ycoord_csv - Ycoord_rlq))
+# 
+#   cat("shared microsamples:", nrow(coord_consistency), "\n")
+#   cat("max |dX| =", max(coord_consistency$dx),
+#       " max |dY| =", max(coord_consistency$dy), "\n")
+#   print(filter(coord_consistency, dx > 1e-6 | dy > 1e-6))
+# }
+```
+
+#### Functional ordination figure
+PCoA of the GIFT elements of the genomes that entered the caecum `G121eI117A` RLQ, with the genome-length curve along axis 1 and the carbohydrate-minus-lipid contrast along axis 2. 
+This element-level ordination is only used for the figure; the RLQ trait input is the `gift_pcoa` computed above.
+```{r spt_pcoa_genome_select, echo = TRUE, warning = FALSE, message = FALSE}
+extRLQ_traits  <- rlq_traits$G121eI117A
+extRLQ_genomes <- extRLQ_traits$genome
+
+macromag_gifts_sel <- gifts_subset(extRLQ_genomes)
+nrow(macromag_gifts_sel)
+```
+
+```{r spt_pcoa, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+gift_elements <- macromag_gifts_sel %>%
+  to.elements(., GIFT_db) %>%
+  as.data.frame() %>%
+  select(-starts_with(c("S0", "D04")))
+
+gift_elem_pcoa <- ape::pcoa(dist(gift_elements))
+
+gift_pcoa_rel_eigen <- gift_elem_pcoa$values$Relative_eig[1:10]
+
+gift_pcoa_vectors <- gift_elem_pcoa$vectors %>%
+  as.data.frame() %>%
+  select(Axis.1, Axis.2)
+
+gift_functions <- gift_elements %>%
+  rownames_to_column(var = "genome") %>%
+  pivot_longer(-genome, names_to = "element", values_to = "value") %>%
+  mutate(func = substr(element, 1, 3)) %>%
+  group_by(genome, func) %>%
+  summarise(value = mean(value, na.rm = TRUE), .groups = "drop") %>%
+  pivot_wider(names_from = func, values_from = value) %>%
+  column_to_rownames(var = "genome")
+
+gift_functions <- gift_functions[rownames(gift_elem_pcoa$vectors), ]
+
+gift_pcoa_envfit <- envfit(gift_elem_pcoa$vectors, gift_functions, choices = 1:2)
+gift_pcoa_gifts <- scores(gift_pcoa_envfit, display = "vectors") %>%
+  as.data.frame() %>%
+  rownames_to_column(var = "label")
+
+gift_pcoa_gifts_top <- gift_pcoa_gifts %>%
+  mutate(magnitude = sqrt(Axis.1^2 + Axis.2^2)) %>%
+  slice_max(magnitude, n = 10) %>%
+  select(-magnitude)
+
+arrow_fill  <- 0.75
+site_lims   <- c(range(gift_pcoa_vectors$Axis.1),  range(gift_pcoa_vectors$Axis.2))
+arrow_lims  <- c(range(gift_pcoa_gifts_top$Axis.1), range(gift_pcoa_gifts_top$Axis.2))
+arrow_ratio <- site_lims / arrow_lims
+arrow_ratio <- arrow_ratio[is.finite(arrow_ratio) & arrow_ratio > 0]
+loading_scale <- arrow_fill * min(arrow_ratio) # arrow stretch, visual only
+
+pcoa_x_range <- range(c(gift_pcoa_vectors$Axis.1, gift_pcoa_gifts_top$Axis.1 * loading_scale))
+pcoa_y_range <- range(c(gift_pcoa_vectors$Axis.2, gift_pcoa_gifts_top$Axis.2 * loading_scale))
+
+extRLQ_axis2_by_genome <- gift_pcoa_vectors %>%
+  rownames_to_column(var = "genome") %>%
+  mutate(norm = gsub(":", "_", genome)) %>%
+  left_join(extRLQ_traits %>% select(genome, AxcQ2_G121eI117A),
+            by = c("norm" = "genome")) %>%
+  select(genome, AxcQ2_G121eI117A)
+
+ax2_overlay_lim <- max(abs(extRLQ_axis2_by_genome$AxcQ2_G121eI117A), na.rm = TRUE)
+```
+
+```{r spt_pcoa_plot, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=10, fig.fullwidth=TRUE}
+pcoa_plot <- gift_pcoa_vectors %>%
+  rownames_to_column(var = "genome") %>%
+  left_join(macromag_genomemetadata, by = "genome") %>%
+  ggplot() +
+      scale_color_manual(values = order_colors) +
+      geom_point(aes(x = Axis.1, y = Axis.2, color = order, size = length),
+                 alpha = 0.9, shape = 16) +
+    guides(color = "none") +
+      scale_size_continuous(range = c(0.1, 5)) +
+      geom_segment(data = gift_pcoa_gifts_top,
+                   aes(x = 0, y = 0, xend = Axis.1 * loading_scale, yend = Axis.2 * loading_scale),
+                    arrow = arrow(length = unit(0.3, "cm"),
+                    type = "open",
+                    angle = 25),
+                    linewidth = 0.5,
+                    color = "black") +
+    geom_label_repel(data = gift_pcoa_gifts_top,
+                     aes(label = label, x = Axis.1 * loading_scale, y = Axis.2 * loading_scale),
+                     segment.color = 'transparent') +
+    labs(x = paste0("PCoA1 (", round(gift_pcoa_rel_eigen[1] * 100, 1), "%)"),
+         y = paste0("PCoA2 (", round(gift_pcoa_rel_eigen[2] * 100, 1), "%)")) +
+    coord_cartesian(xlim = pcoa_x_range, ylim = pcoa_y_range) +
+    theme_minimal()
+```
+
+```{r spt_pcoa_length_curve, echo = TRUE, message = FALSE, warning = FALSE, fig.height=2, fig.width=10, fig.fullwidth=TRUE}
+gift_axis_1 <- gift_pcoa_vectors %>%
+  rownames_to_column(var = "genome") %>%
+  left_join(macromag_genomemetadata, by = "genome") %>%
+  left_join(extRLQ_axis2_by_genome, by = "genome") %>%
+  ggplot(aes(x = Axis.1, y = length)) +
+      geom_point(aes(fill = AxcQ2_G121eI117A),
+                 shape = 21, color = "grey30", stroke = 0.2,
+                 size = 3.0, alpha = 0.9) +
+      scale_fill_fermenter(palette = "RdBu", n.breaks = 7,
+                           limits = c(-ax2_overlay_lim, ax2_overlay_lim),
+                           name = "Caecum axis 2") +
+      geom_smooth(color = "black") +
+      coord_cartesian(xlim = pcoa_x_range) +
+      theme_minimal() +
+  labs(y = "Genome length", x = NULL)
+```
+
+```{r spt_pcoa_carbs_lipids, echo = TRUE, message = FALSE, warning = FALSE, fig.height=7, fig.width=2, fig.fullwidth=TRUE}
+gift_df_PCoA <- macromag_gifts_sel %>%
+    to.elements(., GIFT_db) %>%
+    to.functions(., GIFT_db) %>%
+    as.data.frame() %>%
+    rownames_to_column(var = "genome") %>%
+    left_join(macromag_genomemetadata, by = "genome") %>%
+    left_join(gift_pcoa_vectors %>% rownames_to_column(var = "genome"), by = "genome") %>%
+    left_join(extRLQ_axis2_by_genome, by = "genome") %>%
+    mutate(carb_minus_lipid = D02 - D01) # OR do D02+D03 - D01
+
+gift_plot_PC2 <- gift_df_PCoA %>%
+  ggplot(aes(x = Axis.2, y = carb_minus_lipid)) +
+  geom_point(aes(fill = AxcQ2_G121eI117A),
+             shape = 21, color = "grey30", stroke = 0.2,
+             size = 3.0, alpha = 0.9) +
+  scale_fill_fermenter(palette = "RdBu", n.breaks = 7,
+                       limits = c(-ax2_overlay_lim, ax2_overlay_lim),
+                       name = "Caecum axis 2") +
+  geom_smooth(color = "black") +
+  geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
+  theme_minimal() +
+  labs(x = NULL, y = "Carbohydrate - lipid\ndegradation (GIFT)") +
+  coord_flip(xlim = pcoa_y_range) +
+  theme(axis.title = element_text(size = 8),
+        plot.margin = margin(5.5, 9, 5.5, 5.5))
+```
+
+##### Figure 5a
+```{r spt_pcoa_composite, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=9, fig.fullwidth=TRUE}
+# 2 x 2 grid so patchwork aligns the curves with the scatter axes
+fig5a_gift_pcoa_composite_plot <- gift_axis_1 + plot_spacer() +
+  pcoa_plot + gift_plot_PC2 +
+  plot_layout(ncol = 2, nrow = 2, widths = c(7, 1.3), heights = c(1.3, 6),
+              guides = "collect") &
+  theme(legend.position = "bottom")
+
+fig5a_gift_pcoa_composite_plot
+```
+
+
+#### Caecum RLQ (G121eI117A)
+
+```{r spt_caecum_tree_nodes, echo = TRUE, message = FALSE, warning = FALSE, fig.height=9, fig.width=9}
+extRLQ_tree <- tree_subset(extRLQ_genomes)
+# # node numbers, to pick the clades to rotate
+# ggtree(extRLQ_tree, ladderize = FALSE) +
+#   geom_nodelab(aes(label = node), size = 2) +
+#   geom_tiplab(size = 2)
+
+extRLQ_tree <- safe_rotate(extRLQ_tree, 97)
+extRLQ_tree <- safe_rotate(extRLQ_tree, 96)
+## Final resulting tree
+# ggtree(extRLQ_tree, ladderize = FALSE) +
+#   geom_nodelab(aes(label = node), size = 2) +
+#   geom_tiplab(size = 2)
+```
+
+```{r spt_caecum_tree_data, echo = TRUE, message = FALSE, warning = FALSE}
+extRLQ_tree_data <- make_extRLQ_tree_data(extRLQ_tree, extRLQ_traits)
+extRLQ_space <- rlq_space$G121eI117A
+# head(extRLQ_tree_data)
+# head(extRLQ_space)
+```
+
+##### Axis 2, Fig 5c
+
+GIFT scores of the elements of the three degradation functions (D01 lipid, D02 polysaccharide, D03 sugar) next to the tree as per-element z-scores.
+
+```{r spt_caecum_axis2_tree_heatmap_z, echo = TRUE, message = FALSE, warning = FALSE, fig.height=14, fig.width=6}
+extRLQ_tree_grad <- build_extRLQ_grad_tree(
+  extRLQ_tree, extRLQ_tree_data, "AxcQ2_G121eI117A", "Caecum axis 2")
+# extRLQ_tree_grad
+
+fig5c_gift_tree_heatmap_len_z <- build_gift_tree_heatmap_len(
+  extRLQ_tree_grad, macromag_gifts_sel)
+
+fig5c_gift_tree_heatmap_len_z
+```
+##### Fig 5b
+```{r spt_caecum_axis2_overlay, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
+fig5b_overlay_caecum_axis2 <- plot_pixel_overlay(
+  "G121eI117A", extRLQ_space, "AxcR2_G121eI117A", "Caecum axis 2")
+
+show_overlay(fig5b_overlay_caecum_axis2)
+```
+
+
+```{r spt_caecum_axis2_scatter, echo = TRUE, message = FALSE, warning = FALSE, fig.height=4, fig.width=5}
+# scatter_caecum_axis2_dist <- build_extRLQ_scatter(
+#   extRLQ_space, "distance_host", "AxcR2_G121eI117A",
+#   "Distance to host (um)", "Caecum axis 2")
+# scatter_caecum_axis2_dist
+```
+
+##### Axis 1 - Fig S15a
+```{r spt_caecum_axis1_tree_heatmap_z, echo = TRUE, message = FALSE, warning = FALSE, fig.height=14, fig.width=6}
+extRLQ_tree_grad_ax1 <- build_extRLQ_grad_tree(
+  extRLQ_tree, extRLQ_tree_data, "AxcQ1_G121eI117A", "Caecum axis 1")
+
+# extRLQ_tree_grad_ax1
+
+figS15a_gift_tree_heatmap_len_z_ax1 <- build_gift_tree_heatmap_len(
+  extRLQ_tree_grad_ax1, macromag_gifts_sel)
+
+figS15a_gift_tree_heatmap_len_z_ax1
+```
+##### Fig S15b
+```{r spt_caecum_axis1_overlay, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
+figS15b_overlay_caecum_axis1 <- plot_pixel_overlay(
+  "G121eI117A", extRLQ_space, "AxcR1_G121eI117A", "Caecum axis 1")
+
+show_overlay(figS15b_overlay_caecum_axis1)
+```
+##### Fig S15c
+```{r spt_caecum_axis1_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=5, fig.width=8}
+scatter_caecum_axis1_rich <- build_extRLQ_scatter(
+  extRLQ_space, "div", "AxcR1_G121eI117A", "Richness", "Caecum axis 1")
+scatter_caecum_axis1_seq  <- build_extRLQ_scatter(
+  extRLQ_space, "log_seq_counts", "AxcR1_G121eI117A", "log(seq count)", "Caecum axis 1")
+
+layout_extRLQ_scatter_pair(scatter_caecum_axis1_rich, scatter_caecum_axis1_seq)
+```
+
+#### Colon RLQ axis 1 (G121eO306A)
+Its own genome set, so tree and GIFT subset are built fresh (the caecum
+rotations refer to the caecum node numbers).
+
+```{r spt_colon_import, echo = TRUE, message = FALSE, warning = FALSE}
+colon_traits  <- rlq_traits$G121eO306A
+colon_space   <- rlq_space$G121eO306A
+colon_genomes <- colon_traits$genome
+
+colon_gifts_sel <- gifts_subset(colon_genomes)
+nrow(colon_gifts_sel)
+```
+
+```{r spt_colon_tree_nodes, echo = TRUE, message = FALSE, warning = FALSE, fig.height=10, fig.width=8}
+colon_tree <- tree_subset(colon_genomes)
+
+# ggtree(colon_tree, ladderize = FALSE) +
+#   geom_nodelab(aes(label = node), size = 2) +
+#   geom_tiplab(size = 2)
+colon_tree <- safe_rotate(colon_tree, 92)
+# # Final resulting tree
+# ggtree(colon_tree, ladderize = FALSE) +
+#   geom_nodelab(aes(label = node), size = 2) +
+#   geom_tiplab(size = 2)
+```
+
+##### Fig S16a
+```{r spt_colon_tree, echo = TRUE, message = FALSE, warning = FALSE, fig.height=14, fig.width=6}
+colon_tree_data <- make_extRLQ_tree_data(colon_tree, colon_traits)
+extRLQ_tree_grad_colon <- build_extRLQ_grad_tree(
+  colon_tree, colon_tree_data, "AxcQ1_G121eO306A", "Colon axis 1")
+# extRLQ_tree_grad_colon
+
+figS16a_gift_tree_heatmap_len_z_colon <- build_gift_tree_heatmap_len(
+  extRLQ_tree_grad_colon, colon_gifts_sel)
+
+figS16a_gift_tree_heatmap_len_z_colon
+```
+##### Fig S16b
+```{r spt_colon_overlay, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
+figS16b_overlay_colon_axis1 <- plot_pixel_overlay(
+  "G121eO306A", colon_space, "AxcR1_G121eO306A", "Colon axis 1")
+
+show_overlay(figS16b_overlay_colon_axis1)
+```
+##### Fig S16c
+```{r spt_colon_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=5, fig.width=8}
+scatter_colon_axis1_rich <- build_extRLQ_scatter(
+  colon_space, "div", "AxcR1_G121eO306A", "Richness", "Colon axis 1")
+scatter_colon_axis1_seq  <- build_extRLQ_scatter(
+  colon_space, "log_seq_counts", "AxcR1_G121eO306A", "log(seq count)", "Colon axis 1")
+
+layout_extRLQ_scatter_pair(scatter_colon_axis1_rich, scatter_colon_axis1_seq)
+```
+
+#### Cryosection replication
+The same axis across the three cryosections of a gut section: 
+a tree of the shared genomes with one bar panel per cryosection on a shared scale, 
+the pixel overlays on that same scale, 
+and for axis 1 the scatters against `div` and `log_seq_counts`.
+
+##### Caecum axis 2 (G121eI117A, G121eI118B, G121eI114B)
+```{r spt_repl_caecum_import, echo = TRUE, message = FALSE, warning = FALSE}
+caecum_sections <- c("G121eI117A", "G121eI118B", "G121eI114B")
+
+repl_c2_traits <- rlq_repl_traits_table(caecum_sections, axis = 2)
+repl_c1_traits <- rlq_repl_traits_table(caecum_sections, axis = 1)
+
+nrow(repl_c2_traits) # genomes shared by the three caecum cryosections
+```
+
+```{r spt_repl_caecum_tree_nodes, echo = TRUE, message = FALSE, warning = FALSE, fig.height=10, fig.width=8}
+# fewer tips than the single-cryosection trees, so different node numbers
+repl_c_tree <- tree_subset(repl_c2_traits$genome)
+# ggtree(repl_c_tree, ladderize = FALSE) +
+#   geom_nodelab(aes(label = node), size = 2) +
+#   geom_tiplab(size = 2)
+
+repl_c_tree <- safe_rotate(repl_c_tree, 93)
+# # Final resulting tree
+# ggtree(repl_c_tree, ladderize = FALSE) +
+#   geom_nodelab(aes(label = node), size = 2) +
+#   geom_tiplab(size = 2)
+```
+
+##### Fig S17a
+```{r spt_repl_caecum_axis2_tree, echo = TRUE, message = FALSE, warning = FALSE, fig.height=6, fig.width=14}
+repl_c2_tree_data <- make_extRLQ_tree_data(repl_c_tree, repl_c2_traits)
+
+repl_c2_tree_bars <- build_extRLQ_family_tree_bars(
+  repl_c_tree, repl_c2_tree_data,
+  bar_cols = paste0("AxcQ2_", caecum_sections),
+  bar_legend = "Caecum axis 2")
+
+repl_c2_tree_bars
+```
+##### Fig S17b
+```{r spt_repl_caecum_axis2_overlays, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
+repl_c2_axis_lim <- extRLQ_axis_r_lim(
+  rlq_space[caecum_sections], paste0("AxcR2_", caecum_sections))
+
+overlay_c2_117A <- plot_pixel_overlay(
+  "G121eI117A", rlq_space$G121eI117A, "AxcR2_G121eI117A", "Caecum axis 2",
+  axis_lim = repl_c2_axis_lim)
+overlay_c2_118B <- plot_pixel_overlay(
+  "G121eI118B", rlq_space$G121eI118B, "AxcR2_G121eI118B", "Caecum axis 2",
+  axis_lim = repl_c2_axis_lim)
+overlay_c2_114B <- plot_pixel_overlay(
+  "G121eI114B", rlq_space$G121eI114B, "AxcR2_G121eI114B", "Caecum axis 2",
+  axis_lim = repl_c2_axis_lim)
+
+show_overlay(overlay_c2_117A)
+show_overlay(overlay_c2_118B)
+show_overlay(overlay_c2_114B)
+```
+
+##### Caecum axis 1 (G121eI117A, G121eI118B, G121eI114B)
+##### Fig S18a
+```{r spt_repl_caecum_axis1_tree, echo = TRUE, message = FALSE, warning = FALSE, fig.height=6, fig.width=14}
+repl_c1_tree_data <- make_extRLQ_tree_data(repl_c_tree, repl_c1_traits)
+
+repl_c1_tree_bars <- build_extRLQ_family_tree_bars(
+  repl_c_tree, repl_c1_tree_data,
+  bar_cols = paste0("AxcQ1_", caecum_sections),
+  bar_legend = "Caecum axis 1")
+
+repl_c1_tree_bars
+```
+##### Fig S18b
+```{r spt_repl_caecum_axis1_overlays, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
+repl_c1_axis_lim <- extRLQ_axis_r_lim(
+  rlq_space[caecum_sections], paste0("AxcR1_", caecum_sections))
+
+overlay_c1_117A <- plot_pixel_overlay(
+  "G121eI117A", rlq_space$G121eI117A, "AxcR1_G121eI117A", "Caecum axis 1",
+  axis_lim = repl_c1_axis_lim)
+overlay_c1_118B <- plot_pixel_overlay(
+  "G121eI118B", rlq_space$G121eI118B, "AxcR1_G121eI118B", "Caecum axis 1",
+  axis_lim = repl_c1_axis_lim)
+overlay_c1_114B <- plot_pixel_overlay(
+  "G121eI114B", rlq_space$G121eI114B, "AxcR1_G121eI114B", "Caecum axis 1",
+  axis_lim = repl_c1_axis_lim)
+
+show_overlay(overlay_c1_117A)
+show_overlay(overlay_c1_118B)
+show_overlay(overlay_c1_114B)
+```
+##### Fig S18c
+```{r spt_repl_caecum_axis1_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=4, fig.width=14}
+repl_c1_legend <- "Caecum axis 1"
+
+repl_c1_scatters <- lapply(caecum_sections, function(cryo) {
+  axis_col <- paste0("AxcR1_", cryo)
+  list(
+    div = build_extRLQ_scatter(
+      rlq_space[[cryo]], "div", axis_col, "Richness", repl_c1_legend,
+      axis_lim = repl_c1_axis_lim, legend_label = repl_c1_legend) +
+      ggtitle(cryo),
+    seq = build_extRLQ_scatter(
+      rlq_space[[cryo]], "log_seq_counts", axis_col, "log(seq count)", repl_c1_legend,
+      axis_lim = repl_c1_axis_lim, legend_label = repl_c1_legend)
+  )
+})
+names(repl_c1_scatters) <- caecum_sections
+
+repl_c1_scatter_grid <- layout_extRLQ_scatter_grid(
+  lapply(repl_c1_scatters, `[[`, "div"),
+  lapply(repl_c1_scatters, `[[`, "seq"))
+
+repl_c1_scatter_grid
+```
+
+##### Colon axis 1 (G121eO306A, G121eO307A, G121eO308A)
+```{r spt_repl_colon_import, echo = TRUE, message = FALSE, warning = FALSE}
+colon_sections <- c("G121eO306A", "G121eO307A", "G121eO308A")
+
+repl_o1_traits <- rlq_repl_traits_table(colon_sections, axis = 1)
+
+nrow(repl_o1_traits) # genomes shared by the three colon cryosections
+```
+
+```{r spt_repl_colon_tree_nodes, echo = TRUE, message = FALSE, warning = FALSE, fig.height=10, fig.width=8}
+repl_o_tree <- tree_subset(repl_o1_traits$genome)
+
+# ggtree(repl_o_tree, ladderize = FALSE) +
+#   geom_nodelab(aes(label = node), size = 2) +
+#   geom_tiplab(size = 2)
+
+repl_o_tree <- safe_rotate(repl_o_tree, 89)
+
+# # Final resulting tree
+# ggtree(repl_o_tree, ladderize = FALSE) +
+#   geom_nodelab(aes(label = node), size = 2) +
+#   geom_tiplab(size = 2)
+```
+
+##### Fig S19a
+```{r spt_repl_colon_axis1_tree, echo = TRUE, message = FALSE, warning = FALSE, fig.height=6, fig.width=14}
+repl_o1_tree_data <- make_extRLQ_tree_data(repl_o_tree, repl_o1_traits)
+
+repl_o1_tree_bars <- build_extRLQ_family_tree_bars(
+  repl_o_tree, repl_o1_tree_data,
+  bar_cols = paste0("AxcQ1_", colon_sections),
+  bar_legend = "Colon axis 1")
+
+repl_o1_tree_bars
+```
+##### Fig S19b
+```{r spt_repl_colon_axis1_overlays, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
+repl_o1_axis_lim <- extRLQ_axis_r_lim(
+  rlq_space[colon_sections], paste0("AxcR1_", colon_sections))
+
+overlay_o1_306A <- plot_pixel_overlay(
+  "G121eO306A", rlq_space$G121eO306A, "AxcR1_G121eO306A", "Colon axis 1",
+  axis_lim = repl_o1_axis_lim)
+overlay_o1_307A <- plot_pixel_overlay(
+  "G121eO307A", rlq_space$G121eO307A, "AxcR1_G121eO307A", "Colon axis 1",
+  axis_lim = repl_o1_axis_lim)
+overlay_o1_308A <- plot_pixel_overlay(
+  "G121eO308A", rlq_space$G121eO308A, "AxcR1_G121eO308A", "Colon axis 1",
+  axis_lim = repl_o1_axis_lim)
+
+# alignment of the points on the G121eO307A photo, in image pixels
+# (shift_x: - = left, + = right; shift_y: - = down, + = up)
+overlay_o1_307A_tweak <- plot_pixel_overlay(
+  "G121eO307A", rlq_space$G121eO307A, "AxcR1_G121eO307A", "Colon axis 1",
+  axis_lim = repl_o1_axis_lim, shift_x = -17, shift_y = 0)
+
+show_overlay(overlay_o1_306A)
+show_overlay(overlay_o1_308A)
+show_overlay(overlay_o1_307A_tweak)
+
+```
+##### Fig S19c
+```{r spt_repl_colon_axis1_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=4, fig.width=14}
+repl_o1_legend <- "Colon axis 1"
+
+repl_o1_scatters <- lapply(colon_sections, function(cryo) {
+  axis_col <- paste0("AxcR1_", cryo)
+  list(
+    div = build_extRLQ_scatter(
+      rlq_space[[cryo]], "div", axis_col, "Richness", repl_o1_legend,
+      axis_lim = repl_o1_axis_lim, legend_label = repl_o1_legend) +
+      ggtitle(cryo),
+    seq = build_extRLQ_scatter(
+      rlq_space[[cryo]], "log_seq_counts", axis_col, "log(seq count)", repl_o1_legend,
+      axis_lim = repl_o1_axis_lim, legend_label = repl_o1_legend)
+  )
+})
+names(repl_o1_scatters) <- colon_sections
+
+repl_o1_scatter_grid <- layout_extRLQ_scatter_grid(
+  lapply(repl_o1_scatters, `[[`, "div"),
+  lapply(repl_o1_scatters, `[[`, "seq"))
+
+repl_o1_scatter_grid
+```
 
 ### Subspecies Segregation 
 #### Pangenome: Genes Presence/Absence  (Suppl.Fig. 12a)
