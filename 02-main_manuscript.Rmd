@@ -1925,12 +1925,12 @@ spatial_rlq_results <- lapply(
 )
 names(spatial_rlq_results) <- spatial_sections
 
-head(spatial_rlq_results$G121eO306A$rlq_scores) #invert
-head(spatial_rlq_results$G121eO307A$rlq_scores) #invert
-head(spatial_rlq_results$G121eO308A$rlq_scores)
-head(spatial_rlq_results$G121eI117A$rlq_scores) #invert
-head(spatial_rlq_results$G121eI118B$rlq_scores) #invert
-head(spatial_rlq_results$G121eI114B$rlq_scores)
+# head(spatial_rlq_results$G121eO306A$rlq_scores) #invert
+# head(spatial_rlq_results$G121eO307A$rlq_scores) #invert
+# head(spatial_rlq_results$G121eO308A$rlq_scores)
+# head(spatial_rlq_results$G121eI117A$rlq_scores) #invert
+# head(spatial_rlq_results$G121eI118B$rlq_scores) #invert
+# head(spatial_rlq_results$G121eI114B$rlq_scores)
 ```
 
 
@@ -1989,18 +1989,18 @@ for (section_id in names(axes_to_flip)) {
     )
 }
 
-head(spatial_rlq_results_flipped$G121eO306A$rlq_scores) 
-head(spatial_rlq_results_flipped$G121eO307A$rlq_scores) 
-head(spatial_rlq_results$G121eO308A$rlq_scores)
-head(spatial_rlq_results_flipped$G121eI117A$rlq_scores) 
-head(spatial_rlq_results_flipped$G121eI118B$rlq_scores) 
-head(spatial_rlq_results$G121eI114B$rlq_scores)
-spatial_rlq_results_flipped$G121eO306A$rlqmix$lQ
-spatial_rlq_results_flipped$G121eO307A$rlqmix$lQ
-spatial_rlq_results$G121eO308A$rlqmix$lQ
-spatial_rlq_results_flipped$G121eI117A$rlqmix$lQ
-spatial_rlq_results_flipped$G121eI118B$rlqmix$lQ
-spatial_rlq_results$G121eI114B$rlqmix$lQ
+# head(spatial_rlq_results_flipped$G121eO306A$rlq_scores) 
+# head(spatial_rlq_results_flipped$G121eO307A$rlq_scores) 
+# head(spatial_rlq_results$G121eO308A$rlq_scores)
+# head(spatial_rlq_results_flipped$G121eI117A$rlq_scores) 
+# head(spatial_rlq_results_flipped$G121eI118B$rlq_scores) 
+# head(spatial_rlq_results$G121eI114B$rlq_scores)
+# spatial_rlq_results_flipped$G121eO306A$rlqmix$lQ
+# spatial_rlq_results_flipped$G121eO307A$rlqmix$lQ
+# spatial_rlq_results$G121eO308A$rlqmix$lQ
+# spatial_rlq_results_flipped$G121eI117A$rlqmix$lQ
+# spatial_rlq_results_flipped$G121eI118B$rlqmix$lQ
+# spatial_rlq_results$G121eI114B$rlqmix$lQ
 ```
 
 
@@ -2061,12 +2061,12 @@ for (section_id in names(axes_to_flip)) {
     )
 }
 
-head(spatial_rlq_results_flipped$G121eO306A$rlq_scores)
-head(spatial_rlq_results_flipped$G121eO307A$rlq_scores)
-head(spatial_rlq_results_flipped$G121eO308A$rlq_scores)
-head(spatial_rlq_results_flipped$G121eI117A$rlq_scores)
-head(spatial_rlq_results_flipped$G121eI118B$rlq_scores)
-head(spatial_rlq_results_flipped$G121eI114B$rlq_scores)
+# head(spatial_rlq_results_flipped$G121eO306A$rlq_scores)
+# head(spatial_rlq_results_flipped$G121eO307A$rlq_scores)
+# head(spatial_rlq_results_flipped$G121eO308A$rlq_scores)
+# head(spatial_rlq_results_flipped$G121eI117A$rlq_scores)
+# head(spatial_rlq_results_flipped$G121eI118B$rlq_scores)
+# head(spatial_rlq_results_flipped$G121eI114B$rlq_scores)
 ```
 
 #### Plotting tables
@@ -2093,40 +2093,6 @@ pixel_coords_all <- if (file.exists(pixel_coords_file)) {
 # 
 # if (!is.null(pixel_coords_all)) print(count(pixel_coords_all, cryosection))
 # sapply(spatial_sections, function(x) !is.null(cryosection_image(x)))
-```
-
-```{r spt_pixel_checks, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
-# # do the pixel coordinates cover the RLQ microsamples, and do their stage
-# # coordinates agree with the metadata of this project?
-# if (!is.null(pixel_coords_all)) {
-#   pixel_coverage <- map_dfr(spatial_sections, function(cryo) {
-#     rlq_ms <- rlq_space[[cryo]]$microsample
-#     px <- pixel_coords_all %>% filter(cryosection == cryo)
-#     tibble(
-#       cryosection = cryo,
-#       rlq_microsamples = length(rlq_ms),
-#       with_pixel_coords = sum(rlq_ms %in% px$microsample),
-#       missing_pixel_coords = sum(!rlq_ms %in% px$microsample),
-#       non_positive_in_csv = sum(px$type != "positive")
-#     )
-#   })
-#   print(pixel_coverage)
-# 
-#   coord_consistency <- pixel_coords_all %>%
-#     select(microsample, cryosection, Xcoord, Ycoord) %>%
-#     inner_join(
-#       bind_rows(rlq_space, .id = "cryosection") %>%
-#         select(microsample, cryosection, Xcoord, Ycoord),
-#       by = c("microsample", "cryosection"), suffix = c("_csv", "_rlq")
-#     ) %>%
-#     mutate(dx = abs(Xcoord_csv - Xcoord_rlq),
-#            dy = abs(Ycoord_csv - Ycoord_rlq))
-# 
-#   cat("shared microsamples:", nrow(coord_consistency), "\n")
-#   cat("max |dX| =", max(coord_consistency$dx),
-#       " max |dY| =", max(coord_consistency$dy), "\n")
-#   print(filter(coord_consistency, dx > 1e-6 | dy > 1e-6))
-# }
 ```
 
 #### Functional ordination figure

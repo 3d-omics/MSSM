@@ -15,3 +15,13 @@ _bookdown_files/
 figures_new/
 .positai
 
+# Project-local package libraries (do not commit)
+r-lib/
+renv/library/
+renv/local/
+renv/cellar/
+renv/lock/
+renv/python/
+renv/sandbox/
+renv/staging/
+

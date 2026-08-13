@@ -49,8 +49,28 @@ And indicating the following git repository:
 Once the R project has been created, follow the instructions and code chunks shown in this webbook.
 
 ### Libraries
-The following R packages are required for the data analysis. Most modules can be installed directly from CRAN or GitHub.
-However, four modules are provided through Bioconductor and should be installed if needed with the command below before loading:
+
+**Recommended (reproducible):** if this repository has an `renv.lock` file, restore the project library once with:
+
+```{r restore_renv, eval = FALSE}
+# install.packages("renv")  # once, if needed
+renv::restore()
+```
+
+**Optional (no renv yet):** to keep installs out of your global R library, run this in the project before loading packages:
+
+```{r local_r_lib}
+dir.create("r-lib", showWarnings = FALSE)
+.libPaths(c(file.path(getwd(), "r-lib"), .libPaths()))
+```
+
+The packages below are required. Most install from CRAN or GitHub. Bioconductor packages (`ggtree`, `ggtreeExtra`, `ALDEx2`, `ComplexHeatmap`, `microbiome`, …) may need:
+
+```{r bioc_hint, eval = FALSE}
+# install.packages("BiocManager")
+# BiocManager::install(c("ggtree", "ggtreeExtra", "ALDEx2", "ComplexHeatmap", "microbiome"))
+```
+
 ```{r load_libraries, warning = FALSE, comments = "", message = FALSE}
 #install.packages('BiocManager', dependencies = TRUE)
 # BiocManager::install(c("phyloseq", "ggtreeExtra","ggtree", "ALDEx2", "ComplexHeatmap"))
