@@ -92,6 +92,12 @@ mssm_kraken <- read_tsv("resources/zenodo/mssm_kraken.tsv", show_col_types = FAL
 ### Redundancy & Coverage Estimation: Nonpareil
 ```{r estimates_nonpareil, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
 mssm_nonpareil <- read_tsv("resources/zenodo/mssm_nonpareil.tsv", show_col_types = FALSE)
+
+# Full Nonpareil subsampling curves (MultiQC tables, one per sequencing run), only the columns used for the coverage figure
+mssm_nonpareil_curves <- list.files("resources/zenodo", "^mssm_nonpareil_curves_.*\\.tsv\\.gz$", full.names = TRUE) %>%
+  read_tsv(col_types = cols(.default = "c")) %>%
+  transmute(microsample = sub("\\..*", "", Sample),   # "M305894.L1" -> "M305894"
+            nonpareil_L, nonpareil_R, nonpareil_C, nonpareil_x.adj, nonpareil_y.cov)
 ```
 
 ### Combined Quality Statistics
@@ -434,44 +440,37 @@ microquant_metrics_filt_30 <- calculate_alpha_diversity(
 
 ##### Mapping and Catalogue Data
 ```{r load_98ANI, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
-# Read count
-#macroquant_read_counts_98 <- read_tsv("resources/zenodo/macroquant_read_counts_98.tsv", show_col_types = FALSE)
-# 298 × 199
-# Covered bases
-#macroquant_covered_bases_98 <- read_tsv("resources/zenodo/macroquant_covered_bases_98.tsv", #show_col_types = FALSE)
-# 298 × 199
-macroquant_read_counts_98_new <- read_tsv("resources/other/genome.count.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
-  rename_with(
-    .fn = ~ ifelse(.x == "genome", .x, sub("\\..*", "", .x))
-  )
-anyDuplicated(names(macroquant_read_counts_98_new))
-#298 × 769
+# Read count and covered bases: old _98 (198 samples) + mssm_extraseq + MSEB60-61 (960 samples), lanes summed per sample
+macroquant_read_counts_98 <- read_tsv("resources/zenodo/macroquant_read_counts_98_20261012.tsv", show_col_types = FALSE)
+macroquant_covered_bases_98 <- read_tsv("resources/zenodo/macroquant_covered_bases_98_20261012.tsv", show_col_types = FALSE)
 
-macroquant_read_counts_98_new <- full_join(
-  macroquant_read_counts_98,
-  macroquant_read_counts_98_new,
-  by = "genome"
-)
-# 298 × 967
-
-# 298 × 199
-# Covered bases
-macroquant_covered_bases_98_new <- read_tsv("resources/other/genome.covered_bases.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
-  rename_with(
-    .fn = ~ ifelse(.x == "genome", .x, sub("\\..*", "", .x))
-  )
-anyDuplicated(names(macroquant_covered_bases_98_new))
-
-macroquant_covered_bases_98_new <- full_join(
-  macroquant_covered_bases_98,
-  macroquant_covered_bases_98_new,
-  by = "genome"
-)
-
-macroquant_read_counts_98 <- macroquant_read_counts_98_new 
-rm(macroquant_read_counts_98_new)
-macroquant_covered_bases_98 <- macroquant_covered_bases_98_new
-rm(macroquant_covered_bases_98_new)
+# OLD: load old _98 files and manually merge the "extra" 0.98 files - replaced by the _20261012 files above
+# macroquant_read_counts_98 <- read_tsv("resources/zenodo/macroquant_read_counts_98.tsv", show_col_types = FALSE)
+# macroquant_covered_bases_98 <- read_tsv("resources/zenodo/macroquant_covered_bases_98.tsv", show_col_types = FALSE)
+# macroquant_read_counts_98_new <- read_tsv("resources/other/genome.count.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
+#   rename_with(
+#     .fn = ~ ifelse(.x == "genome", .x, sub("\\..*", "", .x))
+#   )
+# anyDuplicated(names(macroquant_read_counts_98_new))
+# macroquant_read_counts_98_new <- full_join(
+#   macroquant_read_counts_98,
+#   macroquant_read_counts_98_new,
+#   by = "genome"
+# )
+# macroquant_covered_bases_98_new <- read_tsv("resources/other/genome.covered_bases.REF0015-g_mg_hybrid-0.98_extra.tsv", show_col_types = FALSE) %>% rename(genome=sequence_id) %>%
+#   rename_with(
+#     .fn = ~ ifelse(.x == "genome", .x, sub("\\..*", "", .x))
+#   )
+# anyDuplicated(names(macroquant_covered_bases_98_new))
+# macroquant_covered_bases_98_new <- full_join(
+#   macroquant_covered_bases_98,
+#   macroquant_covered_bases_98_new,
+#   by = "genome"
+# )
+# macroquant_read_counts_98 <- macroquant_read_counts_98_new
+# rm(macroquant_read_counts_98_new)
+# macroquant_covered_bases_98 <- macroquant_covered_bases_98_new
+# rm(macroquant_covered_bases_98_new)
 
 # Taxonomy
 macromag_taxonomy_98 <- macroscale_catalogue_taxonomy %>%
@@ -750,14 +749,18 @@ names(ani_list) <- stringr::str_extract(basename(ani_files), "GPB_bin_\\d+")
 ## Wrap working objects
 In the last step, the objects that are needed for downstream analyses are stored in an R object.
 ```{r wrap_objects, warning = FALSE, comments = "", message = FALSE, eval = FALSE}
-load("resources/working_data_object_new.Rdata") # load the data from 1-data_preparation
-# update microquant_metrics_filt_30 
-# 98ANI 
-# update phyloseq object 
-# Do not use save.image(): it embeds themes and helper functions. Themes break
-# across ggplot2 versions; functions overwrite the scripts sourced in index.Rmd.
-#save(list = ls()[!vapply(ls(), function(x) {
-#  obj <- get(x); inherits(obj, "theme") || is.function(obj)
-#}, logical(1))],
-#     file = "resources/working_data_object.Rdata")
+#load("resources/working_data_object_new.Rdata") # load the data from 1-data_preparation
+# Save only the objects created in this Rmd, so objects from 02 (or other Rmds)
+# that happen to be in the session are never stored by accident.
+objects_01 <- intersect(ls(), objects_created_in("01-data_preparation.Rmd"))
+objects_01 <- objects_01[!vapply(objects_01, function(x) {
+ obj <- get(x); inherits(obj, "theme") || is.function(obj)
+}, logical(1))]
+# Keep only the objects that 02, 03 or the helper functions use (intermediate tables of this Rmd are left out)
+objects_01 <- objects_01[vapply(objects_01, function(x) grepl(
+  paste0("(?<![A-Za-z0-9_.])", gsub(".", "\\.", x, fixed = TRUE), "(?![A-Za-z0-9_.])"),
+  paste(unlist(lapply(c("02-main_manuscript.Rmd", "03-supporting_information.Rmd", "resources/scripts/MSSM_functions.R"),
+                      readLines, warn = FALSE)), collapse = "\n"),
+  perl = TRUE), logical(1))]
+save(list = objects_01, file = "resources/working_data_object.Rdata")
 ```

@@ -50,27 +50,15 @@ Once the R project has been created, follow the instructions and code chunks sho
 
 ### Libraries
 
-**Recommended (reproducible):** if this repository has an `renv.lock` file, restore the project library once with:
 
-```{r restore_renv, eval = FALSE}
-# install.packages("renv")  # once, if needed
-renv::restore()
-```
-
-**Optional (no renv yet):** to keep installs out of your global R library, run this in the project before loading packages:
-
+To keep installs out of your global R library, run this in the project before loading packages:
 ```{r local_r_lib}
 dir.create("r-lib", showWarnings = FALSE)
 .libPaths(c(file.path(getwd(), "r-lib"), .libPaths()))
 ```
 
-The packages below are required. Most install from CRAN or GitHub. Bioconductor packages (`ggtree`, `ggtreeExtra`, `ALDEx2`, `ComplexHeatmap`, `microbiome`, …) may need:
-
-```{r bioc_hint, eval = FALSE}
-# install.packages("BiocManager")
-# BiocManager::install(c("ggtree", "ggtreeExtra", "ALDEx2", "ComplexHeatmap", "microbiome"))
-```
-
+The packages below are required. 
+Most install from CRAN or GitHub. 
 ```{r load_libraries, warning = FALSE, comments = "", message = FALSE}
 #install.packages('BiocManager', dependencies = TRUE)
 # BiocManager::install(c("phyloseq", "ggtreeExtra","ggtree", "ALDEx2", "ComplexHeatmap"))
@@ -84,7 +72,6 @@ pacman::p_load_gh("anttonalberdi/hilldiv2", "anttonalberdi/distillR", "wilkelab/
 select <- dplyr::select
 recode <- dplyr::recode
 #install.packages("colorspace")
-
 ```
 
 ## Define Plotting Settings
@@ -233,8 +220,11 @@ lawsonibacter_colors <- c(
   `GPB:bin_000044` = "black",
   `GPB:bin_000034` = "#e3c7a0",
   `GPB:bin_000063` = "#ffcc62",
-  `D300470:bin_000020` = "darkseagreen3"
+  `D300470:bin_000020` = "darkseagreen3",
+  `GPB:bin_000141` = "#8c6bb1" # pangenome only (not in the 98% ANI catalogue), only used for the tree in Suppl. Fig. 12a
 )
+
+
 
 barplot(
   1:length(lawsonibacter_colors),

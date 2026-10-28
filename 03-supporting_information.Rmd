@@ -423,8 +423,7 @@ fig_s2_1a
 ### Library Preparation Efficiency (Fig. S2.1b)
 
 ```{r fig_s2_1b,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
-s2_dreamprep_df <- read_tsv("resources/zenodo/sn3_5_dreamprep_df.tsv", show_col_types = FALSE) 
-s2_dreamprep_df <- s2_dreamprep_df %>%
+s2_dreamprep_df <- sn3_5_dreamprep_df %>%
   mutate(plate = str_extract(sample, "^Plate \\d+")) %>%
   filter(
     !Range %in% c("35 bp to 100 bp"),
@@ -477,4 +476,299 @@ fig_s2_1b <- s2_dreamprep_df %>%
 fig_s2_1b
 ```
 
+
+## S6
+### Sequencing depth in the equivolume batches (MSEB0060-75)
+
+#### Panel a: Nonpareil coverage
+```{r fig_nonpareil, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+# Nonpareil counts read pairs after QC and host removal (1 read pair = 2 reads).
+equivolume_batches <- c("MSEB0060", "MSEB0061", paste0("MSEB00", 68:75))
+section_colors <- c("Caecum right" = "#c1558b", "Colon" = "#ffc273")
+animal_shapes <- c("G121e" = 16, "G103b" = 18)            # circle, diamond
+animal_lines  <- c("G121e" = "solid", "G103b" = "dotted")
+reads_per_pair <- 2
+
+# Same depth (x) axis in all three figures, so they line up in a composite figure
+depth_scale <- scale_x_log10(limits = c(1e4, 3e8), breaks = 10^(4:8),
+                             labels = c("0.01M", "0.1M", "1M", "10M", "100M"))
+depth_label <- "Reads for bacterial quantification (log10)"
+
+depth_df <- macroquant_metrics_filt_30 %>%
+  filter(batch %in% equivolume_batches, type == "positive") %>%
+  mutate(group = paste(animal, ifelse(section == "Colon", "colon", "caecum"))) # animal + section: one smooth curve per group in panel c
+
+# Full Nonpareil subsampling curves of every sample (retained and excluded microsamples), from 01-data_preparation
+np_raw <- mssm_nonpareil_curves %>%
+  inner_join(depth_df %>% select(microsample, section, animal, cov_filtering), by = "microsample")
+
+as_vec <- function(s) as.numeric(str_split_1(str_remove_all(s, "\\[|\\]"), ", ")) # "[0, 2, ...]" -> numbers
+
+# Curves: one row per subsampling point (effort in Mbp / read length = million read pairs)
+np_obs <- np_raw %>%
+  transmute(microsample, section, animal, L = as.numeric(nonpareil_L),
+            mreads = purrr::map(nonpareil_x.adj, as_vec), coverage = purrr::map(nonpareil_y.cov, as_vec)) %>%
+  unnest(c(mreads, coverage)) %>%
+  mutate(mreads = mreads / L, coverage = coverage / 100) %>%
+  filter(mreads >= 0.01)                                   # drop the 0-read starting point (log axis)
+
+# End point of each curve = the sample's real depth and coverage
+np_sample <- np_raw %>%
+  transmute(microsample, section, animal, cov_filtering,
+            mreads = as.numeric(nonpareil_R) / 1e6, coverage = as.numeric(nonpareil_C))
+
+# Depth at which a curve first reaches a coverage threshold (interpolated on log depth; NA = never reached)
+first_cross <- function(mreads, coverage, thr) {
+  i <- which(coverage >= thr)[1]
+  if (is.na(i)) return(NA_real_)
+  if (i == 1) return(mreads[1])
+  10^approx(coverage[(i - 1):i], log10(mreads[(i - 1):i]), xout = thr, ties = mean)$y
+}
+
+np_cross_samples <- np_obs %>%
+  arrange(microsample, mreads) %>%
+  group_by(microsample) %>%
+  summarise(`0.90` = first_cross(mreads, coverage, 0.90), `0.95` = first_cross(mreads, coverage, 0.95)) %>%
+  pivot_longer(-microsample, names_to = "threshold", values_to = "pairs_needed") %>%
+  mutate(threshold = as.numeric(threshold))
+
+# Microsamples reaching 90% / 95% coverage and median read pairs needed
+np_cross <- np_cross_samples %>%
+  group_by(threshold) %>%
+  summarise(n_reached = sum(!is.na(pairs_needed)), n = n(),
+            median_pairs = median(pairs_needed, na.rm = TRUE))
+
+# The 90% / 95% coverage lines, reused in the next two figures as depth lines (median reads needed)
+cov_lines <- np_cross %>%
+  mutate(reads = median_pairs * 1e6 * reads_per_pair,   # read pairs (M) -> reads
+         line  = ifelse(threshold == 0.90, "dotdash", "dashed"),
+         label = paste0(100 * threshold, "% coverage"))
+
+# Plotted in reads (not read pairs), to share the x axis with the other two figures
+to_reads <- function(m_pairs) m_pairs * 1e6 * reads_per_pair   # million read pairs -> reads
+
+fig_nonpareil <- ggplot() +
+  geom_hline(yintercept = cov_lines$threshold, linetype = cov_lines$line, colour = "grey40") +
+  annotate("text", x = 1.2e4, y = cov_lines$threshold, label = cov_lines$label,
+           hjust = 0, vjust = c(1.4, -0.5), size = 3, colour = "grey30") +   # 90% below its line, 95% above
+  geom_line(data = np_obs, aes(to_reads(mreads), coverage, group = microsample, colour = section, linetype = animal),
+            alpha = 0.12, linewidth = 0.3) +
+  geom_point(data = np_sample, aes(to_reads(mreads), coverage, colour = section, shape = animal), size = 0.9, alpha = 0.5) +
+  geom_point(data = filter(np_sample, cov_filtering == "Excluded By Filtering"), # x over excluded samples (as in b)
+             aes(to_reads(mreads), coverage), shape = 4, size = 0.5, stroke = 0.7, colour = "grey15") +
+  geom_boxplot(data = filter(np_cross_samples, !is.na(pairs_needed)),
+               aes(x = to_reads(pairs_needed), y = threshold, group = threshold), orientation = "y",
+               width = 0.025, colour = "grey15", fill = "white", linewidth = 0.4,
+               outlier.size = 0.6, outlier.colour = "grey15") +
+  depth_scale +
+  scale_y_continuous(limits = c(0, 1), breaks = seq(0, 1, 0.25)) +
+  scale_colour_manual(values = section_colors, name = NULL) +
+  scale_shape_manual(values = animal_shapes, name = NULL) +
+  scale_linetype_manual(values = animal_lines, name = NULL) +
+  guides(colour   = guide_legend(override.aes = list(size = 3, alpha = 1)),     # readable keys
+         shape    = guide_legend(override.aes = list(size = 3, alpha = 1)),
+         linetype = guide_legend(override.aes = list(alpha = 1, linewidth = 0.6))) +
+  labs(x = depth_label, y = "Nonpareil coverage") +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+```
+
+#### Panel b: Reads per batch
+```{r fig_reads_per_batch_equivolume, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+set.seed(1)
+reads_eq_df <- depth_df %>%
+  mutate(batch = gsub("MSEB00", "B", batch),
+         batch = factor(batch, levels = rev(sort(unique(batch)))),  # reversed, so B60 is at the top
+         batch_jit = as.numeric(batch) + runif(n(), -0.2, 0.2))      # jitter once, so the x's land on their own points
+
+fig_reads_per_batch <- ggplot(reads_eq_df, aes(x = raw_total_sequences_mag)) +
+  geom_boxplot(aes(y = batch), fill = NA, outlier.shape = NA) +   # transparent box, points drawn below
+  geom_point(aes(y = batch_jit, colour = section, shape = animal), size = 1.2, alpha = 0.5) +
+  geom_point(data = filter(reads_eq_df, cov_filtering == "Excluded By Filtering"), # x over excluded samples
+             aes(y = batch_jit), shape = 4, size = 0.5, stroke = 0.7, colour = "grey15") +
+  # Median reads needed for 90% / 95% Nonpareil coverage (cov_lines from fig_nonpareil)
+  annotate("segment", y = 0.5, yend = nlevels(reads_eq_df$batch) + 0.5,       # lines stop below the labels
+           x = cov_lines$reads, xend = cov_lines$reads, linetype = cov_lines$line, colour = "grey40") +
+  annotate("text", y = nlevels(reads_eq_df$batch) + 0.6, x = cov_lines$reads, label = cov_lines$label,
+           hjust = c(1, 0), vjust = 0, size = 2.8, colour = "grey30") +      # above the top batch: 90% left, 95% right
+  scale_y_discrete(expand = expansion(add = c(0.6, 1.2))) +                   # extra room at the top for the labels
+  depth_scale +
+  scale_colour_manual(values = section_colors, name = NULL) +
+  scale_shape_manual(values = animal_shapes, name = NULL) +
+  guides(colour = guide_legend(override.aes = list(size = 3, alpha = 1)),       # readable keys
+         shape  = guide_legend(override.aes = list(size = 3, alpha = 1))) +
+  labs(x = depth_label, y = "Batch") +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+```
+
+#### Panel c: Richness vs reads
+```{r fig_richness_vs_reads, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+# Retained microsamples only: excluded microsamples have richness 0 by definition.
+richness_df <- depth_df %>% filter(cov_filtering == "Retained By Filtering")
+
+fig_richness_vs_reads <- ggplot(richness_df, aes(x = raw_total_sequences_mag, y = richness, colour = section)) +
+  # Median reads needed for 90% / 95% Nonpareil coverage (cov_lines from fig_nonpareil)
+  geom_vline(xintercept = cov_lines$reads, linetype = cov_lines$line, colour = "grey40") +
+  annotate("text", x = cov_lines$reads, y = 5, label = cov_lines$label, angle = 90,
+           hjust = 0, vjust = c(-0.5, 1.4), size = 3, colour = "grey30") +   # 90% left of its line, 95% right
+  geom_point(aes(shape = animal), size = 1.2, alpha = 0.5) +
+  # GAM (k = 4), one curve per animal + section
+  geom_smooth(aes(fill = section, linetype = animal, group = group), method = "gam", formula = y ~ s(x, k = 4),
+              se = TRUE, alpha = 0.2, linewidth = 0.8) +
+  depth_scale +
+  scale_colour_manual(values = section_colors, name = NULL) +
+  scale_fill_manual(values = section_colors, name = NULL) +
+  scale_shape_manual(values = animal_shapes, name = NULL) +
+  scale_linetype_manual(values = animal_lines, name = NULL) +
+  guides(shape    = guide_legend(override.aes = list(size = 3, alpha = 1)),     # readable keys, grey line keys
+         linetype = guide_legend(override.aes = list(colour = "grey30", fill = NA))) +
+  labs(x = depth_label, y = "Richness") +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+```
+
+#### Composite figure (a: Nonpareil, b: reads per batch, c: richness)
+```{r fig_depth_composite, echo = TRUE, warning = FALSE, comments = "", message = FALSE, fig.width = 8, fig.height = 10}
+# a and b share the x axis with c, so only c keeps the x axis title.
+# Only c keeps its legend: it already shows section colours, animal shapes and animal line types.
+top_panel <- theme(axis.title.x = element_blank(), legend.position = "none")
+
+fig_depth_composite <- (fig_nonpareil + top_panel) /
+  (fig_reads_per_batch + top_panel) /
+  (fig_richness_vs_reads + theme(legend.position = "bottom")) +
+  plot_layout(heights = c(0.7, 1, 0.7)) +               # a and c shorter than b
+  plot_annotation(tag_levels = "a") &
+  theme(plot.margin = margin(5, 5, 5, 5), plot.tag = element_text(size = 14, face = "bold"))
+
+fig_depth_composite
+```
+
+### Image darkness vs microbial reads (S6)
+```{r s6_darkness_data, echo = TRUE, warning = FALSE, message = FALSE}
+original_image <- function(cryo) file.path(pixel_coords_dir, "original", paste0(cryo, ".png"))
+
+darkness_samples <- macroquant_metrics_filt_30 %>%
+  filter(type == "positive", batch %in% sprintf("MSEB%04d", 60:75), collection == "Success") %>%
+  transmute(microsample, cryosection, section, animal, batch, Xcoord, Ycoord,
+            size = as.numeric(as.character(size)),          # stored as a factor
+            reads = raw_total_sequences_mag) %>%
+  inner_join(read_csv(file.path(pixel_coords_dir, "microsample_pixel_coords_airtable.csv"), show_col_types = FALSE) %>%
+               select(microsample, pixel_x, pixel_y),
+             by = "microsample") %>%
+  filter(!is.na(pixel_x), !is.na(size), file.exists(original_image(cryosection)))
+
+# 255 - mean grey value of the image pixels inside a circle (grey: rows = y, columns = x)
+spot_darkness <- function(grey, x, y, r) {
+  px <- expand_grid(col = floor(x - r):ceiling(x + r), row = floor(y - r):ceiling(y + r)) %>%
+    filter((col - x)^2 + (row - y)^2 <= r^2)
+  255 - mean(grey[cbind(px$row, px$col)])
+}
+
+darkness_df <- darkness_samples %>%
+  group_by(cryosection) %>%
+  group_modify(function(d, key) {
+    grey <- as.integer(magick::image_data(magick::image_read(original_image(key$cryosection)), "gray"))[, , 1]
+    um_per_px <- coef(lm(Xcoord ~ pixel_x, d))[[2]]     # image scale: microscope µm per image pixel
+    radius_px <- sqrt(d$size / pi) / um_per_px           # microsample radius in pixels
+    mutate(d, darkness = pmap_dbl(list(pixel_x, pixel_y, radius_px), ~ spot_darkness(grey, ..1, ..2, ..3)))
+  }) %>%
+  ungroup()
+```
+
+#### Microbial reads by darkness group
+```{r s6_darkness_groups, echo = TRUE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 10}
+to_pct <- function(x) 100 * (10^x - 1)   # log10 difference -> % difference
+pct_label <- function(x) sprintf("%+.0f%%", x)
+
+darkness_rel <- darkness_df %>%
+  group_by(cryosection) %>%
+  mutate(group     = factor(ntile(darkness, 4), 1:4, c("Lightest\n25%", "25-50%", "50-75%", "Darkest\n25%")),
+         reads_rel = log10(reads) - mean(log10(reads))) %>%   # log10 difference from the section average
+  ungroup()
+
+# average per cryosection and group (small coloured points)
+darkness_sections <- darkness_rel %>%
+  group_by(cryosection, section, animal, group) %>%
+  summarise(pct = to_pct(mean(reads_rel)), .groups = "drop")
+
+# average over all cryosections per group (black dots), with 95% CI
+darkness_groups <- darkness_rel %>%
+  group_by(group) %>%
+  summarise(m = mean(reads_rel), se = sd(reads_rel) / sqrt(n()), n = n()) %>%
+  mutate(pct = to_pct(m), lo = to_pct(m - 1.96 * se), hi = to_pct(m + 1.96 * se))
+
+darkest_vs_lightest <- to_pct(darkness_groups$m[4] - darkness_groups$m[1])
+label_y <- max(darkness_sections$pct) + 8
+section_dodge <- position_dodge(width = 0.35)   # shift each cryosection sideways a little, the same in every group
+
+fig_darkness_reads <- ggplot(darkness_sections, aes(group, pct)) +
+  geom_hline(yintercept = 0, colour = "grey40", linewidth = 0.4) +
+  geom_line(aes(group = cryosection, colour = section, linetype = animal), linewidth = 0.5, alpha = 0.6,
+            position = section_dodge) +
+  geom_point(aes(group = cryosection, colour = section, shape = animal), size = 2, alpha = 0.8,
+             position = section_dodge) +
+  geom_errorbar(data = darkness_groups, aes(ymin = lo, ymax = hi), width = 0.12, linewidth = 0.8) +
+  geom_point(data = darkness_groups, size = 3) +
+  geom_text(data = darkness_groups, aes(y = label_y, label = pct_label(pct)), size = 3.5, fontface = "bold") +
+  annotate("text", x = 2.5, y = label_y + 10, size = 3.5,
+           label = sprintf("Darkest vs lightest: %s microbial reads", pct_label(darkest_vs_lightest))) +
+  scale_y_continuous(labels = pct_label) +
+  scale_colour_manual(values = section_colors, name = NULL) +
+  scale_shape_manual(values = animal_shapes, name = NULL) +
+  scale_linetype_manual(values = animal_lines, name = NULL) +
+  guides(colour   = guide_legend(override.aes = list(size = 3, alpha = 1)),
+         shape    = guide_legend(override.aes = list(size = 3, alpha = 1)),
+         linetype = guide_legend(override.aes = list(colour = "grey30"))) +
+  labs(x = "Microsamples grouped by darkness within their own cryosection",
+       y = "Bacterial quantification reads compared with\nthe average of its section") +
+  custom_ggplot_theme +
+  theme(legend.position = "bottom")
+
+fig_darkness_reads
+```
+
+#### Per cryosection
+```{r s6_darkness_per_section, echo = TRUE, warning = FALSE, message = FALSE}
+darkness_per_section <- darkness_df %>%
+  group_by(cryosection) %>%
+  group_modify(function(d, key) {
+    f <- if (n_distinct(d$batch) > 1) log10(reads) ~ scale(darkness) + batch else log10(reads) ~ scale(darkness)
+    fit <- coef(summary(lm(f, d)))["scale(darkness)", ]
+    neighbours <- spdep::nb2listw(spdep::graph2nb(spdep::gabrielneigh(as.matrix(d[, c("Xcoord", "Ycoord")])), sym = TRUE))
+    moran <- spdep::moran.test(d$darkness, neighbours)
+    tibble(n                 = nrow(d),
+           pct_reads_per_SD  = to_pct(fit[["Estimate"]]),
+           moran_I_darkness  = moran$estimate[["Moran I statistic"]],
+           p_moran           = moran$p.value)
+  }) %>%
+  ungroup()
+
+darkness_per_section %>%
+  mutate(across(c(pct_reads_per_SD, moran_I_darkness), ~ round(.x, 2)),
+         p_moran = signif(p_moran, 2)) %>%
+  knitr::kable()
+
+n_positive <- sum(darkness_per_section$pct_reads_per_SD > 0)
+sign_test  <- binom.test(n_positive, nrow(darkness_per_section))
+n_patchy   <- sum(darkness_per_section$p_moran < 0.05)
+
+# share of the variation in reads explained by darkness within cryosections (all sections together)
+R2_within <- darkness_df %>%
+  group_by(cryosection) %>%
+  mutate(reads_c = log10(reads) - mean(log10(reads)), darkness_c = darkness - mean(darkness)) %>%
+  ungroup() %>%
+  summarise(R2 = cor(reads_c, darkness_c)^2) %>%
+  pull(R2)
+
+# Summary
+cat(sprintf("Darker spots had more reads in %d of %d cryosections (%.0f%% to %.0f%% more reads per SD darker; sign test p = %.2g).\n",
+            n_positive, nrow(darkness_per_section),
+            min(darkness_per_section$pct_reads_per_SD), max(darkness_per_section$pct_reads_per_SD), sign_test$p.value),
+    sprintf("Darkness was spatially aggregated (Moran's I > 0, p < 0.05) in %d of %d cryosections (Moran's I %.2f - %.2f).\n",
+            n_patchy, nrow(darkness_per_section),
+            min(darkness_per_section$moran_I_darkness), max(darkness_per_section$moran_I_darkness)),
+    sprintf("Within cryosections, darkness explained %.1f%% of the variation in log10 microbial reads.\n", 100 * R2_within),
+    sep = "")
+```
 

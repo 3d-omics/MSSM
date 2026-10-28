@@ -1937,11 +1937,11 @@ names(spatial_rlq_results) <- spatial_sections
 ```{r flip_axis, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 spatial_rlq_results_raw <- spatial_rlq_results
 spatial_rlq_results_flipped <- spatial_rlq_results_raw
+# RLQ axes to flip (multiplied by -1) per cryosection
 axes_to_flip <- list(
-  G121eO306A = 1,
-  G121eO307A = 1,
-  G121eI117A = c(1, 2),
-  G121eI118B = c(1, 2)
+  G121eO306A = 2,
+  G121eO307A = c(1, 2),
+  G121eI114B = 1
 )
 
 flip_rlq_axis <- function(x, ax = 1) {
@@ -2009,11 +2009,11 @@ for (section_id in names(axes_to_flip)) {
 ```{r spt_flip_axis, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
 spatial_rlq_results_raw <- spatial_rlq_results
 spatial_rlq_results_flipped <- spatial_rlq_results_raw
+# RLQ axes to flip (multiplied by -1) per cryosection
 axes_to_flip <- list(
-  G121eO306A = 1,
-  G121eO307A = 1,
-  G121eI117A = c(1, 2),
-  G121eI118B = c(1, 2)
+  G121eO306A = 2,
+  G121eO307A = c(1, 2),
+  G121eI114B = 1
 )
 
 flip_rlq_axis <- function(x, ax = 1) {
@@ -2083,7 +2083,7 @@ sapply(rlq_space, nrow)  # microsamples per cryosection
 #### Cryosection images and pixel coordinates
 ```{r spt_pixel_setup, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
 pixel_coords_dir  <- "resources/pixel_coords"
-pixel_coords_file <- file.path(pixel_coords_dir, "microsample_pixel_coords.csv")
+pixel_coords_file <- file.path(pixel_coords_dir, "microsample_pixel_coords_2026_10_09.csv")
 
 pixel_coords_all <- if (file.exists(pixel_coords_file)) {
   readr::read_csv(pixel_coords_file, show_col_types = FALSE)
@@ -2097,7 +2097,6 @@ pixel_coords_all <- if (file.exists(pixel_coords_file)) {
 
 #### Functional ordination figure
 PCoA of the GIFT elements of the genomes that entered the caecum `G121eI117A` RLQ, with the genome-length curve along axis 1 and the carbohydrate-minus-lipid contrast along axis 2. 
-This element-level ordination is only used for the figure; the RLQ trait input is the `gift_pcoa` computed above.
 ```{r spt_pcoa_genome_select, echo = TRUE, warning = FALSE, message = FALSE}
 extRLQ_traits  <- rlq_traits$G121eI117A
 extRLQ_genomes <- extRLQ_traits$genome
@@ -2170,7 +2169,8 @@ pcoa_plot <- gift_pcoa_vectors %>%
       geom_point(aes(x = Axis.1, y = Axis.2, color = order, size = length),
                  alpha = 0.9, shape = 16) +
     guides(color = "none") +
-      scale_size_continuous(range = c(0.1, 5)) +
+      scale_size_continuous(range = c(0.1, 5), name = "Genome length",
+                            labels = scales::label_number(scale = 1e-6, suffix = "M")) +
       geom_segment(data = gift_pcoa_gifts_top,
                    aes(x = 0, y = 0, xend = Axis.1 * loading_scale, yend = Axis.2 * loading_scale),
                     arrow = arrow(length = unit(0.3, "cm"),
@@ -2198,8 +2198,9 @@ gift_axis_1 <- gift_pcoa_vectors %>%
                  size = 3.0, alpha = 0.9) +
       scale_fill_fermenter(palette = "RdBu", n.breaks = 7,
                            limits = c(-ax2_overlay_lim, ax2_overlay_lim),
-                           name = "Caecum axis 2") +
+                           name = "Traits & Phylogeny RLQ axis 2") +
       geom_smooth(color = "black") +
+      scale_y_continuous(labels = scales::label_number(scale = 1e-6, suffix = "M")) +
       coord_cartesian(xlim = pcoa_x_range) +
       theme_minimal() +
   labs(y = "Genome length", x = NULL)
@@ -2223,13 +2224,13 @@ gift_plot_PC2 <- gift_df_PCoA %>%
              size = 3.0, alpha = 0.9) +
   scale_fill_fermenter(palette = "RdBu", n.breaks = 7,
                        limits = c(-ax2_overlay_lim, ax2_overlay_lim),
-                       name = "Caecum axis 2") +
+                       name = "Traits & Phylogeny RLQ axis 2") +
   geom_smooth(color = "black") +
   geom_hline(yintercept = 0, linetype = "dashed", color = "grey60") +
   theme_minimal() +
-  labs(x = NULL, y = "Carbohydrate - lipid\ndegradation (GIFT)") +
+  labs(x = NULL, y = NULL, title = "Carbohydrate - lipid\ndegradation (GIFT)") + # title above the plot
   coord_flip(xlim = pcoa_y_range) +
-  theme(axis.title = element_text(size = 8),
+  theme(plot.title = element_text(size = 8),
         plot.margin = margin(5.5, 9, 5.5, 5.5))
 ```
 
@@ -2240,9 +2241,14 @@ fig5a_gift_pcoa_composite_plot <- gift_axis_1 + plot_spacer() +
   pcoa_plot + gift_plot_PC2 +
   plot_layout(ncol = 2, nrow = 2, widths = c(7, 1.3), heights = c(1.3, 6),
               guides = "collect") &
-  theme(legend.position = "bottom")
+  theme(legend.position = "bottom",
+        axis.title = element_text(face = "bold"),
+        plot.title = element_text(face = "bold"),
+        legend.title = element_text(face = "bold"))
 
 fig5a_gift_pcoa_composite_plot
+# ggsave("_illustrator/fig5a_gift_pcoa_composite.pdf", fig5a_gift_pcoa_composite_plot,
+       # width = 9, height = 8)
 ```
 
 
@@ -2270,40 +2276,42 @@ extRLQ_space <- rlq_space$G121eI117A
 # head(extRLQ_space)
 ```
 
+
 ##### Axis 2, Fig 5c
 
 GIFT scores of the elements of the three degradation functions (D01 lipid, D02 polysaccharide, D03 sugar) next to the tree as per-element z-scores.
 
 ```{r spt_caecum_axis2_tree_heatmap_z, echo = TRUE, message = FALSE, warning = FALSE, fig.height=14, fig.width=6}
 extRLQ_tree_grad <- build_extRLQ_grad_tree(
-  extRLQ_tree, extRLQ_tree_data, "AxcQ2_G121eI117A", "Caecum axis 2")
+  extRLQ_tree, extRLQ_tree_data, "AxcQ2_G121eI117A", "Traits & Phylogeny RLQ axis 2")
 # extRLQ_tree_grad
 
 fig5c_gift_tree_heatmap_len_z <- build_gift_tree_heatmap_len(
-  extRLQ_tree_grad, macromag_gifts_sel)
+  extRLQ_tree_grad, macromag_gifts_sel,
+  heat_title = "Genome inferred functional traits", elem_pos = "bottom",
+  top_title = "Genome inferred functional traits for the degradation of")
 
 fig5c_gift_tree_heatmap_len_z
+# ggsave("_illustrator/fig5c_gift_tree_heatmap_len_z.pdf", fig5c_gift_tree_heatmap_len_z,
+       # width = 6, height = 14)
 ```
 ##### Fig 5b
 ```{r spt_caecum_axis2_overlay, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
 fig5b_overlay_caecum_axis2 <- plot_pixel_overlay(
-  "G121eI117A", extRLQ_space, "AxcR2_G121eI117A", "Caecum axis 2")
+  "G121eI117A", extRLQ_space, "AxcR2_G121eI117A", "Environment & Space RLQ axis 2") +
+  theme(legend.position = "bottom", legend.direction = "horizontal", # horizontal colour bar
+        legend.title.position = "top", legend.title = element_text(face = "bold"),
+        legend.key.width = unit(0.8, "cm"))
 
 show_overlay(fig5b_overlay_caecum_axis2)
-```
-
-
-```{r spt_caecum_axis2_scatter, echo = TRUE, message = FALSE, warning = FALSE, fig.height=4, fig.width=5}
-# scatter_caecum_axis2_dist <- build_extRLQ_scatter(
-#   extRLQ_space, "distance_host", "AxcR2_G121eI117A",
-#   "Distance to host (um)", "Caecum axis 2")
-# scatter_caecum_axis2_dist
+# ggsave("_illustrator/fig5b_overlay_caecum_axis2.pdf", fig5b_overlay_caecum_axis2,
+       # width = 8, height = 8)
 ```
 
 ##### Axis 1 - Fig S15a
 ```{r spt_caecum_axis1_tree_heatmap_z, echo = TRUE, message = FALSE, warning = FALSE, fig.height=14, fig.width=6}
 extRLQ_tree_grad_ax1 <- build_extRLQ_grad_tree(
-  extRLQ_tree, extRLQ_tree_data, "AxcQ1_G121eI117A", "Caecum axis 1")
+  extRLQ_tree, extRLQ_tree_data, "AxcQ1_G121eI117A", "T & P axis 1")
 
 # extRLQ_tree_grad_ax1
 
@@ -2311,28 +2319,34 @@ figS15a_gift_tree_heatmap_len_z_ax1 <- build_gift_tree_heatmap_len(
   extRLQ_tree_grad_ax1, macromag_gifts_sel)
 
 figS15a_gift_tree_heatmap_len_z_ax1
+# ggsave("_illustrator/figS15a_gift_tree_heatmap_len_z_caecum_axis1.pdf", figS15a_gift_tree_heatmap_len_z_ax1,
+       # width = 6, height = 14)
 ```
 ##### Fig S15b
 ```{r spt_caecum_axis1_overlay, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
 figS15b_overlay_caecum_axis1 <- plot_pixel_overlay(
-  "G121eI117A", extRLQ_space, "AxcR1_G121eI117A", "Caecum axis 1")
+  "G121eI117A", extRLQ_space, "AxcR1_G121eI117A", "E & S axis 1")
 
 show_overlay(figS15b_overlay_caecum_axis1)
+# ggsave("_illustrator/figS15b_overlay_caecum_axis1.pdf", figS15b_overlay_caecum_axis1,
+       # width = 8, height = 8)
 ```
 ##### Fig S15c
 ```{r spt_caecum_axis1_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=5, fig.width=8}
 scatter_caecum_axis1_rich <- build_extRLQ_scatter(
-  extRLQ_space, "div", "AxcR1_G121eI117A", "Richness", "Caecum axis 1")
+  extRLQ_space, "div", "AxcR1_G121eI117A", "Richness",
+  "Caecum: E & S axis 1", legend_label = "E & S axis 1")
 scatter_caecum_axis1_seq  <- build_extRLQ_scatter(
-  extRLQ_space, "log_seq_counts", "AxcR1_G121eI117A", "log(seq count)", "Caecum axis 1")
+  extRLQ_space, "log_seq_counts", "AxcR1_G121eI117A", "log(seq count)",
+  "Caecum: E & S axis 1", legend_label = "E & S axis 1")
 
-layout_extRLQ_scatter_pair(scatter_caecum_axis1_rich, scatter_caecum_axis1_seq)
+figS15c_scatters_caecum_axis1 <- layout_extRLQ_scatter_pair(scatter_caecum_axis1_rich, scatter_caecum_axis1_seq)
+figS15c_scatters_caecum_axis1
+# ggsave("_illustrator/figS15c_scatters_caecum_axis1.pdf", figS15c_scatters_caecum_axis1,
+       # width = 8, height = 5)
 ```
 
 #### Colon RLQ axis 1 (G121eO306A)
-Its own genome set, so tree and GIFT subset are built fresh (the caecum
-rotations refer to the caecum node numbers).
-
 ```{r spt_colon_import, echo = TRUE, message = FALSE, warning = FALSE}
 colon_traits  <- rlq_traits$G121eO306A
 colon_space   <- rlq_space$G121eO306A
@@ -2359,29 +2373,38 @@ colon_tree <- safe_rotate(colon_tree, 92)
 ```{r spt_colon_tree, echo = TRUE, message = FALSE, warning = FALSE, fig.height=14, fig.width=6}
 colon_tree_data <- make_extRLQ_tree_data(colon_tree, colon_traits)
 extRLQ_tree_grad_colon <- build_extRLQ_grad_tree(
-  colon_tree, colon_tree_data, "AxcQ1_G121eO306A", "Colon axis 1")
+  colon_tree, colon_tree_data, "AxcQ1_G121eO306A", "T & P axis 1")
 # extRLQ_tree_grad_colon
 
 figS16a_gift_tree_heatmap_len_z_colon <- build_gift_tree_heatmap_len(
   extRLQ_tree_grad_colon, colon_gifts_sel)
 
 figS16a_gift_tree_heatmap_len_z_colon
+# ggsave("_illustrator/figS16a_gift_tree_heatmap_len_z_colon_axis1.pdf", figS16a_gift_tree_heatmap_len_z_colon,
+       # width = 6, height = 14)
 ```
 ##### Fig S16b
 ```{r spt_colon_overlay, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
 figS16b_overlay_colon_axis1 <- plot_pixel_overlay(
-  "G121eO306A", colon_space, "AxcR1_G121eO306A", "Colon axis 1")
+  "G121eO306A", colon_space, "AxcR1_G121eO306A", "E & S axis 1")
 
 show_overlay(figS16b_overlay_colon_axis1)
+# ggsave("_illustrator/figS16b_overlay_colon_axis1.pdf", figS16b_overlay_colon_axis1,
+       # width = 8, height = 8)
 ```
 ##### Fig S16c
 ```{r spt_colon_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=5, fig.width=8}
 scatter_colon_axis1_rich <- build_extRLQ_scatter(
-  colon_space, "div", "AxcR1_G121eO306A", "Richness", "Colon axis 1")
+  colon_space, "div", "AxcR1_G121eO306A", "Richness",
+  "Colon: E & S axis 1", legend_label = "E & S axis 1")
 scatter_colon_axis1_seq  <- build_extRLQ_scatter(
-  colon_space, "log_seq_counts", "AxcR1_G121eO306A", "log(seq count)", "Colon axis 1")
+  colon_space, "log_seq_counts", "AxcR1_G121eO306A", "log(seq count)",
+  "Colon: E & S axis 1", legend_label = "E & S axis 1")
 
-layout_extRLQ_scatter_pair(scatter_colon_axis1_rich, scatter_colon_axis1_seq)
+figS16c_scatters_colon_axis1 <- layout_extRLQ_scatter_pair(scatter_colon_axis1_rich, scatter_colon_axis1_seq)
+figS16c_scatters_colon_axis1
+# ggsave("_illustrator/figS16c_scatters_colon_axis1.pdf", figS16c_scatters_colon_axis1,
+       # width = 8, height = 5)
 ```
 
 #### Cryosection replication
@@ -2421,28 +2444,30 @@ repl_c2_tree_data <- make_extRLQ_tree_data(repl_c_tree, repl_c2_traits)
 repl_c2_tree_bars <- build_extRLQ_family_tree_bars(
   repl_c_tree, repl_c2_tree_data,
   bar_cols = paste0("AxcQ2_", caecum_sections),
-  bar_legend = "Caecum axis 2")
+  bar_legend = "T & P axis 2")
 
 repl_c2_tree_bars
+# ggsave("_illustrator/figS17a_repl_caecum_axis2_tree_bars.pdf", repl_c2_tree_bars,
+       # width = 14, height = 6)
 ```
 ##### Fig S17b
-```{r spt_repl_caecum_axis2_overlays, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
+```{r spt_repl_caecum_axis2_overlays, echo = TRUE, message = FALSE, warning = FALSE, fig.height=4.5, fig.width=12}
 repl_c2_axis_lim <- extRLQ_axis_r_lim(
   rlq_space[caecum_sections], paste0("AxcR2_", caecum_sections))
 
-overlay_c2_117A <- plot_pixel_overlay(
-  "G121eI117A", rlq_space$G121eI117A, "AxcR2_G121eI117A", "Caecum axis 2",
-  axis_lim = repl_c2_axis_lim)
-overlay_c2_118B <- plot_pixel_overlay(
-  "G121eI118B", rlq_space$G121eI118B, "AxcR2_G121eI118B", "Caecum axis 2",
-  axis_lim = repl_c2_axis_lim)
-overlay_c2_114B <- plot_pixel_overlay(
-  "G121eI114B", rlq_space$G121eI114B, "AxcR2_G121eI114B", "Caecum axis 2",
-  axis_lim = repl_c2_axis_lim)
+# one overlay per cryosection on the shared scale, cropped to the tissue (crop = TRUE) to remove white space
+repl_c2_overlays <- lapply(caecum_sections, function(cryo) {
+  plot_pixel_overlay(
+    cryo, rlq_space[[cryo]], paste0("AxcR2_", cryo), "E & S axis 2",
+    axis_lim = repl_c2_axis_lim, crop = TRUE)
+})
+names(repl_c2_overlays) <- caecum_sections
 
-show_overlay(overlay_c2_117A)
-show_overlay(overlay_c2_118B)
-show_overlay(overlay_c2_114B)
+figS17b_overlays_caecum_axis2 <- combine_overlays(repl_c2_overlays)
+show_overlay(figS17b_overlays_caecum_axis2)
+
+# ggsave("_illustrator/figS17b_overlays_caecum_axis2.pdf", figS17b_overlays_caecum_axis2,
+       # width = 12, height = 4.5)
 ```
 
 ##### Caecum axis 1 (G121eI117A, G121eI118B, G121eI114B)
@@ -2453,32 +2478,34 @@ repl_c1_tree_data <- make_extRLQ_tree_data(repl_c_tree, repl_c1_traits)
 repl_c1_tree_bars <- build_extRLQ_family_tree_bars(
   repl_c_tree, repl_c1_tree_data,
   bar_cols = paste0("AxcQ1_", caecum_sections),
-  bar_legend = "Caecum axis 1")
+  bar_legend = "T & P axis 1")
 
 repl_c1_tree_bars
+# ggsave("_illustrator/figS18a_repl_caecum_axis1_tree_bars.pdf", repl_c1_tree_bars,
+       # width = 14, height = 6)
 ```
 ##### Fig S18b
-```{r spt_repl_caecum_axis1_overlays, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
+```{r spt_repl_caecum_axis1_overlays, echo = TRUE, message = FALSE, warning = FALSE, fig.height=4.5, fig.width=12}
 repl_c1_axis_lim <- extRLQ_axis_r_lim(
   rlq_space[caecum_sections], paste0("AxcR1_", caecum_sections))
 
-overlay_c1_117A <- plot_pixel_overlay(
-  "G121eI117A", rlq_space$G121eI117A, "AxcR1_G121eI117A", "Caecum axis 1",
-  axis_lim = repl_c1_axis_lim)
-overlay_c1_118B <- plot_pixel_overlay(
-  "G121eI118B", rlq_space$G121eI118B, "AxcR1_G121eI118B", "Caecum axis 1",
-  axis_lim = repl_c1_axis_lim)
-overlay_c1_114B <- plot_pixel_overlay(
-  "G121eI114B", rlq_space$G121eI114B, "AxcR1_G121eI114B", "Caecum axis 1",
-  axis_lim = repl_c1_axis_lim)
+# one overlay per cryosection on the shared scale, cropped to the tissue (crop = TRUE) to remove white space
+repl_c1_overlays <- lapply(caecum_sections, function(cryo) {
+  plot_pixel_overlay(
+    cryo, rlq_space[[cryo]], paste0("AxcR1_", cryo), "E & S axis 1",
+    axis_lim = repl_c1_axis_lim, crop = TRUE)
+})
+names(repl_c1_overlays) <- caecum_sections
 
-show_overlay(overlay_c1_117A)
-show_overlay(overlay_c1_118B)
-show_overlay(overlay_c1_114B)
+figS18b_overlays_caecum_axis1 <- combine_overlays(repl_c1_overlays)
+show_overlay(figS18b_overlays_caecum_axis1)
+
+# ggsave("_illustrator/figS18b_overlays_caecum_axis1.pdf", figS18b_overlays_caecum_axis1,
+       # width = 12, height = 4.5)
 ```
 ##### Fig S18c
 ```{r spt_repl_caecum_axis1_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=4, fig.width=14}
-repl_c1_legend <- "Caecum axis 1"
+repl_c1_legend <- "E & S axis 1"
 
 repl_c1_scatters <- lapply(caecum_sections, function(cryo) {
   axis_col <- paste0("AxcR1_", cryo)
@@ -2486,7 +2513,7 @@ repl_c1_scatters <- lapply(caecum_sections, function(cryo) {
     div = build_extRLQ_scatter(
       rlq_space[[cryo]], "div", axis_col, "Richness", repl_c1_legend,
       axis_lim = repl_c1_axis_lim, legend_label = repl_c1_legend) +
-      ggtitle(cryo),
+      ggtitle(cryo) + theme(plot.title = element_text(face = "bold")),
     seq = build_extRLQ_scatter(
       rlq_space[[cryo]], "log_seq_counts", axis_col, "log(seq count)", repl_c1_legend,
       axis_lim = repl_c1_axis_lim, legend_label = repl_c1_legend)
@@ -2499,6 +2526,8 @@ repl_c1_scatter_grid <- layout_extRLQ_scatter_grid(
   lapply(repl_c1_scatters, `[[`, "seq"))
 
 repl_c1_scatter_grid
+# ggsave("_illustrator/figS18c_repl_caecum_axis1_scatters.pdf", repl_c1_scatter_grid,
+       # width = 14, height = 4)
 ```
 
 ##### Colon axis 1 (G121eO306A, G121eO307A, G121eO308A)
@@ -2532,39 +2561,34 @@ repl_o1_tree_data <- make_extRLQ_tree_data(repl_o_tree, repl_o1_traits)
 repl_o1_tree_bars <- build_extRLQ_family_tree_bars(
   repl_o_tree, repl_o1_tree_data,
   bar_cols = paste0("AxcQ1_", colon_sections),
-  bar_legend = "Colon axis 1")
+  bar_legend = "T & P axis 1")
 
 repl_o1_tree_bars
+# ggsave("_illustrator/figS19a_repl_colon_axis1_tree_bars.pdf", repl_o1_tree_bars,
+       # width = 14, height = 6)
 ```
 ##### Fig S19b
-```{r spt_repl_colon_axis1_overlays, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
+```{r spt_repl_colon_axis1_overlays, echo = TRUE, message = FALSE, warning = FALSE, fig.height=4.5, fig.width=12}
 repl_o1_axis_lim <- extRLQ_axis_r_lim(
   rlq_space[colon_sections], paste0("AxcR1_", colon_sections))
 
-overlay_o1_306A <- plot_pixel_overlay(
-  "G121eO306A", rlq_space$G121eO306A, "AxcR1_G121eO306A", "Colon axis 1",
-  axis_lim = repl_o1_axis_lim)
-overlay_o1_307A <- plot_pixel_overlay(
-  "G121eO307A", rlq_space$G121eO307A, "AxcR1_G121eO307A", "Colon axis 1",
-  axis_lim = repl_o1_axis_lim)
-overlay_o1_308A <- plot_pixel_overlay(
-  "G121eO308A", rlq_space$G121eO308A, "AxcR1_G121eO308A", "Colon axis 1",
-  axis_lim = repl_o1_axis_lim)
+# one overlay per cryosection on the shared scale, cropped to the tissue (crop = TRUE) to remove white space
+repl_o1_overlays <- lapply(colon_sections, function(cryo) {
+  plot_pixel_overlay(
+    cryo, rlq_space[[cryo]], paste0("AxcR1_", cryo), "E & S axis 1",
+    axis_lim = repl_o1_axis_lim, crop = TRUE)
+})
+names(repl_o1_overlays) <- colon_sections
 
-# alignment of the points on the G121eO307A photo, in image pixels
-# (shift_x: - = left, + = right; shift_y: - = down, + = up)
-overlay_o1_307A_tweak <- plot_pixel_overlay(
-  "G121eO307A", rlq_space$G121eO307A, "AxcR1_G121eO307A", "Colon axis 1",
-  axis_lim = repl_o1_axis_lim, shift_x = -17, shift_y = 0)
+figS19b_overlays_colon_axis1 <- combine_overlays(repl_o1_overlays)
+show_overlay(figS19b_overlays_colon_axis1)
 
-show_overlay(overlay_o1_306A)
-show_overlay(overlay_o1_308A)
-show_overlay(overlay_o1_307A_tweak)
-
+# ggsave("_illustrator/figS19b_overlays_colon_axis1.pdf", figS19b_overlays_colon_axis1,
+       # width = 12, height = 4.5)
 ```
 ##### Fig S19c
 ```{r spt_repl_colon_axis1_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=4, fig.width=14}
-repl_o1_legend <- "Colon axis 1"
+repl_o1_legend <- "E & S axis 1"
 
 repl_o1_scatters <- lapply(colon_sections, function(cryo) {
   axis_col <- paste0("AxcR1_", cryo)
@@ -2572,7 +2596,7 @@ repl_o1_scatters <- lapply(colon_sections, function(cryo) {
     div = build_extRLQ_scatter(
       rlq_space[[cryo]], "div", axis_col, "Richness", repl_o1_legend,
       axis_lim = repl_o1_axis_lim, legend_label = repl_o1_legend) +
-      ggtitle(cryo),
+      ggtitle(cryo) + theme(plot.title = element_text(face = "bold")),
     seq = build_extRLQ_scatter(
       rlq_space[[cryo]], "log_seq_counts", axis_col, "log(seq count)", repl_o1_legend,
       axis_lim = repl_o1_axis_lim, legend_label = repl_o1_legend)
@@ -2585,9 +2609,11 @@ repl_o1_scatter_grid <- layout_extRLQ_scatter_grid(
   lapply(repl_o1_scatters, `[[`, "seq"))
 
 repl_o1_scatter_grid
+# ggsave("_illustrator/figS19c_repl_colon_axis1_scatters.pdf", repl_o1_scatter_grid,
+       # width = 14, height = 4)
 ```
 
-### Subspecies Segregation 
+### Subspecies Segregation
 #### Pangenome: Genes Presence/Absence  (Suppl.Fig. 12a)
 ```{r fig_s12a, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=9}
 wide_data <- left_join(genepa_pg, duplication_pg, by = "gene") %>%
@@ -2619,21 +2645,26 @@ ann_colors <- list(
   )
 )
 
-fig_s12a <- pheatmap(mat,
+# Genome tree as in PPanGGOLiN: 1 - Jaccard on presence/absence, complete linkage
+jac_dist <- as.matrix(dist(t(mat > 0), method = "binary"))
+genome_tree <- hclust(dist(jac_dist), method = "complete")
+
+fig_s12a <- pheatmap::pheatmap(mat,
   color = c("0" = "grey93", "1" = "gray32", "2" = "#7570b3"), # Named colors
   annotation_row = gene_anno,
   annotation_colors = ann_colors,
-  cluster_cols = TRUE,
+  cluster_cols = genome_tree,
   cluster_rows = FALSE,
   show_rownames = FALSE,
   legend_breaks = c(0, 1, 2),
   legend_labels = c("Absence", "Presence", "Multicopy")
 )
-fig_s12a 
+# fig_s12a 
 ```
 
-#### Distribution Lawsonibacter Strains (Suppl.Fig. 12b)
-```{r fig_s12b, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+#### Lawsonibacter strains per microsample (pie chart data)
+Share of each Lawsonibacter strain in each positive microsample with coordinates.
+```{r lawsonibacter_pie_data, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 macroquant_lawsonibacter <- macroquant_genome_counts_filt_30_98 %>%
   filter(genome %in% c(macromag_genomemetadata_98 %>%
     filter(genus == "Lawsonibacter") %>%
@@ -2678,144 +2709,327 @@ lawsonibacter_piecharts <- split(lawsonibacter_pie_df, lawsonibacter_pie_df$cryo
       pnas_theme +
       scale_fill_manual(values = lawsonibacter_colors, drop = FALSE)
   })
-
-fig_s12b <- wrap_plots(
-  lawsonibacter_piecharts[c(
-  "G103bI301A", "G121eI103A")]
-,
-  ncol = 3,
-  guides = "collect"
-) &
-theme(
-  legend.position = "none",
-  plot.title = element_text(hjust = 0.5)
-)
-fig_s12b
 ```
 
+#### Selected cryosections (batches MSEB0011, MSEB0060-61, MSEB0068-75)
+```{r lawsonibacter_selected_cryosections, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+# cryosections sampled in the selected batches (a cryosection can be spread over several batches)
+selected_cryosections <- macroquant_metrics_filt_30 %>%
+  filter(batch %in% c("MSEB0011", "MSEB0060", "MSEB0061", sprintf("MSEB%04d", 68:75))) %>%
+  distinct(cryosection) %>%
+  pull(cryosection) %>%
+  as.character() %>%
+  sort() %>%
+  intersect(names(lawsonibacter_piecharts)) # keep only cryosections with pie charts (Lawsonibacter present + coordinates)
+```
+
+#### Number of Lawsonibacter strains per cryosection
+```{r lawsonibacter_strains_per_cryosection, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+lawsonibacter_strains_per_cryosection <- macroquant_lawsonibacter %>%
+  group_by(cryosection) %>%
+  summarise(
+    batch = paste(sort(unique(as.character(batch))), collapse = ", "), # some cryosections were sampled in several batches
+    microsamples = n_distinct(microsample), # microsamples with at least one Lawsonibacter strain
+    strains = n_distinct(genome),           # different Lawsonibacter strains (genomes) found
+    strain_ids = paste(sort(unique(genome)), collapse = ", ")
+  ) %>%
+  mutate(selected_batches = cryosection %in% selected_cryosections) %>% # TRUE = in MSEB0011, MSEB0060-61, MSEB0068-75
+  arrange(cryosection)
+
+lawsonibacter_strains_per_cryosection %>%
+  select(-strain_ids) %>%
+  knitr::kable()
+```
+
+#### Distribution Lawsonibacter Strains on caecum cryosection images (Suppl.Fig. 12b)
+Pie charts drawn on the cryosection image, at the pixel position of each microsample.
+```{r fig_s12b_pixel_overlay_setup, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+image_size <- 1000 # images are 1000 x 1000 pixels
+pie_area_um2 <- 5000 # pie area in µm² = real microsample area (~80 µm diameter); same physical size in every cryosection
+pie_enlarge <- 2.5 # 1 = true size; > 1 enlarges all pies equally for readability (2.5 = ~200 µm diameter)
+crop_margin_px <- 10 # white space kept around the tissue
+
+# pixel coordinates of all MSSM cryosections (temporary Airtable export; pixel_coords_all only has the 6 RLQ cryosections)
+pixel_coords_lawsonibacter <- read_csv(file.path(pixel_coords_dir, "microsample_pixel_coords_airtable.csv"), show_col_types = FALSE)
+
+# image scale (pixels per µm) per cryosection: pixel_x vs Xcoord is a straight line, its slope is the scale
+px_per_um <- pixel_coords_lawsonibacter %>%
+  filter(!is.na(pixel_x), !is.na(pixel_y)) %>%
+  group_by(cryosection) %>%
+  summarise(px_per_um = mean(c(coef(lm(pixel_x ~ Xcoord))[2], coef(lm(pixel_y ~ Ycoord))[2]))) %>%
+  deframe()
+
+# tissue_box() (tissue bounding box used for cropping) is in MSSM_functions.R
+
+# cryosections with an image and pixel coordinates
+overlay_cryosections <- selected_cryosections %>%
+  keep(~ !is.null(cryosection_image(.x))) %>%
+  intersect(pixel_coords_lawsonibacter %>% filter(!is.na(pixel_x)) %>% pull(cryosection))
+
+lawsonibacter_pie_overlays <- overlay_cryosections %>%
+  set_names() %>%
+  purrr::map(function(cryo) {
+    img <- cryosection_image(cryo)
+    radius <- sqrt(pie_area_um2 / pi) * pie_enlarge * px_per_um[[cryo]] # pie radius in image pixels
+    pie_px <- lawsonibacter_pie_df %>%
+      filter(cryosection == cryo) %>%
+      inner_join(pixel_coords_lawsonibacter %>% select(microsample, pixel_x, pixel_y), by = "microsample") %>%
+      filter(!is.na(pixel_x), !is.na(pixel_y)) %>%
+      mutate(pixel_y_flip = image_size - pixel_y)
+    # crop box = tissue + all pies + margin
+    box <- tissue_box(img)
+    xlim <- c(min(box["xmin"], pie_px$pixel_x - radius), max(box["xmax"], pie_px$pixel_x + radius)) + c(-1, 1) * crop_margin_px
+    ylim <- c(min(box["ymin"], pie_px$pixel_y_flip - radius), max(box["ymax"], pie_px$pixel_y_flip + radius)) + c(-1, 1) * crop_margin_px
+
+    ggplot(pie_px) +
+      annotation_raster(as.raster(img), xmin = 0, xmax = image_size, ymin = 0, ymax = image_size) +
+      geom_arc_bar(
+        aes(x0 = pixel_x, y0 = pixel_y_flip, r0 = 0, r = radius, # radius, not "r": the data already has an r column (75, from lawsonibacter_pie_data)
+            start = start, end = end, fill = genome),
+        color = "black", linewidth = 0.1
+      ) +
+      scale_fill_manual(values = lawsonibacter_colors, drop = FALSE) +
+      coord_fixed(xlim = pmax(0, pmin(image_size, xlim)), ylim = pmax(0, pmin(image_size, ylim)), expand = FALSE) +
+      ggtitle(cryo) +
+      theme_void() +
+      theme(legend.position = "none",
+            plot.title = element_text(hjust = 0.5, face = "bold", size = 10, margin = margin(0, 0, 2, 0)),
+            plot.margin = margin(1, 1, 1, 1))
+  })
+
+# combine the panels of one cryosection group into one figure (NULL when the group has no panels yet)
+overlay_group_figure <- function(prefix, ncol) {
+  panels <- lawsonibacter_pie_overlays[str_subset(names(lawsonibacter_pie_overlays), paste0("^", prefix))]
+  if (length(panels) == 0) {
+    message("no cryosection images with pixel coordinates for ", prefix)
+    return(NULL)
+  }
+  wrap_plots(panels, ncol = ncol)
+}
+```
+
+
+#### Composite Suppl. Fig. 12
+```{r fig_s12_composite, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.width=11, fig.height=15}
+# pangenome names are "GPB_bin_000034", the rest of the analysis uses "GPB:bin_000034"
+strain_name <- function(x) sub("_bin_", ":bin_", x)
+
+# (a) tree | strain names | heatmap
+strain_tree <- ape::as.phylo(genome_tree)
+strain_tree$tip.label <- strain_name(strain_tree$tip.label)
+n_strains <- length(strain_tree$tip.label)
+
+tree_panel <- ggtree::ggtree(strain_tree) +
+  ggtree::geom_tippoint(aes(fill = label), shape = 21, size = 3, stroke = 0.3) +
+  scale_fill_manual(values = lawsonibacter_colors, guide = "none") +
+  scale_y_continuous(limits = c(0.5, n_strains + 0.5), expand = c(0, 0)) # same rows as the heatmap
+
+# strains from bottom to top, as in the tree
+tree_strain_order <- tree_panel$data %>% filter(isTip) %>% arrange(y) %>% pull(label)
+
+# gene order: partition, then number of strains with the gene, then which strains (top to bottom)
+presence <- mat[, sub(":bin_", "_bin_", rev(tree_strain_order))] > 0
+gene_order <- tibble(
+  gene = rownames(mat),
+  partition = factor(gene_anno[rownames(mat), "Family Partition"], levels = c("persistent", "shell", "cloud")),
+  n_with_gene = rowSums(presence),
+  pattern = apply(presence * 1, 1, paste, collapse = "")
+) %>%
+  arrange(partition, desc(n_with_gene), desc(pattern)) %>%
+  mutate(x = row_number())
+
+heatmap_df <- as_tibble(mat, rownames = "gene") %>%
+  pivot_longer(-gene, names_to = "genome", values_to = "value") %>%
+  mutate(genome = factor(strain_name(genome), levels = tree_strain_order),
+         value = factor(value, levels = 0:2, labels = c("Absence", "Presence", "Multicopy"))) %>%
+  left_join(gene_order %>% select(gene, x), by = "gene")
+
+heatmap_panel <- ggplot(heatmap_df, aes(x = x, y = genome, fill = value)) +
+  geom_raster() +
+  scale_fill_manual(values = c(Absence = "grey93", Presence = "gray32", Multicopy = "#7570b3"), name = NULL) +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_discrete(expand = c(0, 0)) +
+  labs(x = "Gene families", y = NULL) +
+  pnas_theme +
+  theme(axis.text.x = element_blank(), axis.ticks = element_blank(), axis.line = element_blank())
+
+# coloured bar above the heatmap with the family partition
+partition_panel <- ggplot(gene_order, aes(x = x, y = 1, fill = partition)) +
+  geom_raster() +
+  scale_fill_manual(values = ann_colors$`Family Partition`, name = "Family partition") +
+  scale_x_continuous(expand = c(0, 0)) +
+  theme_void()
+
+fig_s12_a <- plot_spacer() + partition_panel + tree_panel + heatmap_panel +
+  plot_layout(ncol = 2, widths = c(1, 4), heights = c(0.05, 1), guides = "collect")
+
+# (b) pie charts on the cryosection images (lawsonibacter_pie_overlays)
+# All cryosections are shown at the same scale (µm per cm on the page). Layout in µm:
+# - b_layout puts each cryosection in a row and a column; cryosections in the same column are stacked
+#   (the two small G103bI309 sections share a column next to the tall G103bI301A, so less white space)
+# - each column is as wide as its widest cryosection; each row is as tall as its tallest column
+# - all rows are equally wide in µm (shorter rows are centred); the figure height follows from these µm sizes
+animal_ages <- c(G103b = "14-day-old animal", G121e = "35-day-old animal")
+b_layout <- tribble(
+  ~cryosection, ~row, ~column,
+  "G103bI301A", 1, 1,
+  "G103bI301B", 1, 2,
+  "G103bI309A", 1, 3,
+  "G103bI309B", 1, 3,
+  "G121eI103A", 2, 1,
+  "G121eI103B", 2, 2,
+  "G121eI114B", 2, 3,
+  "G121eI117A", 3, 1,
+  "G121eI118B", 3, 2
+)
+b_zoom <- 0.9 # 1 = cryosections as big as the page width allows; < 1 = smaller (shorter figure, smaller pies)
+fig_s12_width <- 11 # inches
+fig_s12_a_height <- 3 # inches
+scale_bar_um <- 1000 # length of the scale bar (1 mm)
+
+b_panels <- b_layout %>%
+  left_join(lawsonibacter_pie_df %>% ungroup() %>% distinct(cryosection, animal), by = "cryosection") %>%
+  mutate(
+    xlim = purrr::map(cryosection, ~ lawsonibacter_pie_overlays[[.x]]$coordinates$limits$x), # crop box in pixels
+    ylim = purrr::map(cryosection, ~ lawsonibacter_pie_overlays[[.x]]$coordinates$limits$y),
+    scale = px_per_um[cryosection], # pixels per µm
+    width_um = purrr::map_dbl(xlim, diff) / scale,
+    height_um = purrr::map_dbl(ylim, diff) / scale
+  ) %>%
+  group_by(row, column) %>%
+  mutate(column_width_um = max(width_um), column_height_um = sum(height_um)) %>%
+  group_by(row) %>%
+  mutate(row_height_um = max(column_height_um)) %>%
+  ungroup() %>%
+  # panel size in µm: column width x (its share of the row height)
+  mutate(panel_width_um = column_width_um,
+         panel_height_um = height_um * row_height_um / column_height_um)
+row_width_um <- b_panels %>% distinct(row, column, column_width_um) %>% group_by(row) %>%
+  summarise(w = sum(column_width_um)) %>% pull(w) %>% max() / b_zoom # the widest row sets the width of all rows
+label_width_um <- 0.04 * row_width_um # space for the animal label
+
+# same-scale version of one overlay: name inside the image (no title above, saves space); scale bar if scale_bar = TRUE
+same_scale_overlay <- function(cryosection, xlim, ylim, scale, panel_width_um, panel_height_um, scale_bar = FALSE) {
+  xlim <- mean(xlim) + c(-1, 1) * panel_width_um * scale / 2
+  ylim <- mean(ylim) + c(-1, 1) * panel_height_um * scale / 2
+  p <- lawsonibacter_pie_overlays[[cryosection]] +
+    scale_fill_manual(values = lawsonibacter_colors) +
+    coord_fixed(xlim = xlim, ylim = ylim, expand = FALSE) +
+    annotate("text", x = xlim[1] + 10, y = ylim[2] - 10, label = cryosection, hjust = 0, vjust = 1, size = 3, fontface = "bold") +
+    labs(title = NULL) +
+    theme(plot.margin = margin(1, 1, 1, 1))
+  if (scale_bar) {
+    p <- p + annotate("segment", x = xlim[1] + 20, xend = xlim[1] + 20 + scale_bar_um * scale,
+                      y = ylim[1] + 20, yend = ylim[1] + 20, linewidth = 1) +
+      annotate("text", x = xlim[1] + 20 + scale_bar_um * scale / 2, y = ylim[1] + 40,
+               label = "1 mm", size = 3, vjust = 0)
+  }
+  p
+}
+
+# one row: its columns side by side (stacked cryosections inside a column), centred
+b_row <- function(row_panels) {
+  columns <- row_panels %>%
+    split(.$column) %>%
+    purrr::map(~ wrap_plots(purrr::pmap(select(.x, cryosection, xlim, ylim, scale, panel_width_um, panel_height_um, scale_bar), same_scale_overlay),
+                            ncol = 1, heights = .x$panel_height_um))
+  column_widths <- row_panels %>% distinct(column, column_width_um) %>% pull(column_width_um)
+  pad <- max(row_width_um - sum(column_widths), 2) / 2 # a spacer cannot have width 0
+  wrap_plots(c(list(plot_spacer()), columns, list(plot_spacer())), nrow = 1, widths = c(pad, column_widths, pad))
+}
+
+# one block per animal: label on the left, its rows stacked on the right; scale bar in the first panel of each animal
+fig_s12_b <- names(animal_ages) %>%
+  purrr::map(function(a) {
+    animal_panels <- b_panels %>% filter(animal == a) %>% mutate(scale_bar = row_number() == 1)
+    rows <- animal_panels %>% split(.$row) %>% purrr::map(b_row)
+    row_heights <- animal_panels %>% distinct(row, row_height_um) %>% pull(row_height_um)
+    label <- wrap_elements(full = grid::textGrob(paste0(a, "\n", animal_ages[[a]]), rot = 90, gp = grid::gpar(fontsize = 10, fontface = "bold")))
+    label + wrap_plots(rows, ncol = 1, heights = row_heights) + plot_layout(widths = c(label_width_um, row_width_um))
+  }) %>%
+  wrap_plots(ncol = 1, heights = b_panels %>% distinct(animal, row, row_height_um) %>% group_by(animal) %>% summarise(h = sum(row_height_um)) %>% pull(h))
+
+# height of panel b in inches: µm height of all rows x inches per µm (+ a little for the margins)
+inch_per_um <- (fig_s12_width - 0.4) / (row_width_um + label_width_um)
+fig_s12_b_height <- sum(distinct(b_panels, row, row_height_um)$row_height_um) * inch_per_um + 0.2
+
+fig_s12 <- wrap_elements(full = fig_s12_a) / wrap_elements(full = fig_s12_b) +
+  plot_layout(heights = c(fig_s12_a_height, fig_s12_b_height)) +
+  plot_annotation(tag_levels = "a") &
+  theme(plot.tag = element_text(size = 14, face = "bold"))
+fig_s12
+```
+
+#### Prevalence of Lawsonibacter strains per cryosection, faceted by animal (Suppl.Fig. 13)
+Prevalence (%) = % of microsamples in which the strain is found. Counted microsamples: positive, with coordinates, mapped to the 98% ANI catalogue, only caecum, only batches MSEB0011 and MSEB0060-75. Strains are ordered from most (top) to least prevalent over all cryosections.
+```{r lawsonibacter_strain_prevalence_by_animal, echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.width=11, fig.height=6}
+# counted microsamples (denominator of the prevalence)
+prevalence_microsamples <- macroquant_metrics_filt_30 %>%
+  filter(type == "positive", !is.na(Xcoord), !is.na(Ycoord),
+         microsample %in% names(macroquant_genome_counts_filt_30_98),
+         batch %in% c("MSEB0011", sprintf("MSEB%04d", 60:75)), section != "Colon")
+
+# prevalence (%) per cryosection and strain = microsamples with the strain / counted microsamples
+lawsonibacter_strain_prevalence <- lawsonibacter_pie_df %>%
+  filter(microsample %in% prevalence_microsamples$microsample) %>%
+  group_by(animal, cryosection, genome) %>%
+  summarise(n_present = n_distinct(microsample), .groups = "drop") %>%
+  left_join(prevalence_microsamples %>% count(cryosection, name = "n_microsamples"), by = "cryosection") %>%
+  mutate(prevalence = 100 * n_present / n_microsamples)
+
+# every strain in every cryosection; a strain missing in a cryosection gets prevalence 0
+prevalence_complete <- lawsonibacter_strain_prevalence %>%
+  complete(nesting(animal, cryosection), genome, fill = list(prevalence = 0))
+
+# strain order on the y-axis: highest mean prevalence over all cryosections at the top
+strain_order <- prevalence_complete %>%
+  group_by(genome) %>%
+  summarise(mean_prevalence = mean(prevalence)) %>%
+  arrange(mean_prevalence) %>%
+  pull(genome)
+
+# circularised genomes get an asterisk on the y-axis
+circular_genomes <- macromag_genomemetadata_98 %>%
+  filter(circularity == 1) %>%
+  pull(genome)
+strain_labels <- setNames(ifelse(strain_order %in% circular_genomes, paste0(strain_order, " *"), strain_order), strain_order)
+
+# one heatmap panel: colour and number = prevalence (%), one column per group (cryosection or animal)
+strain_heatmap <- function(data, group, title) {
+  data %>%
+    mutate(genome = factor(genome, levels = strain_order)) %>%
+    ggplot(aes(x = .data[[group]], y = genome, fill = prevalence)) +
+    geom_tile(color = "white") +
+    geom_text(aes(label = ifelse(prevalence < 1, "<1", round(prevalence)), # "<1" instead of "0" for found but rare strains
+                  color = prevalence > 60), size = 3) + # white text on dark tiles
+    scale_color_manual(values = c("black", "white"), guide = "none") +
+    scale_y_discrete(labels = strain_labels) +
+    scale_fill_gradient(low = "#eef4fa", high = "#3b6f9e", limits = c(0, 100), name = "%") +
+    labs(title = title, x = NULL, y = NULL) +
+    pnas_theme +
+    theme(axis.text.x = element_text(angle = 45, hjust = 1),
+          plot.title = element_text(hjust = 0.5))
+}
+
+# (a) one column per cryosection, one panel per animal
+prevalence_a <- strain_heatmap(lawsonibacter_strain_prevalence, "cryosection", "Prevalence per cryosection") +
+  facet_grid(~animal, scales = "free_x", space = "free_x") # each panel only shows its own cryosections
+
+# (b) one column per animal: mean prevalence over its cryosections
+prevalence_b <- prevalence_complete %>%
+  group_by(animal, genome) %>%
+  summarise(prevalence = mean(prevalence), .groups = "drop") %>%
+  filter(prevalence > 0) %>% # strains never found in an animal stay empty
+  strain_heatmap("animal", "Mean per animal") +
+  theme(axis.text.y = element_blank()) # same strains as in (a)
+
+# a and b side by side; widths follow the number of columns (9 cryosections vs 2 animals)
+prevalence_a + prevalence_b +
+  plot_layout(widths = c(9, 2.5), guides = "collect") +
+  plot_annotation(tag_levels = "a", caption = "* circularised genome")
+```
 
 ### SNP level microdiversity (Lorikeet)
-
-### Distribution popANI by Group (Suppl.Fig. 13)
-```{r fig_s13, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-lawsonibacter_popANI <- map_dfr(names(ani_list), function(bin_id) {
-
-  ani_mat <- ani_list[[bin_id]]
-
-  ani_mat %>%
-    as.data.frame() %>%
-    rownames_to_column("microsample_1") %>%
-    pivot_longer(
-      cols = -microsample_1,
-      names_to = "microsample_2",
-      values_to = "popANI"
-    ) %>%
-    filter(
-      !is.na(popANI),
-      !is.nan(popANI)
-    ) %>%
-    mutate(
-      bin = bin_id,
-      sample_pair = if_else(
-        microsample_1 < microsample_2,
-        paste(microsample_1, microsample_2, sep = "_"),
-        paste(microsample_2, microsample_1, sep = "_")
-      )
-    ) %>%
-    distinct(bin, sample_pair, .keep_all = TRUE) %>%
-    select(-sample_pair)
-
-})
-
-lawsonibacter_popANI_meta <- macroquant_metrics_filt_30 %>%
-  filter(
-    cryosection %in% c("G121eI103A", "G103bI301A"),
-    type %in% c("positive"),
-    cov_filtering %in% c("Retained By Filtering"),
-    !is.na(Xcoord),
-    !is.na(Ycoord)
-    ) %>%
-  select(cryosection, microsample, animal, Xcoord, Ycoord)
-
-stat.test <- lawsonibacter_popANI %>%
-  filter(
-    !is.nan(popANI),
-    !is.na(popANI),
-    microsample_1 %in% c(lawsonibacter_popANI_meta$microsample),
-    microsample_2 %in% c(lawsonibacter_popANI_meta$microsample)#,
-    # bin %in% c("GPB_bin_000044") or bin %in% c("GPB_bin_000047","GPB_bin_000063")
-  ) %>%
-  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_1" = "microsample")) %>%
-  rename(animal_microsample_1 = animal) %>%
-  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_2" = "microsample")) %>%
-  rename(animal_microsample_2 = animal) %>%
-  mutate(group = ifelse(animal_microsample_1 == animal_microsample_2, animal_microsample_1, "G121e-G103b")) %>%
-  group_by(bin) %>%
-  wilcox_test(popANI ~ group,
-              comparisons = list(
-                c("G121e", "G103b"),
-                c("G121e", "G121e-G103b"),
-                c("G103b", "G121e-G103b")
-              )) %>%
-  adjust_pvalue(method = "BH")
-
-
-fig_s13 <- lawsonibacter_popANI %>%
-  filter(
-    !is.nan(popANI),
-    !is.na(popANI),
-    microsample_1 %in% c(lawsonibacter_popANI_meta$microsample),
-    microsample_2 %in% c(lawsonibacter_popANI_meta$microsample)#,
-    # bin %in% c("GPB_bin_000044") or bin %in% c("GPB_bin_000047","GPB_bin_000063")
-  ) %>%
-  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_1" = "microsample")) %>%
-  rename(animal_microsample_1 = animal) %>%
-  left_join(macroquant_metrics_filt_30 %>% select(microsample, animal), by = c("microsample_2" = "microsample")) %>%
-  rename(animal_microsample_2 = animal) %>%
-  mutate(group = ifelse(animal_microsample_1 == animal_microsample_2, animal_microsample_1, "G121e-G103b")) %>%
-  ggplot(aes(x = group, y = popANI, fill = group)) +
-  geom_boxplot(aes(group = group), outlier.shape = NA) +
-  geom_jitter(
-    position = position_jitterdodge(jitter.width = 0.2, dodge.width = 0.8),
-    size = 0.3, alpha = 0.3
-  ) +
-  scale_fill_manual(values = c("#B92D65", "#E8BD50", "darkgrey")) +
-  pnas_theme +
-  stat_compare_means(
-  method = "wilcox.test",
-  comparisons = list(
-    c("G121e", "G103b"),
-    c("G121e", "G121e-G103b"),
-    c("G103b", "G121e-G103b")
-  ),
-  label = "p.signif",
-  size = 4,
-  p.adjust.method = "BH",
-  hide.ns = TRUE,
-  label.y.npc = c(
-    0.78,  # lowest bracket
-    0.85,  # middle bracket
-    0.92   # highest bracket
-  )
-) +
-  labs(
-    # title = "a",
-    x = "",
-    #y = "popANI GPB_bin_000044"
-  ) +
-  theme(legend.position = "none") +
-  scale_x_discrete(labels = c(
-    "G103b" = "Within \nG103b", "G121e" = "Within \nG121e",
-    "G121e-G103b" = "Between \nindividuals"
-  )) +
-  facet_wrap(~bin) +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1))
-#png("figures/fig_s13.png", width = 7.5, height = 4.5, units = "in", res = 300)
-#fig_s13 
-#dev.off()
-fig_s13
-```
-
 ### Heatmap popANI (Suppl.Fig. 14)
 ```{r Fig6_c, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 plot_popani_3panel <- function(bin_ids,
@@ -2828,8 +3042,8 @@ plot_popani_3panel <- function(bin_ids,
                                height = 12) {
 
 
-  if (length(bin_ids) != 3) {
-    stop("Provide exactly 3 bins.")
+  if (length(bin_ids) != 1) {
+    stop("Provide exactly 1 bin.")
   }
 
   dir.create(dirname(file), showWarnings = FALSE, recursive = TRUE)
@@ -2913,36 +3127,34 @@ plot_popani_3panel <- function(bin_ids,
     annotation_legend_list = NULL
   )
 
-  pdf(paste0(file, ".pdf"), width = width, height = height)
+  # pdf(paste0(file, ".pdf"), width = width, height = height)
 
-  draw(
-    ht_stack,
-    heatmap_legend_side = "left",
-    annotation_legend_side = "left",
-    annotation_legend_list = NULL
-  )
+  # draw(
+    # ht_stack,
+    # heatmap_legend_side = "left",
+    # annotation_legend_side = "left",
+    # annotation_legend_list = NULL
+  # )
 
-  dev.off()
+  # dev.off()
   
-  png(paste0(file,".png"), width = width, height = height, units = "in", res = 300)
+  # png(paste0(file,".png"), width = width, height = height, units = "in", res = 300)
 
-  draw(
-    ht_stack,
-    heatmap_legend_side = "left",
-    annotation_legend_side = "left",
-    annotation_legend_list = NULL
-  )
+  # draw(
+    # ht_stack,
+    # heatmap_legend_side = "left",
+    # annotation_legend_side = "left",
+    # annotation_legend_list = NULL
+  # )
 
-  dev.off()
+  # dev.off()
 
   invisible(ht_stack)
 }
 
 plot_popani_3panel(
   bin_ids = c(
-    "GPB_bin_000044",
-    "GPB_bin_000047",
-    "GPB_bin_000063"
+    "GPB_bin_000044" #, "GPB_bin_000047", "GPB_bin_000063"
   ),
   ani_list = ani_list,
   metadata = macroquant_metrics_filt_30 %>%
@@ -2957,7 +3169,3 @@ plot_popani_3panel(
   file = "figures/fig_s13"
 )
 ```
-
-
-
-

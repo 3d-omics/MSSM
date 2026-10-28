@@ -1,8 +1,6 @@
 # load_working_data()
-# The stored workspace was created with save.image(), so it also embeds plotting themes and copies of helper functions. 
-# Themes serialised by a newer ggplot2 break theme merging; functions overwrite the versions sourced from MSSM_functions.R / JEC_1743_sm_apps5.R (and dplyr::select / dplyr::recode set in index.Rmd). 
-# We skip both so index.Rmd remains the source of truth for code.
-# Requires those scripts (and the dplyr aliases) to be sourced before this runs, which is the normal bookdown order.
+# Loads the data objects of working_data_object.Rdata, skipping stored ggplot themes and functions
+# so the versions sourced in index.Rmd are used.
 load_working_data <- function(path = "resources/working_data_object.Rdata",
                               envir = globalenv()) {
   data_env <- new.env()
@@ -14,6 +12,37 @@ load_working_data <- function(path = "resources/working_data_object.Rdata",
   }, logical(1))
   list2env(mget(objects[!skip], envir = data_env), envir = envir)
   invisible(objects[skip])
+}
+
+# objects_created_in()
+# Names assigned (x <- ..., x = ..., ... -> x, for (x in ...)) in any R chunk of an Rmd,
+# also in eval = FALSE chunks (knitr::purl would comment those out).
+# Used to save/keep only the 01-data_preparation.Rmd objects in working_data_object.Rdata.
+objects_created_in <- function(rmd) {
+  lines  <- readLines(rmd, warn = FALSE)
+  starts <- grep("^```\\{r", lines)
+  ends   <- grep("^```\\s*$", lines)
+  targets <- c()
+  for (s in starts) {
+    e    <- ends[ends > s][1]
+    code <- lines[(s + 1):(e - 1)]
+    pd   <- tryCatch(getParseData(parse(text = code, keep.source = TRUE)),
+                     error = function(err) NULL)
+    if (is.null(pd)) { message("could not parse chunk at line ", s, " of ", rmd); next }
+    # leftmost symbol on the receiving side of each assignment
+    for (op in which(pd$token %in% c("LEFT_ASSIGN", "EQ_ASSIGN", "RIGHT_ASSIGN"))) {
+      sides  <- pd[pd$parent == pd$parent[op] & pd$token == "expr", ]
+      side   <- if (pd$token[op] == "RIGHT_ASSIGN") sides[nrow(sides), ] else sides[1, ]
+      inside <- pd[pd$token == "SYMBOL" & pd$line1 == side$line1 &
+                     pd$col1 >= side$col1 & pd$col2 <= side$col2, ]
+      if (nrow(inside)) targets <- c(targets, inside$text[1])
+    }
+    # loop variables
+    for (fc in pd$id[pd$token == "forcond"]) {
+      targets <- c(targets, pd$text[pd$parent == fc & pd$token == "SYMBOL"][1])
+    }
+  }
+  unique(targets)
 }
 
 
@@ -264,7 +293,7 @@ perform_pca <- function(df, zero_method = "GBM", z_delete = TRUE) {
   original_cols <- ncol(df)
   
   # 1. Zero replacement
-  if (any(df == 0)) { # I think cmultRepl already does that
+  if (any(df == 0)) {
     print("Zeros found")
     df <- cmultRepl(df,
                     method = zero_method, output = "prop",
@@ -1017,7 +1046,6 @@ run_spatial_rlq <- function(cryosection_id,
   
   env <- data.frame(
     log_seq_counts = log(metadata_section$after_filtering.total_bases),
-    div = metadata_section$richness,
     host_dist = log(metadata_section$distance_host)
   )
   
@@ -1059,12 +1087,6 @@ run_spatial_rlq <- function(cryosection_id,
   nb1 <- graph2nb(gabrielneigh(as.matrix(spa)), sym = TRUE)
   
   correlograms <- list(
-    div = sp.correlogram(
-      nb1,
-      log(env$div),
-      order = correlogram_order,
-      method = "I"
-    ),
     log_seq_counts = sp.correlogram(
       nb1,
       env$log_seq_counts,
@@ -1081,12 +1103,13 @@ run_spatial_rlq <- function(cryosection_id,
   
   lw1 <- nb2listw(nb1)
   
-  nb1_neigh <- nb2neig(nb1)
-  vecspa <- scores.neig(nb1_neigh)
-  
+  # spatial variables: positive Moran's eigenvector maps (MEMs)
+  vecspa <- as.data.frame(mem(lw1, MEM.autocor = "positive"))
+
   pcaspa <- dudi.pca(
     vecspa,
     row.w = coacomp$lw,
+    scale = TRUE,
     scan = FALSE,
     nf = ncol(vecspa)
   )
@@ -1259,9 +1282,10 @@ make_extRLQ_tree_data <- function(tree, traits,
 
 # extRLQ_rdbu_scale()
 # Shared diverging scale of all sample-side RLQ plots.
-extRLQ_rdbu_scale <- function(lim, name) {
+extRLQ_rdbu_scale <- function(lim, name, aesthetics = "colour") {
   scale_color_fermenter(palette = "RdBu", n.breaks = 7,
-                        limits = c(-lim, lim), name = name)
+                        limits = c(-lim, lim), name = name,
+                        aesthetics = aesthetics)
 }
 
 # extRLQ_axis_r_lim()
@@ -1335,7 +1359,9 @@ build_extRLQ_grad_tree <- function(tree, tree_data, axis_col, axis_label,
 
 # build_extRLQ_family_tree_bars()
 # Tree with tip points coloured by family (which frees the fill aesthetic) and one bar panel per column in `bar_cols`, all on a single shared RdBu scale.
+# bar_titles = bold title above each bar panel (default: the cryosection name after the "_" in the column name).
 build_extRLQ_family_tree_bars <- function(tree, tree_data, bar_cols, bar_legend,
+                                         bar_titles = sub("^[^_]*_", "", bar_cols),
                                          tax_rank = "order",
                                          bar_pwidth = 0.25,
                                          bar_offset = 0.18,
@@ -1403,6 +1429,15 @@ build_extRLQ_family_tree_bars <- function(tree, tree_data, bar_cols, bar_legend,
     theme(legend.position = "right",
           plot.margin = margin(5.5, 90, 5.5, 5.5, "pt"))
 
+  # bar panel positions are only known after building the plot, so the titles are added afterwards
+  built <- ggplot_build(grad)
+  is_bar <- vapply(grad$layers, function(l) inherits(l$geom, "GeomBar"), logical(1))
+  bar_mid <- vapply(built$data[is_bar],
+                    function(d) mean(range(c(d$xmin, d$xmax))), numeric(1))
+  grad <- grad +
+    annotate("text", x = bar_mid, y = max(tips$y) + 2, label = bar_titles,
+             fontface = "bold", size = 3, vjust = 0)
+
   is_box <- vapply(grad$layers,
                    function(l) inherits(l$geom, "GeomCustomAnn"), logical(1))
   grad$layers <- c(grad$layers[is_box], grad$layers[!is_box])
@@ -1412,8 +1447,12 @@ build_extRLQ_family_tree_bars <- function(tree, tree_data, bar_cols, bar_legend,
 # build_gift_tree_heatmap_len()
 # Gradient tree + GIFT element heatmap of the degradation functions (D01 lipid, D02 polysaccharide, D03 sugar) + genome length bar. 
 # Each element is centred and scaled across genomes.
+# heat_title = heatmap legend title; elem_pos = "top" or "bottom" for the element and "Genome length" names;
+# top_title = title above the function strips (then " degradation" is dropped from the strip names).
 build_gift_tree_heatmap_len <- function(grad_tree, gifts_sel,
-                                        genome_metadata = macromag_genomemetadata) {
+                                        genome_metadata = macromag_genomemetadata,
+                                        heat_title = "GIFT (z)", elem_pos = "top",
+                                        top_title = NULL) {
   gift_funcs_of_interest <- c("D01", "D02", "D03")
 
   gift_elements_long <- gifts_sel %>%
@@ -1465,7 +1504,7 @@ build_gift_tree_heatmap_len <- function(grad_tree, gifts_sel,
                                gift_heat_zlim[2] / 2, gift_heat_zlim[2])),
     limits = gift_heat_zlim,
     oob = scales::squish,
-    name = "GIFT (z)",
+    name = heat_title,
     guide = guide_colorbar(title.position = "top",
                            barwidth = unit(5, "cm"), barheight = unit(0.35, "cm"),
                            ticks.colour = "grey30"))
@@ -1478,8 +1517,10 @@ build_gift_tree_heatmap_len <- function(grad_tree, gifts_sel,
                                   levels = gift_funcs_of_interest),
            Code_element = factor(Code_element, levels = gift_heat_col_levels))
 
+  func_names <- as.character(func_labels$Function)
+  if (!is.null(top_title)) func_names <- str_remove(func_names, " degradation")
   gift_func_name_vec <- setNames(
-    str_wrap(as.character(func_labels$Function), 16),
+    str_wrap(func_names, 16),
     as.character(func_labels$Code_function))
 
   gift_func_strip_colors <- c(D01 = "#F4D58D", D02 = "#BFD7B5", D03 = "#A9C5E0")
@@ -1506,12 +1547,14 @@ build_gift_tree_heatmap_len <- function(grad_tree, gifts_sel,
     geom_tile(colour = "white", linewidth = 0.2) +
     gift_heat_fill +
     gift_heat_func_facet +
-    scale_x_discrete(position = "top", labels = gift_heat_elem_labels) +
+    scale_x_discrete(position = elem_pos, labels = gift_heat_elem_labels) +
     scale_y_continuous(limits = gift_heat_ylim, expand = c(0, 0)) +
-    labs(x = NULL, y = NULL) +
+    labs(x = NULL, y = NULL, title = top_title) +
     theme_minimal() +
     theme(plot.margin = margin(5.5, 5.5, 5.5, 0, "pt"),
+          plot.title = element_text(size = 8, hjust = 0.5),
           axis.text.x.top = element_text(angle = 90, hjust = 0, vjust = 0.5, size = 7),
+          axis.text.x.bottom = element_text(angle = 90, hjust = 1, vjust = 0.5, size = 7),
           axis.text.y = element_blank(), axis.ticks.y = element_blank(),
           panel.grid = element_blank(), panel.spacing.x = unit(4, "pt"),
           strip.text = element_text(size = 7, face = "bold"),
@@ -1521,7 +1564,7 @@ build_gift_tree_heatmap_len <- function(grad_tree, gifts_sel,
   len_panel <- tip_y %>%
     left_join(genome_metadata %>% select(genome, length), by = "genome") %>%
     mutate(panel = "Genome length") %>%
-    ggplot(aes(x = "len", y = y, fill = length)) +
+    ggplot(aes(x = panel, y = y, fill = length)) +
     geom_tile(colour = "white", linewidth = 0.2) +
     scale_fill_gradientn(
       colours = c("#eef3f6", "#c9d7e1", "#98b2c2", "#66879c", "#35556b"),
@@ -1530,17 +1573,18 @@ build_gift_tree_heatmap_len <- function(grad_tree, gifts_sel,
       guide = guide_colorbar(title.position = "top",
                              barwidth = unit(3, "cm"), barheight = unit(0.35, "cm"),
                              ticks.colour = "grey30")) +
-    ggh4x::facet_grid2(. ~ panel,
-      strip = ggh4x::strip_themed(
-        background_x = ggh4x::elem_list_rect(fill = "#c9d7e1"))) +
-    scale_x_discrete(position = "top", labels = NULL) +
+    # "Genome length" as an axis label, on the same side as the element names
+    scale_x_discrete(position = elem_pos) +
     scale_y_continuous(limits = gift_heat_ylim, expand = c(0, 0)) +
     labs(x = NULL, y = NULL) +
     theme_minimal() +
     theme(plot.margin = margin(5.5, 5.5, 5.5, 6, "pt"),
-          axis.text.x = element_blank(), axis.text.y = element_blank(),
+          axis.text.y = element_blank(),
+          axis.text.x.top = element_text(angle = 90, hjust = 0, vjust = 0.5,
+                                         size = 7, face = "bold"),
+          axis.text.x.bottom = element_text(angle = 90, hjust = 1, vjust = 0.5,
+                                            size = 7, face = "bold"),
           axis.ticks = element_blank(), panel.grid = element_blank(),
-          strip.text = element_text(size = 7, face = "bold"),
           legend.position = "bottom", legend.direction = "horizontal",
           legend.title.position = "top")
 
@@ -1633,40 +1677,70 @@ make_overlay_df <- function(cryo, space_df, value_col,
     mutate(pixel_y_flip = image_size - pixel_y)
 }
 
+# image_px_per_um()
+# Image scale (pixels per µm) of a cryosection: pixel_x vs Xcoord is a straight line, its slope is the scale
+image_px_per_um <- function(cryo, pixel_coords = pixel_coords_all) {
+  d <- pixel_coords %>% filter(cryosection == cryo, !is.na(pixel_x), !is.na(pixel_y))
+  mean(abs(c(coef(lm(pixel_x ~ Xcoord, d))[2], coef(lm(pixel_y ~ Ycoord, d))[2])))
+}
+
+# tissue_box()
+# Tissue bounding box in ggplot pixel coordinates: rows/columns with > 3% dark (non-background) pixels
+tissue_box <- function(img, image_size = 1000) {
+  dark <- as.integer(magick::image_data(magick::image_convert(img, colorspace = "gray"), "gray"))[, , 1] < 0.85 * 255
+  xs <- which(colMeans(dark) > 0.03)
+  ys <- which(rowMeans(dark) > 0.03)
+  c(xmin = min(xs), xmax = max(xs), ymin = image_size - max(ys), ymax = image_size - min(ys)) # image y starts at the top, ggplot y at the bottom
+}
+
 # build_pixel_overlay()
-# Microsamples drawn on cryosection image
-build_pixel_overlay <- function(overlay_df, value_col, img, value_label,
+# Microsamples drawn on cryosection image as circles with the real microsample area (`area_um2`, 5000 µm² = ~80 µm diameter).
+# crop = TRUE cuts the image to the tissue + circles + crop_margin_px, to remove white space
+build_pixel_overlay <- function(overlay_df, value_col, img, value_label, px_per_um,
+                                area_um2 = 5000, crop = FALSE, crop_margin_px = 10,
                                 diverging = TRUE, n_bins = 5, image_size = 1000,
                                 axis_lim = NULL, show_legend = TRUE) {
-  plot_df <- overlay_df
+  plot_df <- overlay_df %>% mutate(radius = sqrt(area_um2 / pi) * px_per_um) # circle radius in image pixels
   if (diverging) {
-    color_aes <- aes(x = pixel_x, y = pixel_y_flip, color = .data[[value_col]])
+    fill_col <- value_col
     lim <- if (is.null(axis_lim)) {
       max(abs(plot_df[[value_col]]), na.rm = TRUE)
     } else {
       axis_lim
     }
-    color_scale <- extRLQ_rdbu_scale(lim, value_label)
+    fill_scale <- extRLQ_rdbu_scale(lim, value_label, aesthetics = "fill")
   } else {
-    bin_col <- paste0(value_col, "_bin")
+    fill_col <- paste0(value_col, "_bin")
     breaks <- unique(quantile(plot_df[[value_col]],
                               probs = seq(0, 1, length.out = n_bins + 1),
                               na.rm = TRUE))
     if (length(breaks) < 3) {
       breaks <- pretty(range(plot_df[[value_col]], na.rm = TRUE), n = n_bins)
     }
-    plot_df[[bin_col]] <- cut(plot_df[[value_col]], breaks = breaks,
-                              include.lowest = TRUE, dig.lab = 4)
-    color_aes <- aes(x = pixel_x, y = pixel_y_flip, color = .data[[bin_col]])
-    color_scale <- scale_color_viridis_d(name = value_label, option = "viridis")
+    plot_df[[fill_col]] <- cut(plot_df[[value_col]], breaks = breaks,
+                               include.lowest = TRUE, dig.lab = 4)
+    fill_scale <- scale_fill_viridis_d(name = value_label, option = "viridis")
   }
 
-  ggplot(plot_df, color_aes) +
+  xlim <- ylim <- c(0, image_size)
+  if (crop) {
+    box <- tissue_box(img, image_size)
+    xlim <- c(min(box["xmin"], plot_df$pixel_x - plot_df$radius),
+              max(box["xmax"], plot_df$pixel_x + plot_df$radius)) + c(-1, 1) * crop_margin_px
+    ylim <- c(min(box["ymin"], plot_df$pixel_y_flip - plot_df$radius),
+              max(box["ymax"], plot_df$pixel_y_flip + plot_df$radius)) + c(-1, 1) * crop_margin_px
+    xlim <- pmax(0, pmin(image_size, xlim))
+    ylim <- pmax(0, pmin(image_size, ylim))
+  }
+
+  ggplot(plot_df) +
     annotation_raster(as.raster(img), xmin = 0, xmax = image_size,
                       ymin = 0, ymax = image_size) +
-    geom_point(size = 2) +
-    color_scale +
-    coord_fixed(xlim = c(0, image_size), ylim = c(0, image_size), expand = FALSE) +
+    ggforce::geom_circle(aes(x0 = pixel_x, y0 = pixel_y_flip, r = radius,
+                             fill = .data[[fill_col]]),
+                         color = NA) + # no outline, fill colour only
+    fill_scale +
+    coord_fixed(xlim = xlim, ylim = ylim, expand = FALSE) +
     theme(axis.title = element_blank(), axis.text = element_blank(),
           axis.ticks = element_blank(), axis.ticks.length = unit(0, "pt"),
           panel.grid = element_blank(), panel.border = element_blank(),
@@ -1691,7 +1765,19 @@ plot_pixel_overlay <- function(cryo, space_df, value_col, value_label,
                                 pixel_coords = pixel_coords) %>%
     mutate(pixel_x = pixel_x + shift_x, pixel_y_flip = pixel_y_flip + shift_y)
   build_pixel_overlay(overlay_df, value_col, img, value_label,
+                      px_per_um = image_px_per_um(cryo, pixel_coords),
                       diverging = diverging, axis_lim = axis_lim, ...)
+}
+
+# combine_overlays()
+# Named list of overlays (names = cryosections) side by side in one figure, with one shared legend
+combine_overlays <- function(overlays, ncol = length(overlays)) {
+  overlays <- Filter(Negate(is.null), overlays)
+  if (length(overlays) == 0) return(NULL)
+  panels <- imap(overlays, ~ .x + ggtitle(.y) +
+                   theme(plot.title = element_text(hjust = 0.5, face = "bold", size = 10,
+                                                   margin = margin(0, 0, 2, 0))))
+  wrap_plots(panels, ncol = ncol, guides = "collect")
 }
 
 # show_overlay()

@@ -25,3 +25,38 @@ renv/python/
 renv/sandbox/
 renv/staging/
 
+
+input_data/
+
+# Codeome agent jobs
+.codeome/jobs/
+.codeome/worktrees/
+.codeome/plans/
+.codeome/context/
+
+# Knitted book: copy _book/* into docs/ after knitting, only docs/ is published
+_book/
+
+# Large or re-downloadable data
+resources/working_data_object_BACKUP.Rdata
+resources/zenodo.zip
+
+# Local clutter
+.DS_Store
+Rplots.pdf
+.claude/
+.codeome/
+
+# Personal notes, drafts and helper scripts (not part of the analysis)
+AGENTS.md
+HANDOFF_*.md
+/404.html
+/_*.Rmd
+/_*.md
+_DELETE_inaki_comparison/
+_illustrator/
+resources/scripts/TEMP_pixel_coords_from_airtable.R
+resources/scripts/clean_working_data_object.R
+resources/Tecan Labware & Reagents - Time calculations.csv
+.Rapp.history
+resources/pixel_coords/microsample_pixel_coords.csv
