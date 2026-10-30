@@ -1,7 +1,6 @@
 # Main analysis
 
 ```{r load_data_main, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-#load("resources/working_data_object.Rdata") 
 load_working_data("resources/working_data_object.Rdata")
 ```
 
@@ -565,6 +564,7 @@ knitr::kable(
 )
 ```
 
+
 ```{r boxplot_section_comparison,  echo=TRUE, warning = FALSE, comments = "", message = FALSE, fig.width=8, fig.height=8}
 ordered_metrics <- c(
   "lowquality_reads_pct",
@@ -704,7 +704,7 @@ ggplot(animal_section_df,
   pnas_theme +
   theme(legend.position = "bottom")
 ```
-MSSM performance at 5,000 μm² in the caecum of a 35-day-old (G121e) animal matched that of a 14-day-old (G103b) individual. Colon samples from the 14-day-old animal performed poorlydue to insufficient genome coverage.
+MSSM performance at 5,000 μm² in the caecum of a 35-day-old (G121e) animal matched that of a 14-day-old (G103b) individual. Colon samples from the 14-day-old animal performed poorly due to insufficient genome coverage.
 
 ### Confocal Microscopy Of DAPI-stained Microsections (Fig. S5a)
 
@@ -1104,6 +1104,11 @@ cat_taxa_plot <- ggplot(cat_taxa$plot_df,
 cat_taxa_plot
 ```
 
+```{r catalogues_taxa_heatmap, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+### add!
+```
+
+
 ```{r suppl_fig_8, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
 cat_taxa_animal <- compare_taxa_overlap(
   data = cat_phylo_lg,
@@ -1116,7 +1121,6 @@ cat_taxa_animal <- compare_taxa_overlap(
   sample_var = "microsample"
 )
 ```
-
 
 #### Beta Diversity (Suppl.Fig. 7b)
 ```{r suppl_fig_7b_data, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
@@ -1568,6 +1572,7 @@ adonis2_result <- adonis2(
 adonis2_result %>%
   knitr::kable()
 ```
+
 #### Fig. 4a
 ```{r barplot_MSSM_vs_FISH,echo = TRUE,  warning = FALSE, comments = "", message = FALSE, fig.height=4, fig.width=11}
 # Shared genera order based on average absolute MSSM-FISH median difference
@@ -1853,6 +1858,43 @@ spatial_datasets <- lapply(
   }
 )
 names(spatial_datasets) <- spatial_sections
+
+
+for (section in spatial_sections) {
+
+  cat("\n", section, "\n")
+
+  cat(
+    "Samples:",
+    nrow(spatial_datasets[[section]]$comm_zerRepl),
+    "\n"
+  )
+
+  cat(
+    "Genomes:",
+    ncol(spatial_datasets[[section]]$comm_zerRepl),
+    "\n"
+  )
+
+  cat(
+    "Sample alignment:",
+    identical(
+      rownames(spatial_datasets[[section]]$comm_red),
+      rownames(spatial_datasets[[section]]$comm_zerRepl)
+    ),
+    "\n"
+  )
+
+  cat(
+    "Genome alignment:",
+    identical(
+      colnames(spatial_datasets[[section]]$comm_red),
+      colnames(spatial_datasets[[section]]$comm_zerRepl)
+    ),
+    "\n"
+  )
+}
+
 ```
 
 ```{r functional_ordination, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
@@ -1887,6 +1929,8 @@ gift_pcoa <- ape::pcoa(dist(genome_gifts_red))
 
 
 ```{r rlqESLTP, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+set.seed(123)
+
 spatial_sections <- c(
   "G121eO306A",
   "G121eO307A",
@@ -1925,12 +1969,6 @@ spatial_rlq_results <- lapply(
 )
 names(spatial_rlq_results) <- spatial_sections
 
-# head(spatial_rlq_results$G121eO306A$rlq_scores) #invert
-# head(spatial_rlq_results$G121eO307A$rlq_scores) #invert
-# head(spatial_rlq_results$G121eO308A$rlq_scores)
-# head(spatial_rlq_results$G121eI117A$rlq_scores) #invert
-# head(spatial_rlq_results$G121eI118B$rlq_scores) #invert
-# head(spatial_rlq_results$G121eI114B$rlq_scores)
 ```
 
 
@@ -1941,8 +1979,10 @@ spatial_rlq_results_flipped <- spatial_rlq_results_raw
 axes_to_flip <- list(
   G121eO306A = 2,
   G121eO307A = c(1, 2),
-  G121eI114B = 1
-)
+  G121eI114B = 1,
+  G121eI117A = 2,
+  G121eI118B = 1
+  )
 
 flip_rlq_axis <- function(x, ax = 1) {
   slots <- c(
@@ -1989,18 +2029,6 @@ for (section_id in names(axes_to_flip)) {
     )
 }
 
-# head(spatial_rlq_results_flipped$G121eO306A$rlq_scores) 
-# head(spatial_rlq_results_flipped$G121eO307A$rlq_scores) 
-# head(spatial_rlq_results$G121eO308A$rlq_scores)
-# head(spatial_rlq_results_flipped$G121eI117A$rlq_scores) 
-# head(spatial_rlq_results_flipped$G121eI118B$rlq_scores) 
-# head(spatial_rlq_results$G121eI114B$rlq_scores)
-# spatial_rlq_results_flipped$G121eO306A$rlqmix$lQ
-# spatial_rlq_results_flipped$G121eO307A$rlqmix$lQ
-# spatial_rlq_results$G121eO308A$rlqmix$lQ
-# spatial_rlq_results_flipped$G121eI117A$rlqmix$lQ
-# spatial_rlq_results_flipped$G121eI118B$rlqmix$lQ
-# spatial_rlq_results$G121eI114B$rlqmix$lQ
 ```
 
 
@@ -2013,8 +2041,12 @@ spatial_rlq_results_flipped <- spatial_rlq_results_raw
 axes_to_flip <- list(
   G121eO306A = 2,
   G121eO307A = c(1, 2),
-  G121eI114B = 1
-)
+  G121eI114B = 1,
+  G121eI117A = 2,
+  G121eI118B = 1
+  )
+
+
 
 flip_rlq_axis <- function(x, ax = 1) {
   slots <- c(
@@ -2061,12 +2093,6 @@ for (section_id in names(axes_to_flip)) {
     )
 }
 
-# head(spatial_rlq_results_flipped$G121eO306A$rlq_scores)
-# head(spatial_rlq_results_flipped$G121eO307A$rlq_scores)
-# head(spatial_rlq_results_flipped$G121eO308A$rlq_scores)
-# head(spatial_rlq_results_flipped$G121eI117A$rlq_scores)
-# head(spatial_rlq_results_flipped$G121eI118B$rlq_scores)
-# head(spatial_rlq_results_flipped$G121eI114B$rlq_scores)
 ```
 
 #### Plotting tables
@@ -2206,6 +2232,7 @@ gift_axis_1 <- gift_pcoa_vectors %>%
   labs(y = "Genome length", x = NULL)
 ```
 
+
 ```{r spt_pcoa_carbs_lipids, echo = TRUE, message = FALSE, warning = FALSE, fig.height=7, fig.width=2, fig.fullwidth=TRUE}
 gift_df_PCoA <- macromag_gifts_sel %>%
     to.elements(., GIFT_db) %>%
@@ -2331,6 +2358,7 @@ show_overlay(figS15b_overlay_caecum_axis1)
 # ggsave("_illustrator/figS15b_overlay_caecum_axis1.pdf", figS15b_overlay_caecum_axis1,
        # width = 8, height = 8)
 ```
+
 ##### Fig S15c
 ```{r spt_caecum_axis1_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=5, fig.width=8}
 scatter_caecum_axis1_rich <- build_extRLQ_scatter(
@@ -2355,6 +2383,7 @@ colon_genomes <- colon_traits$genome
 colon_gifts_sel <- gifts_subset(colon_genomes)
 nrow(colon_gifts_sel)
 ```
+
 
 ```{r spt_colon_tree_nodes, echo = TRUE, message = FALSE, warning = FALSE, fig.height=10, fig.width=8}
 colon_tree <- tree_subset(colon_genomes)
@@ -2383,6 +2412,7 @@ figS16a_gift_tree_heatmap_len_z_colon
 # ggsave("_illustrator/figS16a_gift_tree_heatmap_len_z_colon_axis1.pdf", figS16a_gift_tree_heatmap_len_z_colon,
        # width = 6, height = 14)
 ```
+
 ##### Fig S16b
 ```{r spt_colon_overlay, echo = TRUE, message = FALSE, warning = FALSE, fig.height=8, fig.width=8}
 figS16b_overlay_colon_axis1 <- plot_pixel_overlay(
@@ -2392,6 +2422,7 @@ show_overlay(figS16b_overlay_colon_axis1)
 # ggsave("_illustrator/figS16b_overlay_colon_axis1.pdf", figS16b_overlay_colon_axis1,
        # width = 8, height = 8)
 ```
+
 ##### Fig S16c
 ```{r spt_colon_scatters, echo = TRUE, message = FALSE, warning = FALSE, fig.height=5, fig.width=8}
 scatter_colon_axis1_rich <- build_extRLQ_scatter(
@@ -2659,8 +2690,9 @@ fig_s12a <- pheatmap::pheatmap(mat,
   legend_breaks = c(0, 1, 2),
   legend_labels = c("Absence", "Presence", "Multicopy")
 )
-# fig_s12a 
+fig_s12a 
 ```
+
 
 #### Lawsonibacter strains per microsample (pie chart data)
 Share of each Lawsonibacter strain in each positive microsample with coordinates.
@@ -2722,6 +2754,7 @@ selected_cryosections <- macroquant_metrics_filt_30 %>%
   sort() %>%
   intersect(names(lawsonibacter_piecharts)) # keep only cryosections with pie charts (Lawsonibacter present + coordinates)
 ```
+
 
 #### Number of Lawsonibacter strains per cryosection
 ```{r lawsonibacter_strains_per_cryosection, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
@@ -2806,6 +2839,7 @@ overlay_group_figure <- function(prefix, ncol) {
   }
   wrap_plots(panels, ncol = ncol)
 }
+
 ```
 
 
@@ -3030,142 +3064,110 @@ prevalence_a + prevalence_b +
 ```
 
 ### SNP level microdiversity (Lorikeet)
-### Heatmap popANI (Suppl.Fig. 14)
-```{r Fig6_c, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-plot_popani_3panel <- function(bin_ids,
-                               ani_list,
-                               metadata,
-                               animal_order = c("G103b", "G121e"),
-                               cluster = FALSE,
-                               file = "popani_3panel.pdf",
-                               width = 8,
-                               height = 12) {
 
+### Heatmap popANI GPB_bin_000044 (Suppl.Fig. 14)
+```{r FigS14, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
+bin_id <- "GPB_bin_000044"
 
-  if (length(bin_ids) != 1) {
-    stop("Provide exactly 1 bin.")
-  }
-
-  dir.create(dirname(file), showWarnings = FALSE, recursive = TRUE)
-  all_samples <- Reduce(union, lapply(bin_ids, function(b) {
-    rownames(ani_list[[b]])
-  }))
-
-  all_samples <- intersect(all_samples, metadata$microsample)
-
-  meta <- metadata %>%
-    filter(microsample %in% all_samples) %>%
-    select(microsample, animal) %>%
-    column_to_rownames("microsample") %>%
-    rename(Animal = animal)
-
-  meta$Animal <- factor(meta$Animal, levels = animal_order)
-  meta <- meta[order(meta$Animal), , drop = FALSE]
-
-  animal_cols <- setNames(
-    c("#E8BD50", "#B92D65")[seq_along(animal_order)],
-    animal_order
-  )
-
-  top_ha <- HeatmapAnnotation(
-    Animal = meta$Animal,
-    show_annotation_name = FALSE,
-    col = list(Animal = animal_cols)
-  )
-
-  left_ha <- rowAnnotation(
-    Animal = meta$Animal,
-    show_annotation_name = FALSE,
-    show_legend = FALSE,
-    col = list(Animal = animal_cols)  
+# Filter metadata
+meta <- macroquant_metrics_filt_30 %>%
+  filter(
+    cryosection %in% c("G121eI103A", "G103bI301A"),
+    type == "positive",
+    cov_filtering == "Retained By Filtering",
+    !is.na(Xcoord),
+    !is.na(Ycoord)
+  ) %>%
+  select(microsample, animal) %>%
+  distinct(microsample, .keep_all = TRUE) %>%
+  mutate(
+    animal = recode(
+      animal,
+      "G103b" = "G103",
+      "G121e" = "G121"
     )
+  ) %>%
+  column_to_rownames("microsample") %>%
+  rename(Animal = animal)
 
+# Keep samples present in the ANI matrix
+samples <- intersect(
+  rownames(ani_list[[bin_id]]),
+  rownames(meta)
+)
 
-  ht_list <- lapply(seq_along(bin_ids), function(i) {
+meta <- meta[samples, , drop = FALSE]
 
-    bin_id <- bin_ids[i]
+# Order samples by animal
+animal_order <- c("G103", "G121")
+meta$Animal <- factor(meta$Animal, levels = animal_order)
+meta <- meta[order(meta$Animal), , drop = FALSE]
 
-    mat <- ani_list[[bin_id]][all_samples, all_samples]
-    mat <- as.matrix(mat)
-    mat <- mat[rownames(meta), rownames(meta)]
+samples <- rownames(meta)
 
-    bin_vals <- as.numeric(mat)
-    bin_vals <- bin_vals[is.finite(bin_vals)]
+# Subset ANI matrix in matching order
+mat <- as.matrix(
+  ani_list[[bin_id]][samples, samples, drop = FALSE]
+)
 
-    col_fun <- colorRamp2(
-      c(min(bin_vals), max(bin_vals)),
-      c("black", "white")
-    )
+# Colour scale
+bin_vals <- mat[is.finite(mat)]
+value_range <- range(bin_vals)
 
-    Heatmap(
-      mat,
-      name = bin_id,
-
-      col = col_fun,
-
-      top_annotation = top_ha,
-      left_annotation = left_ha,
-
-      cluster_rows = cluster,
-      cluster_columns = cluster,
-
-      show_row_names = FALSE,
-      show_column_names = FALSE,
-
-      row_title = bin_id,
-
-      height = unit(8, "cm")
-    )
-  })
-
-  ht_stack <- Reduce(`%v%`, ht_list)
-  
-  draw(
-    ht_stack,
-    heatmap_legend_side = "left",
-    annotation_legend_side = "left",
-    annotation_legend_list = NULL
-  )
-
-  # pdf(paste0(file, ".pdf"), width = width, height = height)
-
-  # draw(
-    # ht_stack,
-    # heatmap_legend_side = "left",
-    # annotation_legend_side = "left",
-    # annotation_legend_list = NULL
-  # )
-
-  # dev.off()
-  
-  # png(paste0(file,".png"), width = width, height = height, units = "in", res = 300)
-
-  # draw(
-    # ht_stack,
-    # heatmap_legend_side = "left",
-    # annotation_legend_side = "left",
-    # annotation_legend_list = NULL
-  # )
-
-  # dev.off()
-
-  invisible(ht_stack)
+if (diff(value_range) == 0) {
+  value_range <- value_range + c(-0.5, 0.5)
 }
 
-plot_popani_3panel(
-  bin_ids = c(
-    "GPB_bin_000044" #, "GPB_bin_000047", "GPB_bin_000063"
-  ),
-  ani_list = ani_list,
-  metadata = macroquant_metrics_filt_30 %>%
-    filter(
-      cryosection %in% c("G121eI103A", "G103bI301A"),
-      type %in% c("positive"),
-      cov_filtering %in% c("Retained By Filtering"),
-      !is.na(Xcoord),
-      !is.na(Ycoord)
-    ),
-  cluster = FALSE,
-  file = "figures/fig_s13"
+col_fun <- circlize::colorRamp2(
+  value_range,
+  c("black", "white")
 )
+
+# Animal annotation colours
+animal_cols <- c(
+  "G103" = "#E8BD50",
+  "G121" = "#B92D65"
+)
+
+top_ha <- HeatmapAnnotation(
+  Animal = meta$Animal,
+  show_annotation_name = FALSE,
+  col = list(Animal = animal_cols)
+)
+
+left_ha <- rowAnnotation(
+  Animal = meta$Animal,
+  show_annotation_name = FALSE,
+  show_legend = FALSE,
+  col = list(Animal = animal_cols)
+)
+
+# Single heatmap
+ht <- Heatmap(
+  mat,
+  name = "PopANI",
+  col = col_fun,
+  top_annotation = top_ha,
+  left_annotation = left_ha,
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+  show_row_names = FALSE,
+  show_column_names = FALSE,
+  row_title = NULL,
+  column_title = NULL,
+  heatmap_legend_param = list(
+    title = "PopANI GPB_bin_000044",
+    direction = "vertical"
+  )
+)
+
+# Display in R
+draw(
+  ht,
+  heatmap_legend_side = "right",
+  annotation_legend_side = "right",
+  merge_legends = TRUE,
+  padding = grid::unit(c(2, 2, 2, 2), "mm")
+)
+
 ```

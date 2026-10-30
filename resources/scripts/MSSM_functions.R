@@ -1031,6 +1031,7 @@ prepare_spatial_section <- function(cryosection_id,
   )
 }
 
+
 ## Spatial RLQ function
 run_spatial_rlq <- function(cryosection_id,
                             comm_red,

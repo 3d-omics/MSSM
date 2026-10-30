@@ -122,7 +122,7 @@ distribution-lawsonibacter-strains-on-caecum-cryosection-images-suppl.fig.-12b
 composite-suppl.-fig.-12
 prevalence-of-lawsonibacter-strains-per-cryosection-faceted-by-animal-suppl.fig.-13
 snp-level-microdiversity-lorikeet-1
-heatmap-popani-suppl.fig.-14
+heatmap-popani-gpb_bin_000044-suppl.fig.-14
 supporting-information
 s1-lysis-conditions
 b-microbial-taxonomic-profiling-across-lysis-conditions
@@ -135,7 +135,11 @@ s2-resource-optimisation
 summary-statistic-1
 sequencing-performance-fig.-s2.1a
 library-preparation-efficiency-fig.-s2.1b
-s6
+s5-spatial-analysis-of-bacterial-community-structure
+g121ei117a
+g121ei118b
+g121ei114b
+s6-interpretation-of-the-functional-gradient-associated-with-sequencing-depth
 sequencing-depth-in-the-equivolume-batches-mseb0060-75
 panel-a-nonpareil-coverage
 panel-b-reads-per-batch

@@ -6,7 +6,7 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <title>Chapter 2 Loading and Tidying Data | 3D’omics | Micro-scale spatial metagenomics (MSSM)</title>
   <meta name="description" content="&lt;p&gt;Data analysis code for 3D’omics microdissection methods manuscript (MSSM)&lt;/p&gt;" />
-  <meta name="generator" content="bookdown 0.45 and GitBook 2.6.7" />
+  <meta name="generator" content="bookdown 0.46 and GitBook 2.6.7" />
 
   <meta property="og:title" content="Chapter 2 Loading and Tidying Data | 3D’omics | Micro-scale spatial metagenomics (MSSM)" />
   <meta property="og:type" content="book" />
@@ -27,7 +27,7 @@
 <meta name="author" content="Antton Alberdi" />
 
 
-<meta name="date" content="2026-10-28" />
+<meta name="date" content="2026-10-30" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
@@ -2125,8 +2125,9 @@ border: 0;
 
 
 <style type="text/css">
+html { -webkit-text-size-adjust: 100%; }
 pre > code.sourceCode { white-space: pre; position: relative; }
-pre > code.sourceCode > span { line-height: 1.25; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
 pre > code.sourceCode > span:empty { height: 1.2em; }
 .sourceCode { overflow: visible; }
 code.sourceCode > span { color: inherit; text-decoration: inherit; }
@@ -2136,7 +2137,7 @@ div.sourceCode { overflow: auto; }
 }
 @media print {
 pre > code.sourceCode { white-space: pre-wrap; }
-pre > code.sourceCode > span { display: inline-block; text-indent: -5em; padding-left: 5em; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
 }
 pre.numberSource code
 { counter-reset: source-line 0; }
@@ -2390,7 +2391,7 @@ white-space: inherit;
 <li class="chapter" data-level="3.8.1" data-path="main-analysis.html"><a href="main-analysis.html#spatial-and-functional-analysis-of-bacterial-community-structure"><i class="fa fa-check"></i><b>3.8.1</b> Spatial and functional analysis of bacterial community structure</a></li>
 <li class="chapter" data-level="3.8.2" data-path="main-analysis.html"><a href="main-analysis.html#subspecies-segregation"><i class="fa fa-check"></i><b>3.8.2</b> Subspecies Segregation</a></li>
 <li class="chapter" data-level="3.8.3" data-path="main-analysis.html"><a href="main-analysis.html#snp-level-microdiversity-lorikeet-1"><i class="fa fa-check"></i><b>3.8.3</b> SNP level microdiversity (Lorikeet)</a></li>
-<li class="chapter" data-level="3.8.4" data-path="main-analysis.html"><a href="main-analysis.html#heatmap-popani-suppl.fig.-14"><i class="fa fa-check"></i><b>3.8.4</b> Heatmap popANI (Suppl.Fig. 14)</a></li>
+<li class="chapter" data-level="3.8.4" data-path="main-analysis.html"><a href="main-analysis.html#heatmap-popani-gpb_bin_000044-suppl.fig.-14"><i class="fa fa-check"></i><b>3.8.4</b> Heatmap popANI GPB_bin_000044 (Suppl.Fig. 14)</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="4" data-path="supporting-information.html"><a href="supporting-information.html"><i class="fa fa-check"></i><b>4</b> Supporting Information</a>
@@ -2405,10 +2406,16 @@ white-space: inherit;
 <li class="chapter" data-level="4.2.2" data-path="supporting-information.html"><a href="supporting-information.html#sequencing-performance-fig.-s2.1a"><i class="fa fa-check"></i><b>4.2.2</b> Sequencing Performance (Fig. S2.1a)</a></li>
 <li class="chapter" data-level="4.2.3" data-path="supporting-information.html"><a href="supporting-information.html#library-preparation-efficiency-fig.-s2.1b"><i class="fa fa-check"></i><b>4.2.3</b> Library Preparation Efficiency (Fig. S2.1b)</a></li>
 </ul></li>
-<li class="chapter" data-level="4.3" data-path="supporting-information.html"><a href="supporting-information.html#s6"><i class="fa fa-check"></i><b>4.3</b> S6</a>
+<li class="chapter" data-level="4.3" data-path="supporting-information.html"><a href="supporting-information.html#s5-spatial-analysis-of-bacterial-community-structure"><i class="fa fa-check"></i><b>4.3</b> S5: Spatial analysis of bacterial community structure</a>
 <ul>
-<li class="chapter" data-level="4.3.1" data-path="supporting-information.html"><a href="supporting-information.html#sequencing-depth-in-the-equivolume-batches-mseb0060-75"><i class="fa fa-check"></i><b>4.3.1</b> Sequencing depth in the equivolume batches (MSEB0060-75)</a></li>
-<li class="chapter" data-level="4.3.2" data-path="supporting-information.html"><a href="supporting-information.html#image-darkness-vs-microbial-reads-s6"><i class="fa fa-check"></i><b>4.3.2</b> Image darkness vs microbial reads (S6)</a></li>
+<li class="chapter" data-level="4.3.1" data-path="supporting-information.html"><a href="supporting-information.html#g121ei117a"><i class="fa fa-check"></i><b>4.3.1</b> G121eI117A</a></li>
+<li class="chapter" data-level="4.3.2" data-path="supporting-information.html"><a href="supporting-information.html#g121ei118b"><i class="fa fa-check"></i><b>4.3.2</b> G121eI118B</a></li>
+<li class="chapter" data-level="4.3.3" data-path="supporting-information.html"><a href="supporting-information.html#g121ei114b"><i class="fa fa-check"></i><b>4.3.3</b> G121eI114B</a></li>
+</ul></li>
+<li class="chapter" data-level="4.4" data-path="supporting-information.html"><a href="supporting-information.html#s6-interpretation-of-the-functional-gradient-associated-with-sequencing-depth"><i class="fa fa-check"></i><b>4.4</b> S6: Interpretation of the functional gradient associated with sequencing depth</a>
+<ul>
+<li class="chapter" data-level="4.4.1" data-path="supporting-information.html"><a href="supporting-information.html#sequencing-depth-in-the-equivolume-batches-mseb0060-75"><i class="fa fa-check"></i><b>4.4.1</b> Sequencing depth in the equivolume batches (MSEB0060-75)</a></li>
+<li class="chapter" data-level="4.4.2" data-path="supporting-information.html"><a href="supporting-information.html#image-darkness-vs-microbial-reads-s6"><i class="fa fa-check"></i><b>4.4.2</b> Image darkness vs microbial reads (S6)</a></li>
 </ul></li>
 </ul></li>
 <li class="chapter" data-level="5" data-path="data-availability-ena.html"><a href="data-availability-ena.html"><i class="fa fa-check"></i><b>5</b> Data Availability ENA</a></li>
@@ -2845,43 +2852,15 @@ If you prefer to skip this step, you can continue to the next sections by ensuri
 <span id="cb32-2"><a href="loading-and-tidying-data.html#cb32-2" tabindex="-1"></a>macroquant_read_counts_98 <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;resources/zenodo/macroquant_read_counts_98_20261012.tsv&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb32-3"><a href="loading-and-tidying-data.html#cb32-3" tabindex="-1"></a>macroquant_covered_bases_98 <span class="ot">&lt;-</span> <span class="fu">read_tsv</span>(<span class="st">&quot;resources/zenodo/macroquant_covered_bases_98_20261012.tsv&quot;</span>, <span class="at">show_col_types =</span> <span class="cn">FALSE</span>)</span>
 <span id="cb32-4"><a href="loading-and-tidying-data.html#cb32-4" tabindex="-1"></a></span>
-<span id="cb32-5"><a href="loading-and-tidying-data.html#cb32-5" tabindex="-1"></a><span class="co"># OLD: load old _98 files and manually merge the &quot;extra&quot; 0.98 files - replaced by the _20261012 files above</span></span>
-<span id="cb32-6"><a href="loading-and-tidying-data.html#cb32-6" tabindex="-1"></a><span class="co"># macroquant_read_counts_98 &lt;- read_tsv(&quot;resources/zenodo/macroquant_read_counts_98.tsv&quot;, show_col_types = FALSE)</span></span>
-<span id="cb32-7"><a href="loading-and-tidying-data.html#cb32-7" tabindex="-1"></a><span class="co"># macroquant_covered_bases_98 &lt;- read_tsv(&quot;resources/zenodo/macroquant_covered_bases_98.tsv&quot;, show_col_types = FALSE)</span></span>
-<span id="cb32-8"><a href="loading-and-tidying-data.html#cb32-8" tabindex="-1"></a><span class="co"># macroquant_read_counts_98_new &lt;- read_tsv(&quot;resources/other/genome.count.REF0015-g_mg_hybrid-0.98_extra.tsv&quot;, show_col_types = FALSE) %&gt;% rename(genome=sequence_id) %&gt;%</span></span>
-<span id="cb32-9"><a href="loading-and-tidying-data.html#cb32-9" tabindex="-1"></a><span class="co">#   rename_with(</span></span>
-<span id="cb32-10"><a href="loading-and-tidying-data.html#cb32-10" tabindex="-1"></a><span class="co">#     .fn = ~ ifelse(.x == &quot;genome&quot;, .x, sub(&quot;\\..*&quot;, &quot;&quot;, .x))</span></span>
-<span id="cb32-11"><a href="loading-and-tidying-data.html#cb32-11" tabindex="-1"></a><span class="co">#   )</span></span>
-<span id="cb32-12"><a href="loading-and-tidying-data.html#cb32-12" tabindex="-1"></a><span class="co"># anyDuplicated(names(macroquant_read_counts_98_new))</span></span>
-<span id="cb32-13"><a href="loading-and-tidying-data.html#cb32-13" tabindex="-1"></a><span class="co"># macroquant_read_counts_98_new &lt;- full_join(</span></span>
-<span id="cb32-14"><a href="loading-and-tidying-data.html#cb32-14" tabindex="-1"></a><span class="co">#   macroquant_read_counts_98,</span></span>
-<span id="cb32-15"><a href="loading-and-tidying-data.html#cb32-15" tabindex="-1"></a><span class="co">#   macroquant_read_counts_98_new,</span></span>
-<span id="cb32-16"><a href="loading-and-tidying-data.html#cb32-16" tabindex="-1"></a><span class="co">#   by = &quot;genome&quot;</span></span>
-<span id="cb32-17"><a href="loading-and-tidying-data.html#cb32-17" tabindex="-1"></a><span class="co"># )</span></span>
-<span id="cb32-18"><a href="loading-and-tidying-data.html#cb32-18" tabindex="-1"></a><span class="co"># macroquant_covered_bases_98_new &lt;- read_tsv(&quot;resources/other/genome.covered_bases.REF0015-g_mg_hybrid-0.98_extra.tsv&quot;, show_col_types = FALSE) %&gt;% rename(genome=sequence_id) %&gt;%</span></span>
-<span id="cb32-19"><a href="loading-and-tidying-data.html#cb32-19" tabindex="-1"></a><span class="co">#   rename_with(</span></span>
-<span id="cb32-20"><a href="loading-and-tidying-data.html#cb32-20" tabindex="-1"></a><span class="co">#     .fn = ~ ifelse(.x == &quot;genome&quot;, .x, sub(&quot;\\..*&quot;, &quot;&quot;, .x))</span></span>
-<span id="cb32-21"><a href="loading-and-tidying-data.html#cb32-21" tabindex="-1"></a><span class="co">#   )</span></span>
-<span id="cb32-22"><a href="loading-and-tidying-data.html#cb32-22" tabindex="-1"></a><span class="co"># anyDuplicated(names(macroquant_covered_bases_98_new))</span></span>
-<span id="cb32-23"><a href="loading-and-tidying-data.html#cb32-23" tabindex="-1"></a><span class="co"># macroquant_covered_bases_98_new &lt;- full_join(</span></span>
-<span id="cb32-24"><a href="loading-and-tidying-data.html#cb32-24" tabindex="-1"></a><span class="co">#   macroquant_covered_bases_98,</span></span>
-<span id="cb32-25"><a href="loading-and-tidying-data.html#cb32-25" tabindex="-1"></a><span class="co">#   macroquant_covered_bases_98_new,</span></span>
-<span id="cb32-26"><a href="loading-and-tidying-data.html#cb32-26" tabindex="-1"></a><span class="co">#   by = &quot;genome&quot;</span></span>
-<span id="cb32-27"><a href="loading-and-tidying-data.html#cb32-27" tabindex="-1"></a><span class="co"># )</span></span>
-<span id="cb32-28"><a href="loading-and-tidying-data.html#cb32-28" tabindex="-1"></a><span class="co"># macroquant_read_counts_98 &lt;- macroquant_read_counts_98_new</span></span>
-<span id="cb32-29"><a href="loading-and-tidying-data.html#cb32-29" tabindex="-1"></a><span class="co"># rm(macroquant_read_counts_98_new)</span></span>
-<span id="cb32-30"><a href="loading-and-tidying-data.html#cb32-30" tabindex="-1"></a><span class="co"># macroquant_covered_bases_98 &lt;- macroquant_covered_bases_98_new</span></span>
-<span id="cb32-31"><a href="loading-and-tidying-data.html#cb32-31" tabindex="-1"></a><span class="co"># rm(macroquant_covered_bases_98_new)</span></span>
-<span id="cb32-32"><a href="loading-and-tidying-data.html#cb32-32" tabindex="-1"></a></span>
-<span id="cb32-33"><a href="loading-and-tidying-data.html#cb32-33" tabindex="-1"></a><span class="co"># Taxonomy</span></span>
-<span id="cb32-34"><a href="loading-and-tidying-data.html#cb32-34" tabindex="-1"></a>macromag_taxonomy_98 <span class="ot">&lt;-</span> macroscale_catalogue_taxonomy <span class="sc">%&gt;%</span></span>
-<span id="cb32-35"><a href="loading-and-tidying-data.html#cb32-35" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, macroquant_read_counts_98<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span></span>
-<span id="cb32-36"><a href="loading-and-tidying-data.html#cb32-36" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> macroquant_covered_bases_98<span class="sc">$</span>genome)</span>
-<span id="cb32-37"><a href="loading-and-tidying-data.html#cb32-37" tabindex="-1"></a><span class="co"># Genome Metadata</span></span>
-<span id="cb32-38"><a href="loading-and-tidying-data.html#cb32-38" tabindex="-1"></a>macromag_genomemetadata_98 <span class="ot">&lt;-</span> macromag_taxonomy_98 <span class="sc">%&gt;%</span></span>
-<span id="cb32-39"><a href="loading-and-tidying-data.html#cb32-39" tabindex="-1"></a>  <span class="fu">left_join</span>(macroscale_catalogue_quality, <span class="at">by =</span> <span class="fu">join_by</span>(genome <span class="sc">==</span> genome)) <span class="sc">%&gt;%</span> <span class="co"># join quality</span></span>
-<span id="cb32-40"><a href="loading-and-tidying-data.html#cb32-40" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, macroquant_read_counts_98<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span></span>
-<span id="cb32-41"><a href="loading-and-tidying-data.html#cb32-41" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> macroquant_read_counts_98<span class="sc">$</span>genome)</span></code></pre></div>
+<span id="cb32-5"><a href="loading-and-tidying-data.html#cb32-5" tabindex="-1"></a><span class="co"># Taxonomy</span></span>
+<span id="cb32-6"><a href="loading-and-tidying-data.html#cb32-6" tabindex="-1"></a>macromag_taxonomy_98 <span class="ot">&lt;-</span> macroscale_catalogue_taxonomy <span class="sc">%&gt;%</span></span>
+<span id="cb32-7"><a href="loading-and-tidying-data.html#cb32-7" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, macroquant_read_counts_98<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span></span>
+<span id="cb32-8"><a href="loading-and-tidying-data.html#cb32-8" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> macroquant_covered_bases_98<span class="sc">$</span>genome)</span>
+<span id="cb32-9"><a href="loading-and-tidying-data.html#cb32-9" tabindex="-1"></a><span class="co"># Genome Metadata</span></span>
+<span id="cb32-10"><a href="loading-and-tidying-data.html#cb32-10" tabindex="-1"></a>macromag_genomemetadata_98 <span class="ot">&lt;-</span> macromag_taxonomy_98 <span class="sc">%&gt;%</span></span>
+<span id="cb32-11"><a href="loading-and-tidying-data.html#cb32-11" tabindex="-1"></a>  <span class="fu">left_join</span>(macroscale_catalogue_quality, <span class="at">by =</span> <span class="fu">join_by</span>(genome <span class="sc">==</span> genome)) <span class="sc">%&gt;%</span> <span class="co"># join quality</span></span>
+<span id="cb32-12"><a href="loading-and-tidying-data.html#cb32-12" tabindex="-1"></a>  <span class="fu">arrange</span>(<span class="fu">match</span>(genome, macroquant_read_counts_98<span class="sc">$</span>genome)) <span class="sc">%&gt;%</span></span>
+<span id="cb32-13"><a href="loading-and-tidying-data.html#cb32-13" tabindex="-1"></a>  <span class="fu">filter</span>(genome <span class="sc">%in%</span> macroquant_read_counts_98<span class="sc">$</span>genome)</span></code></pre></div>
 </div>
 <div id="filter-and-normalise" class="section level5 hasAnchor" number="2.4.3.0.2">
 <h5><span class="header-section-number">2.4.3.0.2</span> Filter and Normalise<a href="loading-and-tidying-data.html#filter-and-normalise" class="anchor-section" aria-label="Anchor link to header"></a></h5>
@@ -2897,16 +2876,7 @@ If you prefer to skip this step, you can continue to the next sections by ensuri
 <span id="cb33-10"><a href="loading-and-tidying-data.html#cb33-10" tabindex="-1"></a>macroquant_genome_counts_98 <span class="ot">&lt;-</span> macroquant_read_counts_98 <span class="sc">%&gt;%</span></span>
 <span id="cb33-11"><a href="loading-and-tidying-data.html#cb33-11" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="fu">across</span>(<span class="fu">where</span>(is.numeric), <span class="sc">~</span> . <span class="sc">/</span> (macromag_genomemetadata_98<span class="sc">$</span>length <span class="sc">/</span> readlength)))</span>
 <span id="cb33-12"><a href="loading-and-tidying-data.html#cb33-12" tabindex="-1"></a></span>
-<span id="cb33-13"><a href="loading-and-tidying-data.html#cb33-13" tabindex="-1"></a>macroquant_genome_counts_filt_30_98 <span class="ot">&lt;-</span> macroquant_counts_filt_30_98</span>
-<span id="cb33-14"><a href="loading-and-tidying-data.html#cb33-14" tabindex="-1"></a></span>
-<span id="cb33-15"><a href="loading-and-tidying-data.html#cb33-15" tabindex="-1"></a><span class="co">#macroquant_read_counts_98_old &lt;- macroquant_read_counts_98  </span></span>
-<span id="cb33-16"><a href="loading-and-tidying-data.html#cb33-16" tabindex="-1"></a><span class="co">#macroquant_covered_bases_98_old &lt;- macroquant_covered_bases_98  </span></span>
-<span id="cb33-17"><a href="loading-and-tidying-data.html#cb33-17" tabindex="-1"></a><span class="co">#macromag_taxonomy_98_old &lt;- macromag_taxonomy_98</span></span>
-<span id="cb33-18"><a href="loading-and-tidying-data.html#cb33-18" tabindex="-1"></a><span class="co">#macromag_genomemetadata_98_old &lt;-  macromag_genomemetadata_98 </span></span>
-<span id="cb33-19"><a href="loading-and-tidying-data.html#cb33-19" tabindex="-1"></a><span class="co">#macroquant_coverage_98_old &lt;- macroquant_coverage_98</span></span>
-<span id="cb33-20"><a href="loading-and-tidying-data.html#cb33-20" tabindex="-1"></a><span class="co">#macroquant_read_counts_filt_30_98_old &lt;- macroquant_read_counts_filt_30_98</span></span>
-<span id="cb33-21"><a href="loading-and-tidying-data.html#cb33-21" tabindex="-1"></a><span class="co">#macroquant_counts_filt_30_98_old &lt;- macroquant_counts_filt_30_98 </span></span>
-<span id="cb33-22"><a href="loading-and-tidying-data.html#cb33-22" tabindex="-1"></a><span class="co">#macroquant_genome_counts_98_old &lt;- macroquant_genome_counts_98</span></span></code></pre></div>
+<span id="cb33-13"><a href="loading-and-tidying-data.html#cb33-13" tabindex="-1"></a>macroquant_genome_counts_filt_30_98 <span class="ot">&lt;-</span> macroquant_counts_filt_30_98</span></code></pre></div>
 </div>
 </div>
 </div>

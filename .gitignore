@@ -5,6 +5,7 @@
 # Ignore all contents of the "data_preparation" folder
 old_new_codes/
 resources/zenodo/
+resources/zenodo_update/
 resources/data_preparation
 resources/data_preparation_old
 _main_files/
@@ -12,6 +13,7 @@ docs/_main_files/
 .RDataTmp*
 other/
 _bookdown_files/
+figures/
 figures_new/
 .positai
 

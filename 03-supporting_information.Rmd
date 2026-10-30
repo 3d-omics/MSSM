@@ -1,7 +1,6 @@
 # Supporting Information
 
 ```{r load_data_supplementary, echo = TRUE,  warning = FALSE, comments = "", message = FALSE}
-#load("resources/working_data_object.Rdata") 
 load_working_data("resources/working_data_object.Rdata")
 ```
 
@@ -303,6 +302,7 @@ s1micro_taxa_plot <- ggplot(s1micro_taxa$plot_df,
 s1micro_taxa_plot
 ```      
 
+
 ## S2: Resource optimisation
 ### Summary Statistic
 ```{r s2_stat,  echo=TRUE, warning = FALSE, comments = "", message = FALSE}
@@ -476,10 +476,167 @@ fig_s2_1b <- s2_dreamprep_df %>%
 fig_s2_1b
 ```
 
+## S5: Spatial analysis of bacterial community structure
+### G121eI117A
+```{r G121eI117A_corr, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+comm_G121eI117A<-comm_data%>%
+  as.data.frame()%>%
+  rownames_to_column(var="microsample")%>%
+  bind_cols(metadata)%>%
+  filter(cryosection=="G121eI117A")%>%
+  column_to_rownames(var="microsample...1")%>%
+  select(contains("bin_"))
 
-## S6
+comm_G121eI117A_zerRepl<-cmultRepl(comm_G121eI117A, method = "GBM", output = "prop",z.warning = z.war)
+comm_G121eI117A_clr<-data.frame(t(apply(comm_G121eI117A_zerRepl, 1, clr_transform))) 
+
+metadata_G121eI117A<-metadata%>%
+  filter(microsample%in%rownames(comm_G121eI117A_zerRepl))
+comm_G121eI117A_clr_det<-resid(lm(as.matrix(comm_G121eI117A_clr)~.,data = metadata_G121eI117A[,c("Xcoord","Ycoord")]))
+
+# Mantel correlogram
+mantel(dist(metadata_G121eI117A[,c("Xcoord","Ycoord")]),dist(comm_G121eI117A_clr))
+correlog_G121eI117A<-mantel.correlog(D.eco=dist(comm_G121eI117A_clr_det),D.geo=dist(metadata_G121eI117A[,c("Xcoord","Ycoord")]),nperm=9999)
+plot(correlog_G121eI117A)
+title("G121eI117A")
+
+```
+
+
+```{r G121eI117A_trend, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+# Multivariate Trend Surface Analysis
+set.seed(123)
+# Compute polynomials of coordinates
+G121eI117A_poly<-poly(as.matrix(metadata_G121eI117A[,c("Xcoord","Ycoord")]),degree = 3)
+# Rda on community data
+G121eI117A_trend_rda<-rda(comm_G121eI117A_clr~.,data=as.data.frame(G121eI117A_poly))
+# Computation of adjusted r2
+R2adj_G121eI117A_poly<-RsquareAdj(G121eI117A_trend_rda)$adj.r.squared
+# Forward selection by Blanchet double stop criteria  
+G121eI117A_poly_fwd<-forward.sel(comm_G121eI117A_clr,G121eI117A_poly,adjR2thresh = R2adj_G121eI117A_poly)
+# New RDA using the terms retained
+G121eI117A_trend_rda2<-rda(comm_G121eI117A_clr~., 
+                           data=as.data.frame(G121eI117A_poly)[,G121eI117A_poly_fwd[,2]])
+# Overall test and test of the canonical axes
+anova(G121eI117A_trend_rda2,step=1000)
+anova(G121eI117A_trend_rda2,step=1000,by="axis")
+# Plot of the two independent significant spatial structures
+G121eI117A_trend_fit<-scores(G121eI117A_trend_rda2,choices=c(1,2),
+                             display="lc",scaling=1)
+par(mfrow=c(1,2))
+s.value(metadata_G121eI117A[,c("Xcoord","Ycoord")],
+        G121eI117A_trend_fit[,1],
+        include.origin = FALSE,sub="G121eI117A")
+```
+
+
+### G121eI118B
+```{r G121eI118B_corr, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+comm_G121eI118B<-comm_data%>%
+  as.data.frame()%>%
+  rownames_to_column(var="microsample")%>%
+  bind_cols(metadata)%>%
+  filter(cryosection=="G121eI118B")%>%
+  column_to_rownames(var="microsample...1")%>%
+  select(contains("bin_"))
+
+comm_G121eI118B_zerRepl<-cmultRepl(comm_G121eI118B, method = "GBM", output = "prop",z.warning = z.war)
+comm_G121eI118B_clr<-data.frame(t(apply(comm_G121eI118B_zerRepl, 1, clr_transform))) 
+
+metadata_G121eI118B<-metadata%>%
+  filter(microsample%in%rownames(comm_G121eI118B_zerRepl))
+comm_G121eI118B_clr_det<-resid(lm(as.matrix(comm_G121eI118B_clr)~.,data = metadata_G121eI118B[,c("Xcoord","Ycoord")]))
+
+# Mantel correlogram
+mantel(dist(metadata_G121eI118B[,c("Xcoord","Ycoord")]),dist(comm_G121eI118B_clr))
+correlog_G121eI118B<-mantel.correlog(D.eco=dist(comm_G121eI118B_clr_det),D.geo=dist(metadata_G121eI118B[,c("Xcoord","Ycoord")]),nperm=999)
+plot(correlog_G121eI118B)
+title("G121eI118B")
+```
+
+```{r G121eI118B_trend, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+# Multivariate Trend Surface Analysis
+set.seed(123)
+# Compute polynomials of coordinates
+G121eI118B_poly<-poly(as.matrix(metadata_G121eI118B[,c("Xcoord","Ycoord")]),degree = 3)
+# Rda on community data
+G121eI118B_trend_rda<-rda(comm_G121eI118B_clr~.,data=as.data.frame(G121eI118B_poly))
+# Computation of adjusted r2
+R2adj_G121eI118B_poly<-RsquareAdj(G121eI118B_trend_rda)$adj.r.squared
+# Forward selection by Blanchet double stop criteria  
+G121eI118B_poly_fwd<-forward.sel(comm_G121eI118B_clr,G121eI118B_poly,adjR2thresh = R2adj_G121eI118B_poly,alpha = 0.1)
+# New RDA using the terms retained
+G121eI118B_trend_rda2<-rda(comm_G121eI118B_clr~., 
+                           data=as.data.frame(G121eI118B_poly)[,G121eI118B_poly_fwd[,2]])
+# Overall test and test of the canonical axes
+anova(G121eI118B_trend_rda,step=1000)
+anova(G121eI118B_trend_rda,step=1000,by="axis")
+# Plot of the two independent significant spatial structures
+G121eI118B_trend_fit<-scores(G121eI118B_trend_rda,choices=c(1,2),
+                             display="lc",scaling=1)
+
+par(mfrow=c(1,1))
+s.value(metadata_G121eI118B[,c("Xcoord","Ycoord")],
+        G121eI118B_trend_fit[,1],
+        include.origin = FALSE,sub="G121eI118B")
+```
+
+### G121eI114B
+```{r G121eI114B_corr, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+comm_G121eI114B<-comm_data%>%
+  as.data.frame()%>%
+  rownames_to_column(var="microsample")%>%
+  bind_cols(metadata)%>%
+  filter(cryosection=="G121eI114B")%>%
+  column_to_rownames(var="microsample...1")%>%
+  select(contains("bin_"))
+
+comm_G121eI114B_zerRepl<-cmultRepl(comm_G121eI114B, method = "GBM", output = "prop",z.warning = z.war)
+comm_G121eI114B_clr<-data.frame(t(apply(comm_G121eI114B_zerRepl, 1, clr_transform))) 
+
+metadata_G121eI114B<-metadata%>%
+  filter(microsample%in%rownames(comm_G121eI114B_zerRepl))
+comm_G121eI114B_clr_det<-resid(lm(as.matrix(comm_G121eI114B_clr)~.,data = metadata_G121eI114B[,c("Xcoord","Ycoord")]))
+
+# Mantel correlogram
+mantel(dist(metadata_G121eI114B[,c("Xcoord","Ycoord")]),dist(comm_G121eI114B_clr))
+correlog_G121eI114B<-mantel.correlog(D.eco=dist(comm_G121eI114B_clr_det),D.geo=dist(metadata_G121eI114B[,c("Xcoord","Ycoord")]),nperm=999)
+plot(correlog_G121eI114B)
+title("G121eI114B")
+
+```
+
+
+```{r G121eI114B_trend, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
+# Multivariate Trend Surface Analysis
+set.seed(123)
+# Compute polynomials of coordinates
+G121eI114B_poly<-poly(as.matrix(metadata_G121eI114B[,c("Xcoord","Ycoord")]),degree = 3)
+# Rda on community data
+G121eI114B_trend_rda<-rda(comm_G121eI114B_clr~.,data=as.data.frame(G121eI114B_poly))
+# Computation of adjusted r2
+R2adj_G121eI114B_poly<-RsquareAdj(G121eI114B_trend_rda)$adj.r.squared
+# Forward selection by Blanchet double stop criteria  
+G121eI114B_poly_fwd<-forward.sel(comm_G121eI114B_clr,G121eI114B_poly,adjR2thresh = R2adj_G121eI114B_poly)
+# New RDA using the terms retained
+G121eI114B_trend_rda2<-rda(comm_G121eI114B_clr~., 
+                           data=as.data.frame(G121eI114B_poly)[,G121eI114B_poly_fwd[,2]])
+# Overall test and test of the canonical axes
+anova(G121eI114B_trend_rda2,step=1000)
+anova(G121eI114B_trend_rda2,step=1000,by="axis")
+# Plot of the two independent significant spatial structures
+G121eI114B_trend_fit<-scores(G121eI114B_trend_rda2,choices=c(1,2),
+                             display="lc",scaling=1)
+par(mfrow=c(1,2))
+s.value(metadata_G121eI114B[,c("Xcoord","Ycoord")],
+        G121eI114B_trend_fit[,1],
+        include.origin = FALSE,sub="G121eI114B",csub = 2)
+```
+
+
+## S6: Interpretation of the functional gradient associated with sequencing depth
+
 ### Sequencing depth in the equivolume batches (MSEB0060-75)
-
 #### Panel a: Nonpareil coverage
 ```{r fig_nonpareil, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
 # Nonpareil counts read pairs after QC and host removal (1 read pair = 2 reads).
@@ -675,6 +832,7 @@ darkness_df <- darkness_samples %>%
   }) %>%
   ungroup()
 ```
+
 
 #### Microbial reads by darkness group
 ```{r s6_darkness_groups, echo = TRUE, warning = FALSE, message = FALSE, fig.height = 6, fig.width = 10}
