@@ -1055,7 +1055,7 @@ cat_phylo_lg <- pivot_phylo(
   glom = TRUE,
   tax_transform = TRUE,
   taxon_level = "species",
-  tr_method = "compositional" # remove this 
+  tr_method = "compositional" 
 )
 
 cat_taxa <- compare_taxa_overlap(
@@ -1105,7 +1105,216 @@ cat_taxa_plot
 ```
 
 ```{r catalogues_taxa_heatmap, echo = TRUE, warning = FALSE, comments = "", message = FALSE}
-### add!
+species_presence <- cat_phylo_lg %>%
+  filter(
+    !is.na(species),
+    !is.na(microsample),
+    !is.na(dataset),
+    !is.na(animal)
+  ) %>%
+  distinct(species, microsample, animal, dataset) %>%
+  mutate(
+    animal = recode(
+      animal,
+      "G103b" = "G103",
+      "G121e" = "G121"
+    )
+  ) 
+
+species_groups <- species_presence %>%
+  distinct(species, dataset) %>%
+  mutate(detected = TRUE) %>%
+  pivot_wider(
+    names_from = dataset,
+    values_from = detected,
+    values_fill = FALSE
+  ) %>%
+  mutate(
+    group = case_when(
+      `Micro-scale` & !Reference ~ "Micro-scale only",
+      !`Micro-scale` & Reference ~ "Reference only",
+      `Micro-scale` & Reference ~ "Shared"
+    )
+  )
+
+# Number of micro-samples per animal and dataset
+samples_per_host <- species_presence %>%
+  distinct(microsample, animal, dataset) %>%
+  count(animal, dataset, name = "n_samples")
+
+# Number of micro-samples where each species was detected
+species_per_host <- species_presence %>%
+  group_by(species, animal, dataset) %>%
+  summarise(
+    n_detected = n_distinct(microsample),
+    .groups = "drop"
+  )
+
+# Complete species x animal x dataset combinations
+occurrence <- expand_grid(
+  species = species_groups$species,
+  animal = unique(species_presence$animal),
+  dataset = c("Micro-scale", "Reference")
+) %>%
+  left_join(
+    species_per_host,
+    by = c("species", "animal", "dataset")
+  ) %>%
+  left_join(
+    samples_per_host,
+    by = c("animal", "dataset")
+  ) %>%
+  mutate(
+    n_detected = replace_na(n_detected, 0),
+    frequency = 1 * n_detected / n_samples
+  ) %>%
+  left_join(
+    species_groups %>% select(species, group),
+    by = "species"
+  )
+
+# Define animal and dataset order
+animal_order <- unique(as.character(species_presence$animal))
+
+dataset_order <- c(
+  "Micro-scale",
+  "Reference"
+)
+
+# Create column order: animal first, then dataset
+column_order <- expand_grid(
+  animal = animal_order,
+  dataset = dataset_order
+) %>%
+  mutate(
+    column = paste(animal, dataset, sep = " | ")
+  ) %>%
+  pull(column)
+
+occurrence <- occurrence %>%
+  mutate(
+    column = paste(animal, dataset, sep = " | ")
+  )
+
+occurrence_matrix <- occurrence %>%
+  select(species, column, frequency) %>%
+  pivot_wider(
+    names_from = column,
+    values_from = frequency,
+    values_fill = 0
+  ) %>%
+  column_to_rownames("species") %>%
+  as.matrix()
+
+# Order species by detection group
+species_order <- species_groups %>%
+  mutate(
+    group = factor(
+      group,
+      levels = c(
+        "Micro-scale only",
+        "Reference only",
+        "Shared"
+      )
+    )
+  ) %>%
+  arrange(group, species) %>%
+  pull(species)
+
+occurrence_matrix <- occurrence_matrix[
+  species_order,
+  column_order[column_order %in% colnames(occurrence_matrix)],
+  drop = FALSE
+]
+
+species_annotation <- species_groups %>%
+  slice(match(rownames(occurrence_matrix), species))
+
+group_colours <- c(
+  "Micro-scale only" = "#5C7FBA",
+  "Reference only" = "#79B1A3",
+  "Shared" = "grey80"
+)
+
+row_annotation <- rowAnnotation(
+  Detection = species_annotation$group,
+  col = list(
+    Detection = group_colours
+  )
+)
+
+
+column_metadata <- occurrence %>%
+  distinct(column, animal, dataset) %>%
+  slice(match(colnames(occurrence_matrix), column))
+
+# Animal colours
+animal_colours <- c(
+  "G121" = "#E8BD50",
+  "G103" = "#B92D65"
+)
+
+
+# Dataset colours
+dataset_colours <- c(
+  "Micro-scale" = "#5C7FBA",
+  "Reference" = "#79B1A3"
+)
+
+top_annotation <- HeatmapAnnotation(
+  Animal = column_metadata$animal,
+  Dataset = column_metadata$dataset,
+
+  col = list(
+    Animal = animal_colours,
+    Dataset = dataset_colours
+  ),
+
+  annotation_legend_param = list(
+    Animal = list(title = "Animal"),
+    Dataset = list(title = "Dataset")
+  )
+)
+
+Heatmap(
+  occurrence_matrix,
+  name = "Frequency",
+
+  col = colorRamp2(
+    c(0, 0.5, 1),
+    c("white", "grey50", "black")
+  ),
+
+  cluster_rows = FALSE,
+  cluster_columns = FALSE,
+
+  row_split = factor(
+    species_annotation$group,
+    levels = c(
+      "Micro-scale only",
+      "Reference only",
+      "Shared"
+    )
+  ),
+
+  column_split = factor(
+    column_metadata$animal,
+    levels = animal_order
+  ),
+
+  right_annotation = row_annotation,
+  top_annotation = top_annotation,
+
+  show_row_names = TRUE,
+  show_column_names = FALSE,
+
+  row_names_gp = gpar(fontsize = 7),
+  column_names_gp = gpar(fontsize = 8),
+
+
+)
+
+
 ```
 
 

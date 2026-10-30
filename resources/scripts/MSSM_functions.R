@@ -841,7 +841,6 @@ run_metric <- function(metric,
     )
   )
 }
-###
 
 ### pivot_phylo()
 pivot_phylo <- function(phyloseq_obj, glom = TRUE, tax_transform = TRUE, taxon_level, tr_method) {
@@ -1040,7 +1039,7 @@ run_spatial_rlq <- function(cryosection_id,
                             genome_tree,
                             root = 0.5,
                             correlogram_order = 8) {
-
+  set.seed(123)
   comp <- decostand(comm_red, MARGIN = 1, method = "total")
   comp <- comp^root
   colnames(comp) <- gsub("\\.", ":", colnames(comp))
